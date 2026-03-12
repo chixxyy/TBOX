@@ -17,8 +17,9 @@ const categories: Category[] = [
 
 const allEvents = ref<any[]>([])
 const isLoading = ref(true)
-const activeCategory = ref<Category>({ label: 'All', tag: '' })
+const activeCategory = ref<Category>({ label: '全部', tag: '' })
 let refreshInterval: ReturnType<typeof setInterval>
+const knownEventIds = ref<Set<string>>(new Set())
 
 // Client-side filtering by tag slug
 const events = computed(() => {
@@ -28,14 +29,48 @@ const events = computed(() => {
   )
 })
 
-async function fetchMarkets() {
-  isLoading.value = true
+function playNewDataSound() {
   try {
-    // Fetch 50 events so we have enough for all categories to filter from
+    const ctx = new AudioContext()
+    // Short two-tone chime
+    const notes = [880, 1046] // A5, C6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12)
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12)
+      gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + i * 0.12 + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.25)
+      osc.start(ctx.currentTime + i * 0.12)
+      osc.stop(ctx.currentTime + i * 0.12 + 0.3)
+    })
+  } catch (e) {
+    // AudioContext might be blocked before user interaction, silently ignore
+  }
+}
+
+async function fetchMarkets() {
+  isLoading.value = isLoading.value && allEvents.value.length === 0
+  try {
     const res = await fetch('/polymarket/events?closed=false&limit=50')
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json()
-    allEvents.value = Array.isArray(data) ? data : []
+    const raw = await res.json()
+    const data: any[] = Array.isArray(raw) ? raw : []
+
+    // Detect new events (skip sound on first load)
+    const isFirstLoad = knownEventIds.value.size === 0
+    const newIds = data.map((ev: any) => String(ev.id))
+    const hasNew = newIds.some(id => !knownEventIds.value.has(id))
+
+    if (!isFirstLoad && hasNew) {
+      playNewDataSound()
+    }
+
+    knownEventIds.value = new Set(newIds)
+    allEvents.value = data
   } catch (error) {
     console.error('Failed to fetch markets:', error)
   } finally {
