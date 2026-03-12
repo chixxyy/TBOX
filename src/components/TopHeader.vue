@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { activeTab } from '../store'
 
-const tabs = ['交易', '市場']
+const tabs = ['交易', '市場', '新聞']
 </script>
 
 <template>
@@ -42,22 +42,6 @@ const tabs = ['交易', '市場']
           {{ tab }}
         </button>
       </nav>
-    </div>
-
-    <div class="flex items-center space-x-4">
-      <div class="relative flex items-center bg-[#111827] border border-slate-700/80 rounded-lg px-3 py-1.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all duration-300 w-64 group">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 mr-2 group-focus-within:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input type="text" placeholder="搜尋市場與事件" class="bg-transparent border-none outline-none text-xs w-full text-slate-200 placeholder-slate-500" />
-        <span class="ml-2 text-[10px] bg-[#1e293b] text-slate-400 px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm">F</span>
-      </div>
-
-      <button class="p-1.5 text-slate-400 hover:text-white border border-slate-700/80 rounded-lg bg-[#111827] hover:bg-slate-800 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
     </div>
   </header>
 </template>

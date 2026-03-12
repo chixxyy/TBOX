@@ -5,6 +5,7 @@ import AssetList from './components/AssetList.vue'
 import ChartArea from './components/ChartArea.vue'
 import RightPanel from './components/RightPanel.vue'
 import MarketsView from './components/MarketsView.vue'
+import NewsView from './components/NewsView.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { activeTab } from './store'
 
@@ -77,6 +78,10 @@ onUnmounted(() => {
 
     <main v-else-if="activeTab === '市場'" class="flex-1 flex overflow-hidden">
       <MarketsView />
+    </main>
+
+    <main v-else-if="activeTab === '新聞'" class="flex-1 flex overflow-hidden">
+      <NewsView />
     </main>
   </div>
 </template>
