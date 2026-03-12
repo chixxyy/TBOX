@@ -9,28 +9,45 @@ interface Asset {
   change: string
   up: boolean
   rawPrice: number
+  type: 'crypto' | 'stock'
 }
 
 // Initial state with top pairs
 const initialAssets: Asset[] = [
-  { symbol: 'BTCUSDT', name: 'Bitcoin', price: '...', change: '...', up: true, rawPrice: 0 },
-  { symbol: 'ETHUSDT', name: 'Ethereum', price: '...', change: '...', up: true, rawPrice: 0 },
-  { symbol: 'SOLUSDT', name: 'Solana', price: '...', change: '...', up: true, rawPrice: 0 },
-  { symbol: 'DOGEUSDT', name: 'Dogecoin', price: '...', change: '...', up: true, rawPrice: 0 }
+  { symbol: 'BTCUSDT', name: 'Bitcoin', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
+  { symbol: 'ETHUSDT', name: 'Ethereum', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
+  { symbol: 'SOLUSDT', name: 'Solana', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
+  { symbol: 'DOGEUSDT', name: 'Dogecoin', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
+  { symbol: 'NVDA', name: 'Nvidia', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'AMD', name: 'AMD', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'CRCL', name: 'Circle', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' }
 ]
 const assets = ref<Asset[]>(initialAssets)
 
 const filter = ref('')
 const activeFilterIndex = ref(0)
-const filters = ['全部', '加密貨幣', '外匯', '股票']
+const filters = ['全部', '加密貨幣', '股票']
 
 const filteredAssets = computed(() => {
-  if (!filter.value) return assets.value
+  let result = assets.value
+
+  if (activeFilterIndex.value === 1) {
+    result = result.filter(a => a.type === 'crypto')
+  } else if (activeFilterIndex.value === 2) {
+    result = result.filter(a => a.type === 'stock')
+  }
+
+  if (!filter.value) return result
+  
   const q = filter.value.toLowerCase()
-  return assets.value.filter(a => a.symbol.toLowerCase().includes(q) || a.name.toLowerCase().includes(q))
+  return result.filter(a => 
+    a.symbol.toLowerCase().includes(q) || 
+    a.name.toLowerCase().includes(q)
+  )
 })
 
-let ws: WebSocket | null = null
+let wsBinance: WebSocket | null = null
+let wsFinnhub: WebSocket | null = null
 
 const formatPrice = (priceStr: string) => {
   const p = parseFloat(priceStr)
@@ -40,10 +57,10 @@ const formatPrice = (priceStr: string) => {
 }
 
 onMounted(() => {
-  // Connect to Binance WebSocket for all tickers
-  ws = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr')
+  // 1. 加密貨幣 WebSocket (Binance)
+  wsBinance = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr')
   
-  ws.onmessage = (event) => {
+  wsBinance.onmessage = (event) => {
     const data = JSON.parse(event.data)
     
     // Create a map for quick lookup
@@ -54,22 +71,60 @@ onMounted(() => {
 
     // Update tracked assets
     assets.value.forEach(asset => {
-      const ticker = updateMap.get(asset.symbol)
-      if (ticker) {
-        const currentPrice = parseFloat(ticker.c) // c = last price
-        const priceChangePercent = parseFloat(ticker.P) // P = price change percent
-        
-        asset.price = formatPrice(ticker.c)
-        asset.change = `${priceChangePercent > 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%`
-        asset.up = priceChangePercent >= 0
-        asset.rawPrice = currentPrice
+      // 加上 type 判斷，確保 Binance 只更新加密貨幣
+      if (asset.type === 'crypto') {
+        const ticker = updateMap.get(asset.symbol)
+        if (ticker) {
+          const currentPrice = parseFloat(ticker.c) // c = last price
+          const priceChangePercent = parseFloat(ticker.P) // P = price change percent
+          
+          asset.price = formatPrice(ticker.c)
+          asset.change = `${priceChangePercent > 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%`
+          asset.up = priceChangePercent >= 0
+          asset.rawPrice = currentPrice
+        }
       }
     })
+  }
+
+  // 2. 美股 WebSocket (Finnhub)
+  const finnhubToken = import.meta.env.VITE_FINNHUB_TOKEN as string
+  wsFinnhub = new WebSocket(`wss://ws.finnhub.io?token=${finnhubToken}`)
+
+  wsFinnhub.onopen = () => {
+    wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': 'NVDA'}))
+    wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': 'AMD'}))
+    wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': 'CRCL'}))
+  }
+
+  wsFinnhub.onmessage = (event) => {
+    const response = JSON.parse(event.data)
+    
+    // 確保收到的是交易資料 (trade)
+    if (response.type === 'trade') {
+      response.data.forEach((trade: any) => {
+        const symbol = trade.s
+        const price = trade.p
+        
+        // 找到對應的股票資產並更新
+        const asset = assets.value.find(a => a.symbol === symbol && a.type === 'stock')
+        if (asset) {
+          asset.rawPrice = price
+          // 將數字轉為字串傳入你的 formatPrice 函數
+          asset.price = formatPrice(price.toString()) 
+          
+          // 備註：Finnhub 即時報價不包含 24H 漲跌幅，所以這裡先不更新 asset.change 和 asset.up
+          // 若畫面初始有給定預設值（如 '...'），它會保持原樣
+        }
+      })
+    }
   }
 })
 
 onUnmounted(() => {
-  if (ws) ws.close()
+  // 元件卸載時，記得把兩個 WebSocket 都關閉以節省資源
+  if (wsBinance) wsBinance.close()
+  if (wsFinnhub) wsFinnhub.close()
 })
 
 const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
