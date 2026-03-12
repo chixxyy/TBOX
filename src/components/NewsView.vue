@@ -251,13 +251,22 @@ onUnmounted(() => clearInterval(refreshInterval))
         </div>
       </div>
 
-      <div class="flex items-center space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-4 py-2.5 min-w-[220px]">
-        <div class="w-9 h-9 rounded-full bg-red-900/30 border border-red-800/50 flex items-center justify-center text-red-400">⚡</div>
+      <a 
+        :href="filteredNews[0]?.url || '#'" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        class="flex items-center space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-4 py-2.5 min-w-[220px] cursor-pointer hover:bg-slate-800/80 transition-colors group"
+      >
+        <div class="w-9 h-9 rounded-full bg-red-900/30 border border-red-800/50 flex items-center justify-center text-red-400 group-hover:bg-red-900/50 transition-colors">
+          ⚡
+        </div>
         <div>
           <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">最新頭條</div>
-          <div class="text-white font-bold text-sm leading-snug truncate max-w-[160px]">{{ filteredNews[0]?.source || '—' }}</div>
+          <div class="text-white font-bold text-sm leading-snug truncate max-w-[160px] group-hover:text-blue-400 transition-colors">
+            {{ filteredNews[0]?.title || filteredNews[0]?.source || '暫無新聞' }}
+          </div>
         </div>
-      </div>
+      </a>
 
       <!-- Recent Activity -->
       <div class="ml-auto flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-2">
