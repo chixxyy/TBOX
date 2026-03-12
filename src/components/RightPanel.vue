@@ -1,0 +1,168 @@
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { activeSymbol } from '../store'
+import NewsFeed from './NewsFeed.vue'
+
+const currentView = ref('ORDERBOOK')
+
+// Live orderbook data state
+interface Order {
+  price: string
+  amount: string
+  total: string
+  percentage: number
+}
+
+const asks = ref<Order[]>([])
+const bids = ref<Order[]>([])
+const currentPriceStr = ref('64,230.50')
+const currentDir = ref('up')
+
+let ws: WebSocket | null = null
+
+const calculateTotal = (data: [string, string][]) => {
+  let accu = 0
+  let maxTotal = 0
+  const processed = data.slice(0, 15).map(level => { // show more depth
+    const priceNum = parseFloat(level[0])
+    const amountNum = parseFloat(level[1])
+    accu += amountNum
+    if (accu > maxTotal) maxTotal = accu
+    
+    return {
+      price: priceNum.toFixed(2),
+      amount: amountNum.toFixed(4),
+      total: accu.toFixed(4),
+      rawTotal: accu
+    }
+  })
+
+  // Add percentage for the background bar
+  return processed.map(p => ({
+    ...p,
+    percentage: maxTotal > 0 ? (p.rawTotal / maxTotal) * 100 : 0
+  }))
+}
+
+const connectOrderbook = () => {
+  if (ws) ws.close()
+  
+  const symbol = activeSymbol.value.toLowerCase()
+  ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@depth20@100ms`)
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    if (!data.bids || !data.asks) return
+
+    // Bids are sorted descending by price (highest buy order first)
+    bids.value = calculateTotal(data.bids).slice(0, 10)
+    
+    // Asks are sorted ascending by price (lowest sell order first), reverse to show highest at top
+    asks.value = calculateTotal(data.asks).slice(0, 10).reverse()
+
+    // Estimate current price from the middle of spread
+    if (asks.value.length > 0 && bids.value.length > 0) {
+      const askObj = asks.value[asks.value.length - 1]
+      const bidObj = bids.value[0]
+      if (askObj && bidObj) {
+        const topAsk = parseFloat(askObj.price)
+        const topBid = parseFloat(bidObj.price)
+        const mid = (topAsk + topBid) / 2
+        const prevPrice = parseFloat(currentPriceStr.value.replace(/,/g, ''))
+        currentDir.value = mid >= prevPrice ? 'up' : 'down'
+        currentPriceStr.value = mid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      }
+    }
+  }
+}
+
+watch(activeSymbol, () => {
+  // Clear orderbook immediately when switching
+  asks.value = []
+  bids.value = []
+  connectOrderbook()
+})
+
+onMounted(() => {
+  connectOrderbook()
+})
+
+onUnmounted(() => {
+  if (ws) ws.close()
+})
+
+</script>
+
+<template>
+  <div class="flex flex-col h-full bg-[#070b14]">
+    
+    <!-- View Toggle Tabs -->
+    <div class="flex text-[10px] font-bold font-mono tracking-widest border-b border-slate-800 bg-[#0a0f1c]">
+      <button 
+        class="flex-1 py-2 text-center transition-colors border-b-2"
+        :class="currentView === 'FEED' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
+        @click="currentView = 'FEED'"
+      >NEWS FEED</button>
+      <button 
+        class="flex-1 py-2 text-center transition-colors border-b-2"
+        :class="currentView === 'ORDERBOOK' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
+        @click="currentView = 'ORDERBOOK'"
+      >ORDER BOOK</button>
+    </div>
+
+    <!-- News Feed Section -->
+    <div v-show="currentView === 'FEED'" class="flex-1 overflow-hidden">
+      <NewsFeed />
+    </div>
+
+    <!-- Order Book Section -->
+    <div v-show="currentView === 'ORDERBOOK'" class="flex-1 flex flex-col min-h-0 p-2">
+      <div class="flex items-center justify-between mb-2 px-2">
+        <h3 class="text-xs font-bold text-slate-300">訂單簿</h3>
+        <div class="flex space-x-1">
+          <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></button>
+          <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></button>
+        </div>
+      </div>
+
+      <div class="flex text-[10px] text-slate-500 font-bold px-2 mb-1">
+        <span class="flex-1">價格(USDT)</span>
+        <span class="flex-1 text-right">數量(BTC)</span>
+        <span class="flex-1 text-right">總計</span>
+      </div>
+
+      <!-- Asks (Sells) -->
+      <div class="flex flex-col flex-1 overflow-hidden">
+        <div v-for="(ask, i) in asks" :key="'ask'+i" class="flex text-[10px] font-mono px-2 py-0.5 relative group cursor-pointer hover:bg-slate-800/30">
+          <div class="absolute inset-y-0 right-0 bg-red-900/20 z-0 transition-all" :style="{ width: `${ask.percentage}%` }"></div>
+          <span class="flex-1 text-red-400 z-10">{{ ask.price }}</span>
+          <span class="flex-1 text-right text-slate-300 z-10">{{ ask.amount }}</span>
+          <span class="flex-1 text-right text-slate-500 z-10">{{ ask.total }}</span>
+        </div>
+      </div>
+
+      <!-- Current Price Spread -->
+      <div class="flex items-center justify-between py-2 px-2 border-y border-slate-800 my-1 bg-[#0a0f1c]">
+        <span class="text-sm font-bold flex items-center transition-colors duration-300"
+              :class="currentDir === 'up' ? 'text-green-400' : 'text-red-400'">
+          {{ currentPriceStr }} 
+          <svg v-if="currentDir==='up'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+        </span>
+        <span class="text-slate-400 text-xs text-decoration-underline underline-offset-2">{{ currentPriceStr }}</span>
+      </div>
+
+      <!-- Bids (Buys) -->
+      <div class="flex flex-col flex-1 overflow-hidden">
+        <div v-for="(bid, i) in bids" :key="'bid'+i" class="flex text-[10px] font-mono px-2 py-0.5 relative group cursor-pointer hover:bg-slate-800/30">
+          <div class="absolute inset-y-0 right-0 bg-green-900/20 z-0 transition-all" :style="{ width: `${bid.percentage}%` }"></div>
+          <span class="flex-1 text-green-400 z-10">{{ bid.price }}</span>
+          <span class="flex-1 text-right text-slate-300 z-10">{{ bid.amount }}</span>
+          <span class="flex-1 text-right text-slate-500 z-10">{{ bid.total }}</span>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+</template>
