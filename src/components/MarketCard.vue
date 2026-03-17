@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+// 定義 Prop，包含原本的 eventData 和新增的 isNew
 const props = defineProps<{
-  eventData: any
+  eventData: any,
+  isNew?: boolean // 新增：用來觸發閃爍動畫
 }>()
 
 const outcomes = computed(() => {
@@ -12,11 +14,9 @@ const outcomes = computed(() => {
   if (!rawLabels || !rawPrices) return []
   
   try {
-    // 關鍵修正：如果是字串就轉陣列，如果是陣列就直接用
     const labels = typeof rawLabels === 'string' ? JSON.parse(rawLabels) : rawLabels
     const prices = typeof rawPrices === 'string' ? JSON.parse(rawPrices) : rawPrices
     
-    // 確保 labels 是陣列才能執行 .map
     if (!Array.isArray(labels)) return []
 
     let mappedOutcomes = labels.map((label: string, index: number) => {
@@ -29,9 +29,8 @@ const outcomes = computed(() => {
       }
     })
     
-    // Yes/No 排序邏輯
     if (mappedOutcomes.length === 2 && mappedOutcomes[0].label === 'Yes' && mappedOutcomes[1].label === 'No') {
-       // 保持 Yes 在前，No 在後
+       // Keep order
     } else {
        mappedOutcomes.sort((a: any, b: any) => b.probability - a.probability)
     }
@@ -59,7 +58,6 @@ const formatCurrency = (val: any) => {
 }
 
 const formattedDate = computed(() => {
-  // 新版欄位名為 endDate 或 endDateIso
   const dateStr = props.eventData.endDateIso || props.eventData.endDate
   if (!dateStr) return ''
   const date = new Date(dateStr)
@@ -68,7 +66,10 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <div class="bg-[#0f1523] border border-[#1e293b] rounded-lg p-4 hover:border-slate-600 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all cursor-pointer flex flex-col group">
+  <div 
+    class="bg-[#0f1523] border border-[#1e293b] rounded-lg p-4 hover:border-slate-600 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all cursor-pointer flex flex-col group relative overflow-hidden"
+    :class="{ 'animate-flash': isNew }"
+  >
     
     <div class="flex items-start mb-6">
       <img :src="eventData.image" :alt="eventData.question" class="w-10 h-10 rounded-md object-cover border border-slate-700 shadow-lg mr-3 shrink-0" v-if="eventData.image" />
@@ -109,10 +110,8 @@ const formattedDate = computed(() => {
         <span class="text-slate-700">·</span>
         <span>{{ formatCurrency(eventData.liquidity) }} Liq</span>
       </div>
-      <div class="flex items-center space-x-2">
-        <div class="flex items-center space-x-1 ml-1" v-if="formattedDate">
-          <span>📅 {{ formattedDate }}</span>
-        </div>
+      <div class="flex items-center space-x-1" v-if="formattedDate">
+        <span>📅 {{ formattedDate }}</span>
       </div>
     </div>
 

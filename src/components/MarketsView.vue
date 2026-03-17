@@ -168,8 +168,31 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.scrollbar-dark::-webkit-scrollbar { width: 6px; }
+@keyframes flash-new {
+  0% { 
+    background-color: rgba(59, 130, 246, 0.5); 
+    border-color: #3b82f6; 
+    transform: scale(1.02);
+  }
+  100% { 
+    background-color: #0f1523; 
+    border-color: #1e293b; 
+    transform: scale(1);
+  }
+}
+
+.animate-flash {
+  animation: flash-new 2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scrollbar-dark::-webkit-scrollbar { width: 4px; }
 .scrollbar-dark::-webkit-scrollbar-track { background: #05080f; }
 .scrollbar-dark::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
 .scrollbar-dark::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 1000ms;
+}
 </style>
