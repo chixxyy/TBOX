@@ -117,3 +117,33 @@ const formattedDate = computed(() => {
 
   </div>
 </template>
+
+<style scoped>
+@keyframes flash-new {
+  0% { 
+    background-color: rgba(59, 130, 246, 0.5); 
+    border-color: #3b82f6; 
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+    transform: scale(1.02);
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.2);
+  }
+  100% { 
+    background-color: #0f1523; 
+    border-color: #1e293b; 
+    box-shadow: none;
+    transform: scale(1);
+  }
+}
+
+.animate-flash {
+  animation: flash-new 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 1000ms;
+}
+</style>
