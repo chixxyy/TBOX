@@ -19,7 +19,6 @@ const initialAssets: Asset[] = [
   { symbol: 'ETHUSDT', name: 'Ethereum', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
   { symbol: 'SOLUSDT', name: 'Solana', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
   { symbol: 'DOGEUSDT', name: 'Dogecoin', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
-  { symbol: 'PAXGUSDT', name: 'Gold (PAXG)', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
   { symbol: 'USDCUSDT', name: 'USDC/USDT', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
   // Stock
   { symbol: 'NVDA', name: 'Nvidia', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
@@ -117,7 +116,6 @@ onMounted(() => {
           // 將數字轉為字串傳入你的 formatPrice 函數
           asset.price = formatPrice(price.toString()) 
           
-          // 備註：Finnhub 即時報價不包含 24H 漲跌幅，所以這裡先不更新 asset.change 和 asset.up
           // 若畫面初始有給定預設值（如 '...'），它會保持原樣
         }
       })
