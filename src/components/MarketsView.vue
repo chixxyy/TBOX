@@ -151,7 +151,7 @@ onUnmounted(() => {
           </svg>
         </div>
         <div>
-          <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">總市場</div>
+          <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">今日訊號</div>
           <div class="text-white font-bold text-lg leading-none">{{ allEvents.length }}</div>
         </div>
       </div>
