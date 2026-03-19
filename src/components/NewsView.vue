@@ -4,7 +4,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 const newsItems = ref<any[]>([])
 const isLoading = ref(true)
 const totalFetched = ref(0)
-// 初始化 24 小時制時間
 const lastUpdateTime = ref(new Date().toLocaleTimeString('zh-TW', { hour12: false }))
 let refreshInterval: ReturnType<typeof setInterval>
 

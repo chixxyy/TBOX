@@ -10,15 +10,21 @@ const chart = shallowRef<any>(null)
 const series = shallowRef<any>(null)
 const volumeSeries = shallowRef<any>(null)
 const isFullscreen = ref(false)
-const intervals = ['1d', '1w', '1M']
+const intervals = ['1s', '1m', '1h', '1d', '1w', '1M']
 
 const intervalColors: Record<string, string> = {
+  '1s': '#eab308',
+  '1m': '#a855f7',
+  '1h': '#ec4899',
   '1d': '#38bdf8',
   '1w': '#10b981',
   '1M': '#f97316',
 }
 
 const displayIntervals: Record<string, string> = {
+  '1s': '1s',
+  '1m': '1m',
+  '1h': '1H',
   '1d': '1D',
   '1w': '1W',
   '1M': '1M'
@@ -57,50 +63,106 @@ function createChartInContainer(container: HTMLElement) {
 const loadHistoricalData = async (targetChart = chart.value) => {
   if (!targetChart) return
   const symbol = activeSymbol.value
+  const isCrypto = symbol.endsWith('USDT')
   const interval = activeInterval.value
-  const limit = 500
-  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
-  const { data } = await useFetch(url).json()
   
-  if (data.value && Array.isArray(data.value)) {
-    const isDoge = symbol === 'DOGEUSDT'
-    const priceData = data.value.map((k: any) => ({
-      time: k[0] / 1000,
-      value: parseFloat(k[4]),
-    }))
-    const volData = data.value.map((k: any) => ({
-      time: k[0] / 1000,
-      value: parseFloat(k[5]),
-      color: parseFloat(k[4]) >= parseFloat(k[1])
-        ? 'rgba(16, 185, 129, 0.5)'
-        : 'rgba(239, 68, 68, 0.4)',
-    }))
+  let priceData: any[] = []
+  let volData: any[] = []
 
-    // Update/recreate series on the target chart
-    if (series.value) {
-      series.value.applyOptions({
-        color: intervalColors[activeInterval.value],
-        priceFormat: {
-          type: 'price',
-          precision: isDoge ? 4 : 2,
-          minMove: isDoge ? 0.0001 : 0.01,
-        }
-      })
-      series.value.setData(priceData)
+  if (isCrypto) {
+    const limit = 1000
+    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
+    const { data } = await useFetch(url).json()
+    
+    if (data.value && Array.isArray(data.value)) {
+      priceData = data.value.map((k: any) => ({
+        time: k[0] / 1000,
+        value: parseFloat(k[4]),
+      }))
+      volData = data.value.map((k: any) => ({
+        time: k[0] / 1000,
+        value: parseFloat(k[5]),
+        color: parseFloat(k[4]) >= parseFloat(k[1])
+          ? 'rgba(16, 185, 129, 0.5)'
+          : 'rgba(239, 68, 68, 0.4)',
+      }))
     }
-    if (volumeSeries.value) {
-      volumeSeries.value.setData(volData)
+  } else {
+    // Stock fetched via Yahoo Finance proxy
+    let yInterval = '1d'
+    let yRange = '2y'
+    
+    if (interval === '1s' || interval === '1m') {
+      yInterval = '1m'
+      yRange = '5d' // Max 7d allowed for 1m
+    } else if (interval === '1h') {
+      yInterval = '60m'
+      yRange = '1mo'
+    } else if (interval === '1d') {
+      yInterval = '1d'
+      yRange = '2y'
+    } else if (interval === '1w') {
+      yInterval = '1wk'
+      yRange = '5y'
+    } else if (interval === '1M') {
+      yInterval = '1mo'
+      yRange = '10y'
     }
+    
+    const url = `/yfinance/v8/finance/chart/${symbol}?interval=${yInterval}&range=${yRange}`
+    const { data } = await useFetch(url).json()
 
-    targetChart.timeScale().fitContent()
+    const result = data.value?.chart?.result?.[0]
+    if (result && result.timestamp && result.indicators?.quote?.[0]) {
+      const tArray = result.timestamp
+      const q = result.indicators.quote[0]
+      for (let i = 0; i < tArray.length; i++) {
+        if (q.close[i] === null || q.open[i] === null) continue
+        // Yahoo Finance returns time in seconds
+        priceData.push({ time: tArray[i], value: q.close[i] })
+        volData.push({
+          time: tArray[i],
+          value: q.volume[i] || 0,
+          color: q.close[i] >= q.open[i] ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.4)',
+        })
+      }
+    }
   }
+
+  // Determine scaling dynamically
+  const isDoge = symbol === 'DOGEUSDT'
+  const isStable = symbol.includes('USDC') || symbol.includes('FDUSD')
+  const precision = isDoge || isStable ? 4 : 2
+  const minMove = isDoge || isStable ? 0.0001 : 0.01
+
+  // Update/recreate series on the target chart
+  if (series.value && priceData.length > 0) {
+    series.value.applyOptions({
+      color: intervalColors[activeInterval.value],
+      priceFormat: {
+        type: 'price',
+        precision,
+        minMove,
+      }
+    })
+    series.value.setData(priceData)
+  }
+  if (volumeSeries.value && volData.length > 0) {
+    volumeSeries.value.setData(volData)
+  }
+
+  targetChart.timeScale().fitContent()
 }
 
 const connectWebSocket = () => {
   if (ws) ws.close()
-  const symbol = activeSymbol.value.toLowerCase()
+  const symbol = activeSymbol.value
+  const isCrypto = symbol.endsWith('USDT')
+  
+  if (!isCrypto) return // No Binance WS for stocks
+  
   const interval = activeInterval.value
-  ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`)
+  ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`)
   ws.onmessage = (event) => {
     const message = JSON.parse(event.data)
     if (message.k) {
@@ -154,6 +216,9 @@ function initChart(container: HTMLElement) {
   
   chart.value = createChartInContainer(container)
   const isDoge = activeSymbol.value === 'DOGEUSDT'
+  const isStable = activeSymbol.value.includes('USDC') || activeSymbol.value.includes('FDUSD')
+  const precision = isDoge || isStable ? 4 : 2
+  const minMove = isDoge || isStable ? 0.0001 : 0.01
   
   series.value = chart.value.addSeries(LineSeries, {
     color: intervalColors[activeInterval.value],
@@ -161,8 +226,8 @@ function initChart(container: HTMLElement) {
     crosshairMarkerRadius: 5,
     priceFormat: {
       type: 'price',
-      precision: isDoge ? 4 : 2,
-      minMove: isDoge ? 0.0001 : 0.01,
+      precision,
+      minMove,
     },
     priceScaleId: 'right',
   })
@@ -209,7 +274,7 @@ onUnmounted(() => {
     <div class="h-12 border-b border-slate-800/80 flex items-center justify-between px-4 z-10 bg-[#05080f]/80 backdrop-blur-sm shrink-0">
       <div class="flex items-center space-x-4">
         <h2 class="text-white font-bold text-lg" :style="{ color: intervalColors[activeInterval], textShadow: `0 0 8px ${intervalColors[activeInterval]}80` }">{{ formattedActiveSymbol }}</h2>
-        <div class="text-[10px] text-green-400 font-mono tracking-wider font-bold">LIVE <span class="text-slate-500 ml-1">Binance Stream</span></div>
+        <div class="text-[10px] text-green-400 font-mono tracking-wider font-bold">LIVE <span class="text-slate-500 ml-1">{{ activeSymbol.endsWith('USDT') ? 'Binance Stream' : 'Yahoo Finance' }}</span></div>
       </div>
       
       <div class="flex items-center space-x-2">
@@ -242,7 +307,7 @@ onUnmounted(() => {
         <div class="h-12 border-b border-slate-800 flex items-center justify-between px-4 shrink-0">
           <div class="flex items-center space-x-4">
             <h2 class="text-white font-bold text-lg" :style="{ color: intervalColors[activeInterval] }">{{ formattedActiveSymbol }}</h2>
-            <div class="text-[10px] text-green-400 font-mono tracking-wider font-bold">LIVE <span class="text-slate-500 ml-1">Binance Stream</span></div>
+            <div class="text-[10px] text-green-400 font-mono tracking-wider font-bold">LIVE <span class="text-slate-500 ml-1">{{ activeSymbol.endsWith('USDT') ? 'Binance Stream' : 'Yahoo Finance' }}</span></div>
           </div>
           <div class="flex items-center space-x-2">
             <div class="flex bg-[#111827] rounded border border-slate-800 p-0.5">

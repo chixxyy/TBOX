@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { activeSymbol } from '../store'
 import NewsFeed from './NewsFeed.vue'
 
 const currentView = ref('ORDERBOOK')
+const isCrypto = computed(() => activeSymbol.value.toLowerCase().endsWith('usdt'))
 
 // Live orderbook data state
 interface Order {
@@ -48,6 +49,8 @@ const connectOrderbook = () => {
   if (ws) ws.close()
   
   const symbol = activeSymbol.value.toLowerCase()
+  if (!isCrypto.value) return // No orderbook for stocks
+
   ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@depth20@100ms`)
   
   ws.onmessage = (event) => {
@@ -116,7 +119,16 @@ onUnmounted(() => {
     </div>
 
     <!-- Order Book Section -->
-    <div v-show="currentView === 'ORDERBOOK'" class="flex-1 flex flex-col min-h-0 p-2">
+    <div v-show="currentView === 'ORDERBOOK'" class="flex-1 flex flex-col min-h-0 p-2 relative">
+      
+      <!-- Unavailable Overlay for Stocks -->
+      <div v-if="!isCrypto" class="absolute inset-0 z-50 bg-[#070b14]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center border-t border-slate-800">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="text-slate-400 text-xs font-bold font-mono tracking-widest">ORDER BOOK UNAVAILABLE</span>
+        <span class="text-slate-500 text-[10px] mt-2 leading-relaxed">Level 2 market depth data is restricted for traditional equities.</span>
+      </div>
       <div class="flex items-center justify-between mb-2 px-2">
         <h3 class="text-xs font-bold text-slate-300">訂單簿</h3>
         <div class="flex space-x-1">

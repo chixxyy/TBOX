@@ -16,6 +16,15 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/polymarket/, ''),
         secure: true,
       },
+      '/yfinance': {
+        target: 'https://query1.finance.yahoo.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/yfinance/, ''),
+        headers: {
+          'User-Agent': 'Mozilla/5.0'
+        },
+        secure: true,
+      },
     },
   },
 })

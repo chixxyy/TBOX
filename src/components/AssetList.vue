@@ -10,6 +10,7 @@ interface Asset {
   up: boolean
   rawPrice: number
   type: 'crypto' | 'stock'
+  prevClose?: number
 }
 
 // Initial state with top pairs
@@ -23,7 +24,11 @@ const initialAssets: Asset[] = [
   // Stock
   { symbol: 'NVDA', name: 'Nvidia', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
   { symbol: 'AMD', name: 'AMD', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'CRCL', name: 'Circle', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' }
+  { symbol: 'CRCL', name: 'Circle', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'AMZN', name: 'Amazon', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'TSLA', name: 'Tesla', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'ORCL', name: 'Oracle', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'PLTR', name: 'Palantir', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' }
 ]
 const assets = ref<Asset[]>(initialAssets)
 
@@ -59,7 +64,31 @@ const formatPrice = (priceStr: string) => {
   return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-onMounted(() => {
+onMounted(async () => {
+  const finnhubToken = import.meta.env.VITE_FINNHUB_TOKEN as string || 'd5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag'
+  
+  // Fetch initial stock prices from Finnhub directly
+  try {
+    const stockAssets = assets.value.filter(a => a.type === 'stock')
+    await Promise.all(stockAssets.map(async (asset) => {
+      try {
+        const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${asset.symbol}&token=${finnhubToken}`)
+        const quote = await res.json()
+        if (quote && quote.c) {
+          asset.rawPrice = quote.c
+          asset.price = formatPrice(quote.c.toString())
+          asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+          asset.up = quote.dp >= 0
+          asset.prevClose = quote.pc // store previous close to calculate live updates
+        }
+      } catch (err) {
+        console.error(`Failed to fetch initial quote for ${asset.symbol}:`, err)
+      }
+    }))
+  } catch (e) {
+    console.error('Failed to fetch initial stock quotes:', e)
+  }
+
   // 1. 加密貨幣 WebSocket (Binance)
   wsBinance = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr')
   
@@ -91,13 +120,12 @@ onMounted(() => {
   }
 
   // 2. 美股 WebSocket (Finnhub)
-  const finnhubToken = import.meta.env.VITE_FINNHUB_TOKEN as string
   wsFinnhub = new WebSocket(`wss://ws.finnhub.io?token=${finnhubToken}`)
 
   wsFinnhub.onopen = () => {
-    wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': 'NVDA'}))
-    wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': 'AMD'}))
-    wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': 'CRCL'}))
+    ['NVDA', 'AMD', 'CRCL', 'AMZN', 'TSLA', 'ORCL', 'PLTR'].forEach(sym => {
+      wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': sym}))
+    })
   }
 
   wsFinnhub.onmessage = (event) => {
@@ -113,10 +141,13 @@ onMounted(() => {
         const asset = assets.value.find(a => a.symbol === symbol && a.type === 'stock')
         if (asset) {
           asset.rawPrice = price
-          // 將數字轉為字串傳入你的 formatPrice 函數
           asset.price = formatPrice(price.toString()) 
           
-          // 若畫面初始有給定預設值（如 '...'），它會保持原樣
+          if (asset.prevClose) {
+            const changePercent = ((price - asset.prevClose) / asset.prevClose) * 100
+            asset.change = `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%`
+            asset.up = changePercent >= 0
+          }
         }
       })
     }

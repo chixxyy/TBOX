@@ -8,9 +8,7 @@ export const activeInterval = ref('1d')
 export const activeTab = ref('交易')
 
 export const setActiveSymbol = (symbol: string) => {
-  if (SUPPORTED_ASSETS.includes(symbol)) {
-    activeSymbol.value = symbol
-  }
+  activeSymbol.value = symbol
 }
 
 export const setActiveInterval = (interval: string) => {
