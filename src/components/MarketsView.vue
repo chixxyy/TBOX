@@ -15,7 +15,7 @@ const categories: Category[] = [
 
 const allEvents = ref<any[]>([])
 const isLoading = ref(true)
-const activeCategory = ref<Category>(categories[0])
+const activeCategory = ref<Category>(categories[0] as Category)
 const knownEventIds = ref<Set<string>>(new Set())
 
 // 初始化時間即採用 24 小時制
@@ -61,19 +61,19 @@ const events = computed(() => {
 function playNewDataSound() {
   try {
     const ctx = new window.AudioContext()
-    const notes = [880, 1046]
+    const notes = [880, 1320, 1760]
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.connect(gain)
       gain.connect(ctx.destination)
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12)
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12)
-      gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + i * 0.12 + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.25)
-      osc.start(ctx.currentTime + i * 0.12)
-      osc.stop(ctx.currentTime + i * 0.12 + 0.3)
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.13)
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.13)
+      gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + i * 0.13 + 0.03)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.13 + 0.4)
+      osc.start(ctx.currentTime + i * 0.13)
+      osc.stop(ctx.currentTime + i * 0.13 + 0.5)
     })
   } catch (e) {}
 }
@@ -143,76 +143,81 @@ onUnmounted(() => {
 <template>
   <div class="flex flex-col h-full w-full bg-[#05080f] text-slate-300 overflow-hidden">
     
-    <div class="h-20 border-b border-slate-800 flex items-center px-6 space-x-6 shrink-0 bg-[#0a0f1c]">
-      <div class="flex items-center space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-4 py-2.5 min-w-[140px]">
-        <div class="w-9 h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div class="h-16 md:h-20 border-b border-slate-800 flex items-center px-2 md:px-6 space-x-2 md:space-x-4 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
+      <!-- Signal Box 1 -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <div>
-          <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">今日訊號</div>
-          <div class="text-white font-bold text-lg leading-none">{{ allEvents.length }}</div>
+        <div class="min-w-0">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">今日訊號</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ allEvents.length }}</div>
         </div>
       </div>
 
-      <div class="flex items-center space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-4 py-2.5 min-w-[160px]">
-        <div class="w-9 h-9 rounded-full bg-purple-900/30 border border-purple-800/50 flex items-center justify-center text-purple-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <!-- Signal Box 2 -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-purple-900/30 border border-purple-800/50 flex items-center justify-center text-purple-400 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
           </svg>
         </div>
-        <div>
-          <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">{{ activeCategory.label }}訊號</div>
-          <div class="text-white font-bold text-lg leading-none">{{ events.length }}</div>
+        <div class="min-w-0">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ activeCategory.label }}訊號</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ events.length }}</div>
         </div>
       </div>
 
-      <div class="flex items-center space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-4 py-2.5 min-w-[160px]">
-        <div class="w-9 h-9 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center text-green-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <!-- Signal Box 3 -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center text-green-400 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <div>
-          <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">總體量</div>
-          <div class="text-white font-bold text-lg leading-none">{{ totalVolumeFormatted }}</div>
+        <div class="min-w-0">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">總體量</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ totalVolumeFormatted }}</div>
         </div>
       </div>
 
-      <div class="flex items-center space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-4 py-2.5 min-w-[280px] group cursor-default">
-        <div class="w-9 h-9 rounded-full bg-red-900/30 border border-red-800/50 flex items-center justify-center text-red-400">⚡</div>
-        <div>
-          <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">當前焦點</div>
-          <div class="text-white font-bold text-sm leading-snug truncate max-w-[200px] group-hover:text-blue-400 transition-colors">
+      <!-- Signal Box 4 (Current Focus) -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0 cursor-pointer hover:bg-slate-800/50 transition-all group overflow-hidden">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-red-900/30 border border-red-800/50 flex items-center justify-center text-red-400 shrink-0">⚡</div>
+        <div class="min-w-0 flex-1">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">當前焦點</div>
+          <div class="text-white font-bold text-[10px] md:text-sm leading-none truncate group-hover:text-blue-400 transition-colors">
             {{ events[0]?.question || '暫無資料' }}
           </div>
         </div>
       </div>
 
-      <div class="ml-auto flex flex-col items-end">
+      <!-- Update Info -->
+      <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto">
         <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-          <span class="text-green-400 font-bold text-[11px] tracking-wide">POLYMARKET LIVE</span>
+          <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">Polymarket Live</span>
         </div>
-        <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateTime }}</span>
+        <span class="text-[10px] text-slate-500 font-mono italic">最後更新: {{ lastUpdateTime }}</span>
       </div>
     </div>
 
-    <div class="h-12 border-b border-slate-800 flex items-center justify-between px-6 shrink-0 bg-[#0a0f1c]">
+    <div class="min-h-11 md:h-12 border-b border-slate-800 flex items-center justify-between px-4 md:px-6 shrink-0 bg-[#0a0f1c] overflow-x-auto scrollbar-hide">
       <div class="flex space-x-1 h-full items-center">
         <button 
           v-for="cat in categories" 
           :key="cat.tag"
           @click="selectCategory(cat)"
-          class="h-full px-3 border-b-2 transition-colors relative text-[13px] font-medium"
+          class="h-8 md:h-12 px-3 md:px-4 border-b-2 transition-colors relative text-[12px] md:text-[13px] font-medium whitespace-nowrap"
           :class="activeCategory.tag === cat.tag ? 'border-blue-400 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
           {{ cat.label }}
         </button>
       </div>
 
-      <div class="flex items-center space-x-3 text-[10px] text-slate-500 ml-4">
+      <div class="hidden sm:flex items-center space-x-3 text-[10px] text-slate-500 ml-4 shrink-0">
         <span>Probability:</span>
         <div class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span><span>≥70%</span></div>
         <div class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span><span>≥40%</span></div>

@@ -214,36 +214,36 @@ onUnmounted(() => clearInterval(refreshInterval))
 <template>
   <div class="flex flex-col h-full w-full bg-[#05080f] text-slate-300 overflow-hidden font-sans">
     
-    <div class="h-20 border-b border-slate-800 flex items-center px-6 space-x-6 shrink-0 bg-[#0a0f1c]">
-      <div class="flex items-center space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-4 py-2.5 min-w-[150px]">
-        <div class="w-9 h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <div class="min-h-16 md:h-20 border-b border-slate-800 flex items-center px-4 md:px-6 space-x-3 md:space-x-6 shrink-0 bg-[#0a0f1c] overflow-x-auto scrollbar-hide">
+      <div class="flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-3 md:px-4 py-1.5 md:py-2.5 shrink-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </div>
         <div>
-          <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">今日訊號</div>
-          <div class="text-white font-bold text-lg leading-none">{{ totalFetched }}</div>
+          <div class="text-[9px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase">今日訊號</div>
+          <div class="text-white font-bold text-base md:text-lg leading-none">{{ totalFetched }}</div>
         </div>
       </div>
 
-      <div class="flex items-center space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-4 py-2.5 min-w-[150px]">
-        <div class="w-9 h-9 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center text-green-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z" /></svg>
+      <div class="flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-3 md:px-4 py-1.5 md:py-2.5 shrink-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center text-green-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z" /></svg>
         </div>
         <div>
-          <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">載入新聞</div>
-          <div class="text-white font-bold text-lg leading-none">{{ filteredNews.length }}</div>
+          <div class="text-[9px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase">載入新聞</div>
+          <div class="text-white font-bold text-base md:text-lg leading-none">{{ filteredNews.length }}</div>
         </div>
       </div>
 
-      <a :href="filteredNews[0]?.url || '#'" target="_blank" class="flex items-center space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-4 py-2.5 min-w-[280px] cursor-pointer hover:bg-slate-800/50 transition-all group">
-        <div class="w-9 h-9 rounded-full bg-red-900/30 border border-red-800/50 flex items-center justify-center text-red-400 group-hover:bg-red-900/50">⚡</div>
+      <a :href="filteredNews[0]?.url || '#'" target="_blank" class="flex items-center space-x-3 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-3 md:px-4 py-1.5 md:py-2.5 min-w-[200px] md:min-w-[280px] cursor-pointer hover:bg-slate-800/50 transition-all group shrink-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-red-900/30 border border-red-800/50 flex items-center justify-center text-red-400 group-hover:bg-red-900/50">⚡</div>
         <div>
-          <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">最新頭條</div>
-          <div class="text-white font-bold text-sm leading-snug truncate max-w-[200px] group-hover:text-blue-400 transition-colors">{{ filteredNews[0]?.headline || '暫無即時新聞' }}</div>
+          <div class="text-[9px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase">最新頭條</div>
+          <div class="text-white font-bold text-xs md:text-sm leading-snug truncate max-w-[120px] md:max-w-[200px] group-hover:text-blue-400 transition-colors">{{ filteredNews[0]?.headline || '暫無即時新聞' }}</div>
         </div>
       </a>
 
-      <div class="ml-auto flex flex-col items-end">
+      <div class="ml-auto flex flex-col items-end shrink-0 hidden sm:flex">
         <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
           <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">Live News Stream</span>
@@ -254,15 +254,15 @@ onUnmounted(() => clearInterval(refreshInterval))
       </div>
     </div>
 
-    <div class="h-12 border-b border-slate-800 flex items-center justify-between px-6 shrink-0 bg-[#0a0f1c]">
-      <div class="flex space-x-1 h-full items-center">
-        <button v-for="tab in filterTabs" :key="tab.tag" @click="activeFilter = tab" class="h-full px-4 border-b-2 transition-all text-[13px] font-medium" :class="activeFilter.tag === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'">{{ tab.label }}</button>
+    <div class="min-h-12 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-2 md:py-0 shrink-0 bg-[#0a0f1c] space-y-2 md:space-y-0">
+      <div class="flex space-x-1 h-full items-center overflow-x-auto scrollbar-hide">
+        <button v-for="tab in filterTabs" :key="tab.tag" @click="activeFilter = tab" class="h-8 md:h-12 px-3 md:px-4 border-b-2 transition-all text-[12px] md:text-[13px] font-medium whitespace-nowrap" :class="activeFilter.tag === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'">{{ tab.label }}</button>
       </div>
-      <div class="flex items-center space-x-2 ml-auto pr-4 border-r border-slate-800">
-        <button v-for="s in severityFilters" :key="s" @click="toggleSeverity(s)" class="text-[10px] font-bold px-3 py-1 rounded-md border transition-all" :class="activeSeverity.includes(s) ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'border-slate-800 text-slate-600 hover:border-slate-700'">{{ s.toUpperCase() }}</button>
+      <div class="flex items-center space-x-2 md:ml-auto pr-0 md:pr-4 md:border-r border-slate-800 overflow-x-auto scrollbar-hide shrink-0">
+        <button v-for="s in severityFilters" :key="s" @click="toggleSeverity(s)" class="text-[9px] md:text-[10px] font-bold px-2 md:px-3 py-1 rounded-md border transition-all whitespace-nowrap" :class="activeSeverity.includes(s) ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'border-slate-800 text-slate-600 hover:border-slate-700'">{{ s.toUpperCase() }}</button>
       </div>
-      <div class="flex items-center bg-[#05080f] border border-slate-700 rounded-md px-3 py-1.5 w-64 ml-4 focus-within:border-blue-500 transition-all">
-        <input v-model="searchQuery" type="text" placeholder="搜尋全站新聞..." class="bg-transparent outline-none text-xs text-slate-300 w-full" />
+      <div class="flex items-center bg-[#05080f] border border-slate-700 rounded-md px-3 py-1.5 w-full md:w-64 md:ml-4 focus-within:border-blue-500 transition-all shrink-0">
+        <input v-model="searchQuery" type="text" placeholder="搜尋全站新聞..." class="bg-transparent outline-none text-[11px] md:text-xs text-slate-300 w-full" />
       </div>
     </div>
 
@@ -310,6 +310,7 @@ onUnmounted(() => clearInterval(refreshInterval))
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

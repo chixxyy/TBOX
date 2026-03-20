@@ -6,12 +6,20 @@ import ChartArea from './components/ChartArea.vue'
 import RightPanel from './components/RightPanel.vue'
 import MarketsView from './components/MarketsView.vue'
 import NewsView from './components/NewsView.vue'
+import MoversView from './components/MoversView.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { activeTab } from './store'
 
 const rightPanelWidth = ref(320)
 const minRightPanelWidth = 320
 const isDraggingRight = ref(false)
+const windowWidth = ref(window.innerWidth)
+const isMobile = ref(window.innerWidth < 768)
+
+const updateWindowWidth = () => {
+  windowWidth.value = window.innerWidth
+  isMobile.value = window.innerWidth < 768
+}
 
 const startDragRight = () => {
   isDraggingRight.value = true
@@ -41,11 +49,13 @@ const onMouseUp = () => {
 onMounted(() => {
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
+  window.addEventListener('resize', updateWindowWidth)
 })
 
 onUnmounted(() => {
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
+  window.removeEventListener('resize', updateWindowWidth)
 })
 </script>
 
@@ -54,34 +64,38 @@ onUnmounted(() => {
     <TopHeader />
     <TickerBanner />
     
-    <main v-if="activeTab === '交易'" class="flex-1 flex overflow-hidden">
+    <main v-if="activeTab === '交易'" class="flex-1 flex flex-col md:flex-row overflow-hidden">
       <!-- Left Sidebar: Asset List -->
-      <aside class="w-64 border-r border-slate-800 bg-[#0a0f1c] flex flex-col">
+      <aside class="w-full md:w-64 h-[180px] md:h-full border-b md:border-b-0 md:border-r border-slate-800 bg-[#0a0f1c] flex flex-col shrink-0">
         <AssetList />
       </aside>
 
       <!-- Center: Chart Area -->
-      <section class="flex-1 bg-[#05080f] flex flex-col border-r border-slate-800 relative">
+      <section class="flex-1 bg-[#05080f] flex flex-col border-b md:border-b-0 md:border-r border-slate-800 relative min-h-[350px] md:min-h-0">
         <ChartArea />
       </section>
 
       <!-- Right Sidebar: Trading Panel & Order Book -->
-      <aside class="bg-[#0a0f1c] flex flex-col overflow-hidden relative" :style="{ width: rightPanelWidth + 'px' }">
+      <aside class="bg-[#0a0f1c] flex flex-col overflow-hidden relative shrink-0 h-[300px] md:h-full" :style="{ width: isMobile ? '100%' : rightPanelWidth + 'px' }">
         <!-- Resizer handle -->
         <div 
-          class="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50 z-50 transition-colors"
+          class="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50 z-50 transition-colors hidden md:block"
           @mousedown="startDragRight"
         ></div>
         <RightPanel />
       </aside>
+    </main>
+    
+    <main v-else-if="activeTab === '新聞'" class="flex-1 flex overflow-hidden">
+      <NewsView />
     </main>
 
     <main v-else-if="activeTab === '市場'" class="flex-1 flex overflow-hidden">
       <MarketsView />
     </main>
 
-    <main v-else-if="activeTab === '新聞'" class="flex-1 flex overflow-hidden">
-      <NewsView />
+    <main v-else-if="activeTab === '異動'" class="flex-1 flex overflow-hidden bg-[#05080f] overflow-y-auto">
+      <MoversView />
     </main>
   </div>
 </template>

@@ -72,8 +72,8 @@ const resetCache = () => {
 </script>
 
 <template>
-  <div class="h-10 border-b border-slate-800 bg-[#070b14] flex items-center px-4 text-xs">
-    <div class="flex items-center bg-green-900/40 border border-green-800 text-green-400 px-2.5 py-1 rounded-full space-x-1.5 mr-4 shadow-[0_0_8px_rgba(16,185,129,0.3)] z-10 shrink-0">
+  <div class="h-8 md:h-10 border-b border-slate-800 bg-[#070b14] flex items-center px-2 md:px-4 text-[10px] md:text-xs">
+    <div class="flex items-center bg-green-900/40 border border-green-800 text-green-400 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full space-x-1 md:space-x-1.5 mr-2 md:mr-4 shadow-[0_0_8px_rgba(16,185,129,0.3)] z-10 shrink-0">
       <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
       <span class="font-bold tracking-wide">即時</span>
     </div>
@@ -127,17 +127,17 @@ const resetCache = () => {
       </div>
     </div>
 
-    <div class="flex items-center space-x-4 text-slate-500 text-[10px] ml-4 font-mono z-10 shrink-0 bg-[#070b14] pl-2">
-      <div class="text-right">
-        <div class="text-white font-bold text-xs">{{ alerts.length }}</div>
+    <div class="flex items-center space-x-2 md:space-x-4 text-slate-500 text-[9px] md:text-[10px] ml-2 md:ml-4 font-mono z-10 shrink-0 bg-[#070b14] pl-1 md:pl-2">
+      <div class="text-right hidden sm:block">
+        <div class="text-white font-bold text-[10px] md:text-xs">{{ alerts.length }}</div>
         <div class="tracking-widest opacity-60">活躍訊號</div>
       </div>
       <div class="text-right">
-        <div class="text-white font-bold text-xs">剛剛</div>
+        <div class="text-white font-bold text-[10px] md:text-xs">剛剛</div>
         <div class="tracking-widest opacity-60">最後更新</div>
       </div>
-      <button @click="resetCache" class="p-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded text-slate-400 transition-colors cursor-pointer z-20 relative">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <button @click="resetCache" class="p-1 md:p-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded text-slate-400 transition-colors cursor-pointer z-20 relative">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-3.5 md:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
       </button>

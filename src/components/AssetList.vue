@@ -164,34 +164,45 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
-    <div class="p-3 border-b border-slate-800">
-      <div class="relative flex items-center bg-[#111827] border border-slate-700 rounded mb-3 px-2 py-1.5 focus-within:border-blue-500">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <div class="flex flex-col h-full overflow-hidden bg-[#0a0f1c] text-white">
+    <!-- Header Area -->
+    <div class="p-2 border-b border-slate-800 shrink-0">
+      <div class="flex justify-between items-center px-1 py-1 md:py-1.5 mb-2">
+    </div>
+      
+      <!-- Search Box -->
+      <div class="flex items-center space-x-2 bg-[#111827] rounded-lg p-1.5 md:p-2 border border-slate-800 mt-2 md:mt-4 transition-colors focus-within:border-blue-500/50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4 text-slate-500 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        <input v-model="filter" type="text" placeholder="搜尋資產..." class="bg-transparent border-none outline-none text-xs w-full text-slate-300" />
+        <input 
+          v-model="filter" 
+          type="text" 
+          placeholder="搜尋幣種或股票" 
+          class="bg-transparent border-none text-[10px] md:text-xs text-slate-300 focus:outline-none w-full placeholder-slate-600 font-mono"
+        />
       </div>
 
-      <div class="flex space-x-1 decoration-slate-600 bg-slate-900/50 p-1 rounded-md border border-slate-800">
+      <!-- Filters -->
+      <div class="flex space-x-1.5 md:space-x-2 mt-2 md:mt-4 overflow-x-auto scrollbar-hide">
         <button 
           v-for="(f, i) in filters" 
           :key="f"
           @click="activeFilterIndex = i"
-          class="flex-1 text-[10px] py-1 rounded transition-colors font-medium"
-          :class="activeFilterIndex === i ? 'bg-slate-700 text-white shadow' : 'text-slate-500 hover:text-slate-300'"
+          class="px-2 md:px-3 py-0.5 md:py-1 rounded text-[9px] md:text-[10px] font-bold font-mono transition-colors shrink-0"
+          :class="activeFilterIndex === i ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-[#111827] text-slate-500 border border-slate-800 hover:text-slate-300 hover:bg-slate-800'"
         >
           {{ f }}
         </button>
       </div>
     </div>
 
-    <!-- Headers -->
-    <div class="flex items-center justify-between px-4 py-2 text-[10px] font-bold text-slate-500 border-b border-slate-800/50 bg-[#070b14]">
+    <!-- List Headers -->
+    <div class="flex items-center justify-between px-2 md:px-4 py-1 md:py-2 text-[9px] md:text-[10px] font-bold text-slate-500 border-b border-slate-800/50 bg-[#070b14]">
       <span>資產</span>
-      <div class="flex space-x-4 text-right">
-        <span class="w-16">價格</span>
-        <span class="w-12">24H</span>
+      <div class="flex space-x-2 md:space-x-4 text-right">
+        <span class="w-14 md:w-16">價格</span>
+        <span class="w-10 md:w-12">24H</span>
       </div>
     </div>
 
@@ -201,20 +212,20 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
         v-for="asset in filteredAssets" 
         :key="asset.symbol"
         @click="setActiveSymbol(asset.symbol)"
-        class="flex items-center justify-between px-4 py-3 border-b border-slate-800/30 cursor-pointer group transition-colors"
+        class="flex items-center justify-between px-2 md:px-4 py-2 md:py-3 border-b border-slate-800/30 cursor-pointer group transition-colors"
         :class="activeSymbol === asset.symbol ? 'bg-blue-900/20 border-l-2 border-l-blue-500' : 'hover:bg-slate-800/40'"
       >
         <div class="flex flex-col">
-          <span class="text-xs font-bold group-hover:text-blue-400 group-hover:-translate-y-0.5 transition-all"
+          <span class="text-[10px] md:text-xs font-bold group-hover:text-blue-400 group-hover:-translate-y-0.5 transition-all"
                 :class="activeSymbol === asset.symbol ? 'text-blue-400' : 'text-slate-200'">{{ formatSymbolDisplay(asset.symbol) }}</span>
-          <span class="text-[10px] text-slate-500">{{ asset.name }}</span>
+          <span class="text-[9px] md:text-[10px] text-slate-500">{{ asset.name }}</span>
         </div>
         
-        <div class="flex space-x-4 text-right font-mono">
-          <span class="text-xs w-16 text-slate-300 group-hover:text-white transition-colors duration-300" 
+        <div class="flex space-x-2 md:space-x-4 text-right font-mono">
+          <span class="text-[10px] md:text-xs w-14 md:w-16 text-slate-300 group-hover:text-white transition-colors duration-300" 
             :class="asset.up ? 'group-hover:text-green-400' : 'group-hover:text-red-400'">{{ asset.price }}</span>
           <span 
-            class="text-[10px] w-12 py-0.5 rounded font-bold"
+            class="text-[9px] md:text-[10px] w-10 md:w-12 py-0.5 rounded font-bold"
             :class="asset.up ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'"
           >
             {{ asset.change }}

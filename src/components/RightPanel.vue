@@ -97,17 +97,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-[#070b14]">
-    
-    <!-- View Toggle Tabs -->
-    <div class="flex text-[10px] font-bold font-mono tracking-widest border-b border-slate-800 bg-[#0a0f1c]">
+  <div class="flex flex-col h-full overflow-hidden text-xs">
+    <!-- View Switcher -->
+    <div class="flex h-10 md:h-12 border-b border-slate-800 bg-[#070b14] shrink-0">
       <button 
-        class="flex-1 py-2 text-center transition-colors border-b-2"
+        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2"
         :class="currentView === 'FEED' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
         @click="currentView = 'FEED'"
-      >NEWS FEED</button>
+      >FEED NEWS</button>
       <button 
-        class="flex-1 py-2 text-center transition-colors border-b-2"
+        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2"
         :class="currentView === 'ORDERBOOK' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
         @click="currentView = 'ORDERBOOK'"
       >ORDER BOOK</button>
@@ -119,25 +118,25 @@ onUnmounted(() => {
     </div>
 
     <!-- Order Book Section -->
-    <div v-show="currentView === 'ORDERBOOK'" class="flex-1 flex flex-col min-h-0 p-2 relative">
+    <div v-show="currentView === 'ORDERBOOK'" class="flex-1 flex flex-col min-h-0 p-1 md:p-2 relative">
       
       <!-- Unavailable Overlay for Stocks -->
-      <div v-if="!isCrypto" class="absolute inset-0 z-50 bg-[#070b14]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center border-t border-slate-800">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div v-if="!isCrypto" class="absolute inset-0 z-50 bg-[#070b14]/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 md:p-6 text-center border-t border-slate-800">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8 text-slate-600 mb-2 md:mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span class="text-slate-400 text-xs font-bold font-mono tracking-widest">ORDER BOOK UNAVAILABLE</span>
-        <span class="text-slate-500 text-[10px] mt-2 leading-relaxed">Level 2 market depth data is restricted for traditional equities.</span>
+        <span class="text-slate-400 text-[10px] md:text-xs font-bold font-mono tracking-widest leading-tight">ORDER BOOK UNAVAILABLE</span>
+        <span class="text-slate-500 text-[9px] md:text-[10px] mt-1 md:mt-2 leading-relaxed">Level 2 market depth data is restricted for traditional equities.</span>
       </div>
-      <div class="flex items-center justify-between mb-2 px-2">
-        <h3 class="text-xs font-bold text-slate-300">訂單簿</h3>
+      <div class="flex items-center justify-between mb-1 md:mb-2 px-1 md:px-2">
+        <h3 class="text-[10px] md:text-xs font-bold text-slate-300">訂單簿</h3>
         <div class="flex space-x-1">
           <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></button>
           <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></button>
         </div>
       </div>
 
-      <div class="flex text-[10px] text-slate-500 font-bold px-2 mb-1">
+      <div class="flex text-[9px] md:text-[10px] text-slate-500 font-bold px-1 md:px-2 mb-1">
         <span class="flex-1">價格(USDT)</span>
         <span class="flex-1 text-right">數量(BTC)</span>
         <span class="flex-1 text-right">總計</span>
@@ -145,7 +144,7 @@ onUnmounted(() => {
 
       <!-- Asks (Sells) -->
       <div class="flex flex-col flex-1 overflow-hidden">
-        <div v-for="(ask, i) in asks" :key="'ask'+i" class="flex text-[10px] font-mono px-2 py-0.5 relative group cursor-pointer hover:bg-slate-800/30">
+        <div v-for="(ask, i) in asks" :key="'ask'+i" class="flex text-[9px] md:text-[10px] font-mono px-1 md:px-2 py-0.5 relative group cursor-pointer hover:bg-slate-800/30">
           <div class="absolute inset-y-0 right-0 bg-red-900/20 z-0 transition-all" :style="{ width: `${ask.percentage}%` }"></div>
           <span class="flex-1 text-red-400 z-10">{{ ask.price }}</span>
           <span class="flex-1 text-right text-slate-300 z-10">{{ ask.amount }}</span>
@@ -154,19 +153,19 @@ onUnmounted(() => {
       </div>
 
       <!-- Current Price Spread -->
-      <div class="flex items-center justify-between py-2 px-2 border-y border-slate-800 my-1 bg-[#0a0f1c]">
-        <span class="text-sm font-bold flex items-center transition-colors duration-300"
+      <div class="flex items-center justify-between py-1.5 md:py-2 px-1 md:px-2 border-y border-slate-800 my-1 bg-[#0a0f1c]">
+        <span class="text-xs md:text-sm font-bold flex items-center transition-colors duration-300"
               :class="currentDir === 'up' ? 'text-green-400' : 'text-red-400'">
           {{ currentPriceStr }} 
-          <svg v-if="currentDir==='up'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+          <svg v-if="currentDir==='up'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4 ml-1 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
         </span>
-        <span class="text-slate-400 text-xs text-decoration-underline underline-offset-2">{{ currentPriceStr }}</span>
+        <span class="text-slate-400 text-[9px] md:text-xs text-decoration-underline underline-offset-2">{{ currentPriceStr }}</span>
       </div>
 
       <!-- Bids (Buys) -->
       <div class="flex flex-col flex-1 overflow-hidden">
-        <div v-for="(bid, i) in bids" :key="'bid'+i" class="flex text-[10px] font-mono px-2 py-0.5 relative group cursor-pointer hover:bg-slate-800/30">
+        <div v-for="(bid, i) in bids" :key="'bid'+i" class="flex text-[9px] md:text-[10px] font-mono px-1 md:px-2 py-0.5 relative group cursor-pointer hover:bg-slate-800/30">
           <div class="absolute inset-y-0 right-0 bg-green-900/20 z-0 transition-all" :style="{ width: `${bid.percentage}%` }"></div>
           <span class="flex-1 text-green-400 z-10">{{ bid.price }}</span>
           <span class="flex-1 text-right text-slate-300 z-10">{{ bid.amount }}</span>

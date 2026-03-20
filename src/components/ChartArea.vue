@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, shallowRef, watch } from 'vue'
+import { ref, onMounted, onUnmounted, shallowRef, watch, computed } from 'vue'
 import { createChart, ColorType, LineSeries, HistogramSeries } from 'lightweight-charts'
 import { activeSymbol, activeInterval, setActiveInterval, formattedActiveSymbol } from '../store'
 import { useFetch } from '@vueuse/core'
@@ -11,6 +11,20 @@ const series = shallowRef<any>(null)
 const volumeSeries = shallowRef<any>(null)
 const isFullscreen = ref(false)
 const intervals = ['1s', '1m', '1h', '1d', '1w', '1M']
+const filteredIntervals = computed(() => {
+  const isCrypto = activeSymbol.value.endsWith('USDT')
+  if (isCrypto) return intervals
+  // Hide 1s and 1m for stocks
+  return intervals.filter(i => i !== '1s' && i !== '1m')
+})
+
+// Reset interval if it becomes unavailable for the selected asset
+watch(activeSymbol, (newSymbol) => {
+  const isCrypto = newSymbol.endsWith('USDT')
+  if (!isCrypto && (activeInterval.value === '1s' || activeInterval.value === '1m')) {
+    setActiveInterval('1d')
+  }
+})
 
 const intervalColors: Record<string, string> = {
   '1s': '#eab308',
@@ -269,26 +283,39 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex-1 flex flex-col relative bg-[#03050a] overflow-hidden">
-    <!-- Chart Header -->
-    <div class="h-12 border-b border-slate-800/80 flex items-center justify-between px-4 z-10 bg-[#05080f]/80 backdrop-blur-sm shrink-0">
-      <div class="flex items-center space-x-4">
-        <h2 class="text-white font-bold text-lg" :style="{ color: intervalColors[activeInterval], textShadow: `0 0 8px ${intervalColors[activeInterval]}80` }">{{ formattedActiveSymbol }}</h2>
-        <div class="text-[10px] text-green-400 font-mono tracking-wider font-bold">LIVE <span class="text-slate-500 ml-1">{{ activeSymbol.endsWith('USDT') ? 'Binance Stream' : 'Yahoo Finance' }}</span></div>
+  <div class="flex flex-col h-full w-full relative group">
+    
+    <!-- Top Bar -->
+    <div class="h-10 md:h-12 border-b border-slate-800/80 flex items-center justify-between px-2 md:px-4 z-10 bg-[#05080f]/80 backdrop-blur-sm shrink-0">
+      <div class="flex items-center space-x-2 md:space-x-3">
+        <h2 class="text-white font-bold text-base md:text-lg flex items-center tracking-wide font-mono">
+          <span class="mr-2" :style="{ color: intervalColors[activeInterval], textShadow: `0 0 8px ${intervalColors[activeInterval]}80` }">{{ formattedActiveSymbol }}</span>
+          <!-- Data Source Badge -->
+          <span 
+            class="text-[8px] md:text-[9px] px-1.5 py-0.5 rounded border tracking-wider opacity-80"
+            :class="activeSymbol.endsWith('USDT') ? 'bg-yellow-900/30 text-yellow-500 border-yellow-800' : 'bg-purple-900/30 text-purple-400 border-purple-800'"
+          >
+            {{ activeSymbol.endsWith('USDT') ? 'BINANCE' : 'YAHOO' }}
+          </span>
+        </h2>
       </div>
-      
-      <div class="flex items-center space-x-2">
-        <div class="flex bg-[#111827] rounded border border-slate-800 p-0.5">
-          <button v-for="t in intervals" :key="t" 
+
+      <div class="flex items-center space-x-2 md:space-x-4">
+        <!-- Interval Selector -->
+        <div class="flex items-center space-x-0.5 md:space-x-1 bg-[#0a0f1c] rounded p-0.5 md:p-1 border border-slate-800/50">
+          <button 
+            v-for="t in filteredIntervals" 
+            :key="t"
+            class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 md:py-1 rounded transition-colors uppercase font-mono"
+            :class="t === activeInterval ? 'bg-slate-700 text-white shadow-[0_0_5px_rgba(255,255,255,0.1)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/60'"
             @click="setActiveInterval(t)"
-            class="text-[10px] font-bold px-2 py-1 rounded transition-colors"
-            :class="t === activeInterval ? 'bg-slate-700 text-white shadow-[0_0_5px_rgba(255,255,255,0.1)]' : 'text-slate-500 hover:text-slate-300'">
+          >
             {{ displayIntervals[t] }}
           </button>
         </div>
-        <!-- Expand Button -->
-        <button @click="toggleFullscreen" class="p-1.5 text-slate-400 hover:text-white border border-slate-700 rounded bg-[#111827] transition-colors hover:border-blue-500/50">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+
+        <button @click="toggleFullscreen" class="p-1 md:p-1.5 hover:bg-slate-800 rounded text-slate-500 transition-colors hidden sm:block">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
           </svg>
         </button>
@@ -311,7 +338,7 @@ onUnmounted(() => {
           </div>
           <div class="flex items-center space-x-2">
             <div class="flex bg-[#111827] rounded border border-slate-800 p-0.5">
-              <button v-for="t in intervals" :key="t"
+              <button v-for="t in filteredIntervals" :key="t"
                 @click="setActiveInterval(t)"
                 class="text-[10px] font-bold px-2 py-1 rounded transition-colors"
                 :class="t === activeInterval ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'">
