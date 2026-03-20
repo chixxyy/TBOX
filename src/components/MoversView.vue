@@ -3,7 +3,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Sparkline from './Sparkline.vue'
 
 // ---------- Inline Translation (mymemory API) ----------
-const translationCache = new Map<number, string>()
+interface CardTranslation {
+  title: string
+  news: string
+}
+const translationCache = new Map<number, CardTranslation>()
 const translatingIds = ref<Set<number>>(new Set())
 const translatedIds = ref<Set<number>>(new Set())
 
@@ -28,8 +32,12 @@ async function toggleTranslateMover(item: Mover) {
   }
   translatingIds.value = new Set([...translatingIds.value, item.id])
   try {
-    const translated = await translateText(item.title)
-    translationCache.set(item.id, translated)
+    // Translate both title and news in parallel
+    const [tTitle, tNews] = await Promise.all([
+      translateText(item.title),
+      item.news ? translateText(item.news) : Promise.resolve('')
+    ])
+    translationCache.set(item.id, { title: tTitle, news: tNews })
     translatedIds.value = new Set([...translatedIds.value, item.id])
   } finally {
     translatingIds.value.delete(item.id)
@@ -38,10 +46,50 @@ async function toggleTranslateMover(item: Mover) {
 }
 
 function getDisplayTitle(item: Mover): string {
-  if (translatedIds.value.has(item.id) && translationCache.has(item.id)) {
-    return translationCache.get(item.id)!
+  const trans = translationCache.get(item.id)
+  if (translatedIds.value.has(item.id) && trans) {
+    return trans.title
   }
   return item.title
+}
+
+function getDisplayNews(item: Mover): string {
+  const trans = translationCache.get(item.id)
+  if (translatedIds.value.has(item.id) && trans) {
+    return trans.news
+  }
+  return item.news
+}
+
+const UI_LABELS = {
+  en: {
+    detected: 'Detected',
+    peak: 'Peak',
+    now: 'Now',
+    change: 'Change',
+    volume: 'Volume',
+    yes: 'YES moved',
+    no: 'NO moved',
+    newsPrefix: '*',
+    durationPrefix: 'Market movement started ',
+    durationSuffix: ' after detection'
+  },
+  zh: {
+    detected: '偵測到時',
+    peak: '峰值',
+    now: '目前',
+    change: '變動幅度',
+    volume: '成交量',
+    yes: '【激增】信號觸發',
+    no: '【盤整】信號觸發',
+    newsPrefix: '𝕏 新聞: ',
+    durationPrefix: '偵測到後約於 ',
+    durationSuffix: ' 開始異動'
+  }
+}
+
+function getLabel(key: keyof typeof UI_LABELS.en, isTranslated: boolean): string {
+  return isTranslated ? UI_LABELS.zh[key] : UI_LABELS.en[key]
 }
 
 interface Mover {
@@ -453,7 +501,7 @@ onUnmounted(() => {
 
             <div class="relative z-10">
               <div class="text-[10px] md:text-xs font-bold mb-3 md:mb-4 tracking-wider" :class="item.isUp ? 'text-green-500' : 'text-red-500'">
-                {{ item.isUp ? 'YES moved' : 'NO moved' }}
+                {{ getLabel(item.isUp ? 'yes' : 'no', translatedIds.has(item.id)) }}
               </div>
               
               <div class="flex flex-row items-center justify-between">
@@ -461,26 +509,26 @@ onUnmounted(() => {
                 <div class="flex space-x-4 md:space-x-12 shrink-0">
                   <!-- Detected -->
                   <div class="flex flex-col">
-                    <span class="text-slate-600 text-[9px] md:text-[10px] mb-1 font-bold">Detected</span>
+                    <span class="text-slate-600 text-[9px] md:text-[10px] mb-1 font-bold">{{ getLabel('detected', translatedIds.has(item.id)) }}</span>
                     <span class="text-white text-base md:text-xl font-black">{{ item.detectedPrice }}¢</span>
                     <span class="text-slate-600 text-[9px] md:text-[10px] mt-1">{{ item.detectedTimeStr }}</span>
                   </div>
                   <!-- Peak -->
                   <div class="flex flex-col">
-                    <span class="text-slate-600 text-[9px] md:text-[10px] mb-1 font-bold">→ Peak</span>
+                    <span class="text-slate-600 text-[9px] md:text-[10px] mb-1 font-bold">→ {{ getLabel('peak', translatedIds.has(item.id)) }}</span>
                     <span class="text-green-400 text-base md:text-xl font-black">{{ item.peakPrice }}¢</span>
                     <span class="text-slate-600 text-[9px] md:text-[10px] mt-1 hidden sm:block">{{ item.peakTimeStr }}</span>
                   </div>
                   <!-- Now -->
                   <div class="flex flex-col">
-                    <span class="text-slate-600 text-[9px] md:text-[10px] mb-1 font-bold">→ Now</span>
+                    <span class="text-slate-600 text-[9px] md:text-[10px] mb-1 font-bold">→ {{ getLabel('now', translatedIds.has(item.id)) }}</span>
                     <span class="text-slate-200 text-base md:text-xl font-black">{{ item.currentPrice }}¢</span>
                   </div>
                 </div>
 
                 <!-- Change (Huge text on far right, overlapping sparkline) -->
                 <div class="flex flex-col text-right justify-center pr-1 md:pr-2">
-                  <span class="text-slate-500 text-[9px] md:text-[10px] mb-1 font-bold tracking-widest uppercase text-shadow-sm">Change</span>
+                  <span class="text-slate-500 text-[9px] md:text-[10px] mb-1 font-bold tracking-widest uppercase text-shadow-sm">{{ getLabel('change', translatedIds.has(item.id)) }}</span>
                   <span class="text-xl md:text-3xl font-black tracking-tight" style="text-shadow: 0 4px 12px rgba(0,0,0,0.8);" :class="item.isUp ? 'text-green-400' : 'text-red-400'">
                     {{ item.isUp ? '+' : '-' }}{{ item.changePercent.toFixed(2) }}%
                   </span>
@@ -493,7 +541,7 @@ onUnmounted(() => {
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Market movement started <span class="text-yellow-600 font-bold mx-1">{{ item.detectionDurationStr }}</span> after detection
+              {{ getLabel('durationPrefix', translatedIds.has(item.id)) }} <span class="text-yellow-600 font-bold mx-1">{{ item.detectionDurationStr }}</span> {{ getLabel('durationSuffix', translatedIds.has(item.id)) }}
             </div>
           </div>
 
@@ -503,13 +551,13 @@ onUnmounted(() => {
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              Volume: <span class="text-white font-bold ml-1">{{ item.volumeStr }}</span>
+              {{ getLabel('volume', translatedIds.has(item.id)) }}: <span class="text-white font-bold ml-1">{{ item.volumeStr }}</span>
             </div>
 
             <div v-if="item.news" class="flex items-center justify-between text-slate-500 pt-2 border-t border-slate-800/50">
               <div class="flex items-center truncate pr-4">
                 <span class="mr-2 text-lg">𝕏</span>
-                <span class="truncate uppercase">*{{ item.news }}</span>
+                <span class="truncate uppercase">{{ getLabel('newsPrefix', translatedIds.has(item.id)) + getDisplayNews(item) }}</span>
               </div>
               <div class="flex items-center shrink-0">
                 <span>{{ item.newsTimeStr }}</span>

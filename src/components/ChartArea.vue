@@ -359,3 +359,10 @@ onUnmounted(() => {
   </Teleport>
 </template>
 
+<style scoped>
+/* 移除圖表左下或右下的 TradingView 圖標與連結 */
+:deep(a[href*="tradingview.com"]) {
+  display: none !important;
+}
+</style>
+
