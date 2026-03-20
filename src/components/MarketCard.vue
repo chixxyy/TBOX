@@ -29,7 +29,7 @@ const outcomes = computed(() => {
       }
     })
     
-    if (mappedOutcomes.length === 2 && mappedOutcomes[0].label === 'Yes' && mappedOutcomes[1].label === 'No') {
+    if (mappedOutcomes.length === 2 && mappedOutcomes[0]?.label === 'Yes' && mappedOutcomes[1]?.label === 'No') {
        // Keep order
     } else {
        mappedOutcomes.sort((a: any, b: any) => b.probability - a.probability)
@@ -95,12 +95,12 @@ const formattedDate = computed(() => {
 
     <div class="grid grid-cols-2 gap-3 mb-4" v-if="outcomes.length === 2">
       <button class="bg-green-950/30 border border-green-900/50 hover:bg-green-900/50 text-green-500 rounded font-bold text-xs py-2 flex items-center justify-center space-x-1 transition-colors">
-        <span>{{ outcomes[0].label }}</span>
-        <span class="opacity-80 font-mono">{{ outcomes[0].probability.toFixed(0) }}¢</span>
+        <span>{{ outcomes[0]?.label }}</span>
+        <span class="opacity-80 font-mono">{{ outcomes[0]?.probability?.toFixed(0) }}¢</span>
       </button>
       <button class="bg-red-950/30 border border-red-900/50 hover:bg-red-900/50 text-red-500 rounded font-bold text-xs py-2 flex items-center justify-center space-x-1 transition-colors">
-        <span>{{ outcomes[1].label }}</span>
-        <span class="opacity-80 font-mono">{{ outcomes[1].probability.toFixed(0) }}¢</span>
+        <span>{{ outcomes[1]?.label }}</span>
+        <span class="opacity-80 font-mono">{{ outcomes[1]?.probability?.toFixed(0) }}¢</span>
       </button>
     </div>
 

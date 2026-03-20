@@ -15,9 +15,10 @@ function getRelativeTime(timestamp: number) {
 async function fetchTickerNews() {
   try {
     const categories = ['crypto', 'general', 'forex']
-    const promises = categories.map(cat => 
-      fetch(`https://finnhub.io/api/v1/news?category=${cat}&token=d5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag`).then(res => res.json())
-    )
+    const promises = categories.map(cat => {
+      const token = import.meta.env.VITE_FINNHUB_TOKEN || 'd5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag'
+      return fetch(`https://finnhub.io/api/v1/news?category=${cat}&token=${token}`).then(res => res.json())
+    })
     
     const results = await Promise.all(promises)
     let allNews = results.flat()

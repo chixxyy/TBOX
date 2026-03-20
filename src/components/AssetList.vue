@@ -65,7 +65,7 @@ const formatPrice = (priceStr: string) => {
 }
 
 onMounted(async () => {
-  const finnhubToken = import.meta.env.VITE_FINNHUB_TOKEN as string || 'd5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag'
+  const finnhubToken = import.meta.env.VITE_FINNHUB_TOKEN as string
   
   // Fetch initial stock prices from Finnhub directly
   try {

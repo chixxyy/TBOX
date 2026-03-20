@@ -60,7 +60,10 @@ function generateSparklineData(start: number, end: number, points: number = 24):
 async function fetchFinnhub(): Promise<any[]> {
   const cats = ['crypto', 'general', 'forex']
   const results = await Promise.all(
-    cats.map(c => fetch(`https://finnhub.io/api/v1/news?category=${c}&token=d5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag`).then(r => r.json()).catch(() => []))
+    cats.map(c => {
+      const token = import.meta.env.VITE_FINNHUB_TOKEN || 'd5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag'
+      return fetch(`https://finnhub.io/api/v1/news?category=${c}&token=${token}`).then(r => r.json()).catch(() => [])
+    })
   )
   return results.flat().map((item: any, i: number) => {
     return {
