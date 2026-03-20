@@ -121,57 +121,62 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col h-full w-full bg-[#05080f] text-slate-300 overflow-hidden font-sans">
-    
-    <div class="min-h-16 md:h-20 border-b border-slate-800 flex items-center px-4 md:px-6 space-x-3 md:space-x-6 shrink-0 bg-[#0a0f1c] overflow-x-auto scrollbar-hide">
-      <div class="flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-3 md:px-4 py-1.5 md:py-2.5 shrink-0">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400">
+    <div class="h-16 md:h-20 border-b border-slate-800 flex items-center px-2 md:px-6 space-x-2 md:space-x-4 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
+      <!-- Signal Box 1 -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </div>
-        <div>
-          <div class="text-[9px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase">今日訊號</div>
-          <div class="text-white font-bold text-base md:text-lg leading-none">{{ totalFetched }}</div>
+        <div class="min-w-0">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">今日訊號</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ totalFetched }}</div>
         </div>
       </div>
 
-      <div class="flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-3 md:px-4 py-1.5 md:py-2.5 shrink-0">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center text-green-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z" /></svg>
+      <!-- Signal Box 2 -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-emerald-900/30 border border-emerald-800/50 flex items-center justify-center text-emerald-400 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
         </div>
-        <div>
-          <div class="text-[9px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase">載入新聞</div>
-          <div class="text-white font-bold text-base md:text-lg leading-none">{{ filteredNews.length }}</div>
+        <div class="min-w-0">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">載入新聞</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ filteredNews.length }}</div>
         </div>
       </div>
 
-      <a :href="filteredNews[0]?.url || '#'" target="_blank" class="flex items-center space-x-3 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-3 md:px-4 py-1.5 md:py-2.5 min-w-[200px] md:min-w-[280px] cursor-pointer hover:bg-slate-800/50 transition-all group shrink-0">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-red-900/30 border border-red-800/50 flex items-center justify-center text-red-400 group-hover:bg-red-900/50">⚡</div>
-        <div>
-          <div class="text-[9px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase">最新頭條</div>
-          <div class="text-white font-bold text-xs md:text-sm leading-snug truncate max-w-[120px] md:max-w-[200px] group-hover:text-blue-400 transition-colors">{{ filteredNews[0]?.headline || '暫無即時新聞' }}</div>
+      <!-- Signal Box 3 (Latest News) -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0 cursor-pointer hover:bg-slate-800/50 transition-all group overflow-hidden">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-amber-900/30 border border-amber-800/50 flex items-center justify-center text-amber-400 shrink-0">⚡</div>
+        <div class="min-w-0 flex-1">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">最新頭條</div>
+          <div class="text-white font-bold text-[10px] md:text-sm leading-none truncate group-hover:text-blue-400 transition-colors">
+            {{ filteredNews[0]?.headline || '暫無資料' }}
+          </div>
         </div>
-      </a>
+      </div>
 
-      <div class="ml-auto flex flex-col items-end shrink-0 hidden sm:flex">
+      <!-- Update Info -->
+      <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto">
         <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-          <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">Live News Stream</span>
+          <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">News Live Stream</span>
         </div>
-        <span class="text-[10px] text-slate-500 font-mono">
-          最後更新: {{ lastUpdateTime }}
-        </span>
+        <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateTime }}</span>
       </div>
     </div>
 
-    <div class="min-h-12 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-2 md:py-0 shrink-0 bg-[#0a0f1c] space-y-2 md:space-y-0">
-      <div class="flex space-x-1 h-full items-center overflow-x-auto scrollbar-hide">
-        <button v-for="tab in filterTabs" :key="tab.tag" @click="activeFilter = tab" class="h-8 md:h-12 px-3 md:px-4 border-b-2 transition-all text-[12px] md:text-[13px] font-medium whitespace-nowrap" :class="activeFilter.tag === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'">{{ tab.label }}</button>
+    <!-- Header Filters -->
+    <div class="sticky top-0 z-20 bg-[#0a0f1c]/95 backdrop-blur-md border-b border-slate-800/80 px-2 md:px-4 py-2 md:py-0 flex flex-col md:flex-row md:items-center gap-1.5 md:gap-3">
+      <div class="flex items-center w-full md:w-auto h-full space-x-0.5 md:space-x-1">
+        <button v-for="tab in filterTabs" :key="tab.tag" @click="activeFilter = tab" class="flex-1 md:flex-none h-9 md:h-12 px-1.5 md:px-4 border-b-2 transition-all text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center" :class="activeFilter.tag === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'">{{ tab.label }}</button>
       </div>
-      <div class="flex items-center space-x-2 md:ml-auto pr-0 md:pr-4 md:border-r border-slate-800 overflow-x-auto shrink-0">
-          <div class="flex items-center gap-2">
+      
+      <div class="flex items-center justify-between md:justify-end gap-1.5 md:ml-auto shrink-0 w-full md:w-auto pb-1 md:pb-0">
+          <div class="flex items-center gap-1 md:gap-2 flex-1 md:flex-none">
             <button
               v-for="s in severityFilters" :key="s"
               @click="toggleSeverity(s)"
-              class="px-5 py-1.5 rounded-lg border text-[11px] font-bold tracking-widest transition-all"
+              class="flex-1 md:flex-none px-2 md:px-5 py-1 md:py-1.5 rounded-lg border text-[9px] md:text-[11px] font-bold tracking-tighter md:tracking-widest transition-all text-center whitespace-nowrap"
               :class="[
                 activeSeverity.includes(s)
                   ? (s === 'Critical' ? 'bg-red-950/20 border-red-500 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' :
