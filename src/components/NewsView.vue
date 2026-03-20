@@ -202,8 +202,14 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto scrollbar-dark p-6">
-      <div v-if="isLoading" class="flex items-center justify-center h-full"><div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
+    <div class="flex-1 overflow-y-auto scrollbar-hide p-6">
+      <div v-if="isLoading" class="flex items-center justify-center h-full">
+        <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+      <div v-else-if="filteredNews.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+        <span class="text-sm font-medium tracking-wide">此分類目前各級別暫無即時新聞內容</span>
+      </div>
       <div v-else class="max-w-5xl mx-auto space-y-3">
         <div v-for="item in filteredNews" :key="item.id" class="news-card bg-[#0f1523] border border-[#1e293b] rounded-lg p-3 md:p-4 hover:border-slate-600 hover:shadow-[0_0_15px_rgba(59,130,246,0.06)] transition-all group relative overflow-hidden flex items-start gap-4">
           <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg" :class="item.accentColor"></div>

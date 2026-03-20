@@ -230,8 +230,9 @@ onUnmounted(() => {
         <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
       
-      <div v-else-if="events.length === 0" class="flex items-center justify-center h-full text-slate-500 text-sm">
-        No active markets found in this category
+      <div v-else-if="events.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
+        <span class="text-sm font-medium tracking-wide">此分類目前暫無活躍的市場數據</span>
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

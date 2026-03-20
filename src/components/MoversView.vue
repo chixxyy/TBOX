@@ -194,14 +194,14 @@ const stats = computed(() => {
 
     <!-- Content List -->
     <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
-      
       <div v-if="isLoading" class="flex justify-center items-center h-full">
         <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
-
+      <div v-else-if="filteredMovers.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+        <span class="text-sm font-medium tracking-wide">此類別目前暫無監控中的異動數據</span>
+      </div>
       <div v-else class="max-w-5xl mx-auto space-y-4">
-        
-        <!-- Mover Card -->
         <div 
           v-for="item in filteredMovers" 
           :key="item.id"
