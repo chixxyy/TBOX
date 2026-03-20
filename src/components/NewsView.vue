@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { 
+  globalNews as newsItems, 
+  isNewsLoading as isLoading, 
+  lastNewsUpdate as lastUpdateTime 
+} from '../store'
 
-const newsItems = ref<any[]>([])
-const isLoading = ref(true)
-const totalFetched = ref(0)
-const lastUpdateTime = ref(new Date().toLocaleTimeString('zh-TW', { hour12: false }))
-let refreshInterval: ReturnType<typeof setInterval>
+const totalFetched = computed(() => newsItems.value.length)
 
 // 分類選單配置
 const filterTabs = [
@@ -23,131 +24,14 @@ const activeFilter = ref({ label: '全部', tag: '' })
 const activeSeverity = ref<string[]>([])
 const searchQuery = ref('')
 
-// 時間處理函數
-function getRelativeTime(timestamp: number) {
-  const mins = Math.floor((Date.now() - timestamp) / 60000)
-  if (mins < 60) return `${mins}m`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h`
-  return `${Math.floor(hours / 24)}d`
-}
+// -- Helper functions now in BackgroundMonitor.vue --
 
-function getAccentColor(cat: string, isCritical: boolean) {
-  if (isCritical) return 'bg-red-500'
-  if (cat === 'crypto') return 'bg-blue-500'
-  if (cat === 'general') return 'bg-emerald-500'
-  if (cat === 'forex') return 'bg-amber-500'
-  return 'bg-slate-500'
-}
+// -- Data is now managed by BackgroundMonitor.vue via global store --
 
-function getSeverity(headline: string): 'critical' | 'high' | 'low' {
-  const h = headline.toLowerCase()
-  if (h.includes('hack') || h.includes('crash') || h.includes('ban') || h.includes('collapse')) return 'critical'
-  if (h.includes('surge') || h.includes('drop') || h.includes('fed') || h.includes('sec') || h.includes('war')) return 'high'
-  return 'low'
-}
-
-// API 抓取邏輯
-async function fetchFinnhub(): Promise<any[]> {
-  const categories = ['crypto', 'general', 'forex']
-  const promises = categories.map(cat =>
-    fetch(`https://finnhub.io/api/v1/news?category=${cat}&token=d5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag`)
-      .then(res => res.json())
-      .catch(() => [])
-  )
-  const results = await Promise.all(promises)
-  return results.flat().map((item: any, i: number) => ({
-    _uid: `finnhub-${item.id || i}`,
-    source: item.source,
-    cat: (item.category || 'general').toLowerCase(),
-    timestamp: item.datetime * 1000,
-    headline: item.headline,
-    summary: item.summary || '',
-    image: item.image || '',
-    url: item.url || '#',
-    provider: 'finnhub',
-  }))
-}
-
-async function fetchCryptoCompare(): Promise<any[]> {
-  const res = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&limit=100&sortOrder=latest')
-  const data = await res.json()
-  return (data.Data || []).map((item: any) => {
-    const categories = (item.categories || '').toUpperCase()
-    const tags: string[] = []
-    if (categories.includes('CRYPTO')) tags.push('crypto')
-    if (categories.includes('REGULAT')) tags.push('regulation')
-    if (categories.includes('DEFI')) tags.push('defi')
-    if (categories.includes('MARKET')) tags.push('markets')
-    if (categories.includes('ETF')) tags.push('etf')
-    if (tags.length === 0) tags.push('crypto')
-    
-    return {
-      _uid: `cc-${item.id}`,
-      source: item.source_info?.name || item.source,
-      tags,
-      cat: tags[0],
-      timestamp: item.published_on * 1000,
-      headline: item.title,
-      summary: item.body?.slice(0, 300) || '',
-      image: item.imageurl || '',
-      url: item.url || '#',
-      provider: 'cryptocompare',
-    }
-  })
-}
-
-async function fetchNews() {
-  try {
-    const [finnhubItems, ccItems] = await Promise.allSettled([
-      fetchFinnhub(),
-      fetchCryptoCompare(),
-    ])
-
-    const allRaw = [
-      ...(finnhubItems.status === 'fulfilled' ? finnhubItems.value : []),
-      ...(ccItems.status === 'fulfilled' ? ccItems.value : []),
-    ]
-
-    const unique = new Map<string, any>()
-    allRaw.forEach(item => unique.set(item._uid, item))
-    const sorted = Array.from(unique.values()).sort((a, b) => b.timestamp - a.timestamp)
-    totalFetched.value = sorted.length
-
-    // 更新最後抓取時間 (24 小時制)
-    lastUpdateTime.value = new Date().toLocaleTimeString('zh-TW', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
-    })
-
-    const providerColors: Record<string, string> = { finnhub: '1d4ed8', cryptocompare: '7c3aed' }
-
-    newsItems.value = sorted.slice(0, 150).map(item => {
-      const isCritical = getSeverity(item.headline) === 'critical'
-      const severity = getSeverity(item.headline)
-      const bg = providerColors[item.provider] || '1d4ed8'
-      return {
-        ...item,
-        id: item._uid,
-        tags: item.tags || [item.cat],
-        severity,
-        time: getRelativeTime(item.timestamp),
-        accentColor: getAccentColor(item.cat, isCritical),
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.source)}&background=${bg}&color=fff&rounded=true&font-size=0.4&bold=true`
-      }
-    })
-  } catch (e) {
-    console.error('Failed to fetch news', e)
-  } finally {
-    isLoading.value = false
-  }
-}
 
 const filteredNews = computed(() => {
   return newsItems.value.filter(item => {
-    if (activeFilter.value.tag && !item.tags?.includes(activeFilter.value.tag)) return false
+    if (activeFilter.value.tag && item.cat !== activeFilter.value.tag) return false
     if (activeSeverity.value.length && !activeSeverity.value.map(s => s.toLowerCase()).includes(item.severity)) return false
     if (searchQuery.value && !item.headline.toLowerCase().includes(searchQuery.value.toLowerCase())) return false
     return true
@@ -205,10 +89,10 @@ function getDisplayItem(item: any) {
 }
 
 onMounted(() => {
-  fetchNews()
-  refreshInterval = setInterval(fetchNews, 30_000)
+  // Data is now handled by BackgroundMonitor.vue
 })
-onUnmounted(() => clearInterval(refreshInterval))
+onUnmounted(() => {
+})
 </script>
 
 <template>
@@ -269,20 +153,22 @@ onUnmounted(() => clearInterval(refreshInterval))
     <div class="flex-1 overflow-y-auto scrollbar-dark p-6">
       <div v-if="isLoading" class="flex items-center justify-center h-full"><div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
       <div v-else class="max-w-5xl mx-auto space-y-3">
-        <div v-for="item in filteredNews" :key="item.id" class="flex items-start space-x-4 bg-[#0f1523] border border-[#1e293b] rounded-lg p-5 hover:border-slate-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.05)] transition-all group relative overflow-hidden">
+        <div v-for="item in filteredNews" :key="item.id" class="news-card bg-[#0f1523] border border-[#1e293b] rounded-lg p-3 md:p-4 hover:border-slate-600 hover:shadow-[0_0_15px_rgba(59,130,246,0.06)] transition-all group relative overflow-hidden flex items-start gap-4">
           <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg" :class="item.accentColor"></div>
-          <div class="relative shrink-0">
-            <img :src="item.avatar" class="w-10 h-10 rounded-full border border-slate-700" alt="" />
-            <div v-if="item.severity === 'critical'" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0f1523] animate-ping"></div>
+          
+          <div class="relative shrink-0 mt-1">
+            <img :src="item.avatar" class="w-8 h-8 rounded-full border border-slate-700" alt="" />
+            <div v-if="item.severity === 'critical'" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0f1523] animate-ping"></div>
           </div>
+
           <div class="flex-1 min-w-0">
-            <div class="flex items-center space-x-2 mb-2">
-              <span class="text-white font-bold text-sm group-hover:text-blue-400 transition-colors">{{ item.source }}</span>
-              <span class="text-slate-600 text-xs">· {{ item.time }}</span>
-              <div class="flex items-center space-x-2 ml-4">
-                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 uppercase">{{ item.cat }}</span>
-              </div>
-              <button @click.stop="toggleTranslate(item)" class="ml-auto flex items-center space-x-1.5 text-[10px] font-bold px-2.5 py-1 rounded border transition-all" :class="translatedIds.has(item.id) ? 'bg-indigo-600 text-white border-indigo-500' : 'border-slate-700 text-slate-500 hover:border-blue-500 hover:text-blue-400'">
+            <!-- Meta Row -->
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="text-white font-bold text-[13px] group-hover:text-blue-400 transition-colors uppercase tracking-tight">{{ item.source }}</span>
+              <span class="text-slate-600 text-[11px] font-mono">· {{ item.time }}</span>
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-500 border border-slate-700/50 uppercase">{{ item.cat }}</span>
+              
+              <button @click.stop="toggleTranslate(item)" class="ml-auto flex items-center space-x-1.5 text-[9px] font-bold px-2.5 py-1 rounded border border-slate-700/50 text-slate-500 hover:border-blue-500 hover:text-blue-400 transition-all bg-black/20">
                 <svg v-if="translatingIds.has(item.id)" class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -290,14 +176,20 @@ onUnmounted(() => clearInterval(refreshInterval))
                 <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
                 </svg>
-                <span>{{ translatedIds.has(item.id) ? 'SHOW ORIGINAL' : '翻譯' }}</span>
+                <span>{{ translatedIds.has(item.id) ? 'ORIGINAL' : '翻譯' }}</span>
               </button>
             </div>
-            <a :href="item.url" target="_blank" class="block group">
-              <h4 class="text-slate-100 font-semibold text-[15px] leading-snug mb-2 transition-colors">{{ getDisplayItem(item).headline }}</h4>
-              <div class="flex items-start space-x-4">
-                <p v-if="item.summary" class="text-slate-500 text-xs leading-relaxed line-clamp-2 flex-1">{{ getDisplayItem(item).summary }}</p>
-                <img v-if="item.image" :src="item.image" class="w-24 h-16 rounded object-cover border border-slate-800 opacity-80 group-hover:opacity-100 transition-all" />
+
+            <!-- Content Area: Flex Row for text and optional image -->
+            <a :href="item.url" target="_blank" class="flex items-start gap-4">
+              <div class="flex-1 min-w-0">
+                <h4 class="text-slate-100 font-semibold text-[14px] leading-snug mb-1 group-hover:text-sky-300 transition-colors line-clamp-1">{{ getDisplayItem(item).headline }}</h4>
+                <p v-if="item.summary" class="text-slate-500 text-[11px] leading-relaxed font-mono line-clamp-2">{{ getDisplayItem(item).summary }}</p>
+              </div>
+
+              <!-- Compact Fixed Image -->
+              <div v-if="item.image" class="shrink-0">
+                <img :src="item.image" class="w-32 h-20 rounded border border-slate-800 object-cover brightness-75 group-hover:brightness-100 transition-all" alt="Thumb" />
               </div>
             </a>
           </div>

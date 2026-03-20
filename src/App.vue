@@ -7,12 +7,10 @@ import RightPanel from './components/RightPanel.vue'
 import MarketsView from './components/MarketsView.vue'
 import NewsView from './components/NewsView.vue'
 import MoversView from './components/MoversView.vue'
+import BackgroundMonitor from './components/BackgroundMonitor.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { activeTab } from './store'
 
-const rightPanelWidth = ref(320)
-const minRightPanelWidth = 320
-const isDraggingRight = ref(false)
 const windowWidth = ref(window.innerWidth)
 const isMobile = ref(window.innerWidth < 768)
 
@@ -21,40 +19,11 @@ const updateWindowWidth = () => {
   isMobile.value = window.innerWidth < 768
 }
 
-const startDragRight = () => {
-  isDraggingRight.value = true
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-}
-
-const onMouseMove = (e: MouseEvent) => {
-  if (isDraggingRight.value) {
-    const newWidth = window.innerWidth - e.clientX
-    if (newWidth >= minRightPanelWidth) {
-      rightPanelWidth.value = newWidth
-    }
-  }
-}
-
-const onMouseUp = () => {
-  if (isDraggingRight.value) {
-    isDraggingRight.value = false
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-    // Dispatch resize event to force lightweight-charts to recalculate its container size
-    window.dispatchEvent(new Event('resize'))
-  }
-}
-
 onMounted(() => {
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('resize', updateWindowWidth)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('mousemove', onMouseMove)
-  window.removeEventListener('mouseup', onMouseUp)
   window.removeEventListener('resize', updateWindowWidth)
 })
 </script>
@@ -63,10 +32,11 @@ onUnmounted(() => {
   <div class="h-screen w-screen bg-[#070b14] text-slate-300 flex flex-col font-sans overflow-hidden">
     <TopHeader />
     <TickerBanner />
+    <BackgroundMonitor />
     
     <main v-if="activeTab === '交易'" class="flex-1 flex flex-col md:flex-row overflow-hidden">
       <!-- Left Sidebar: Asset List -->
-      <aside class="w-full md:w-64 h-[180px] md:h-full border-b md:border-b-0 md:border-r border-slate-800 bg-[#0a0f1c] flex flex-col shrink-0">
+      <aside class="w-full md:w-[260px] h-[180px] md:h-full border-b md:border-b-0 md:border-r border-slate-800 bg-[#0a0f1c] flex flex-col shrink-0">
         <AssetList />
       </aside>
 
@@ -76,12 +46,7 @@ onUnmounted(() => {
       </section>
 
       <!-- Right Sidebar: Trading Panel & Order Book -->
-      <aside class="bg-[#0a0f1c] flex flex-col overflow-hidden relative shrink-0 h-[300px] md:h-full" :style="{ width: isMobile ? '100%' : rightPanelWidth + 'px' }">
-        <!-- Resizer handle -->
-        <div 
-          class="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50 z-50 transition-colors hidden md:block"
-          @mousedown="startDragRight"
-        ></div>
+      <aside class="bg-[#0a0f1c] flex flex-col overflow-hidden relative shrink-0 h-[300px] md:h-full w-full md:w-[380px]">
         <RightPanel />
       </aside>
     </main>

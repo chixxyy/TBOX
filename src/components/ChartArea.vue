@@ -45,7 +45,6 @@ const displayIntervals: Record<string, string> = {
 }
 
 let ws: WebSocket | null = null
-let resizeObserver: ResizeObserver | null = null
 
 function createChartInContainer(container: HTMLElement) {
   const c = createChart(container, {
@@ -254,16 +253,8 @@ function initChart(container: HTMLElement) {
     scaleMargins: { top: 0.8, bottom: 0 },
   })
 
-  if (resizeObserver) resizeObserver.disconnect()
-  resizeObserver = new ResizeObserver(entries => {
-    const entry = entries[0]
-    if (!entry || !chart.value) return
-    chart.value.applyOptions({
-      height: entry.contentRect.height,
-      width: entry.contentRect.width
-    })
-  })
-  resizeObserver.observe(container)
+  // Since autoSize: true is set in createChartInContainer, 
+  // we don't need a manual ResizeObserver to applyOptions(width/height).
 }
 
 onMounted(async () => {
@@ -277,7 +268,6 @@ onMounted(async () => {
 onUnmounted(() => {
   if (chart.value) chart.value.remove()
   if (ws) ws.close()
-  if (resizeObserver) resizeObserver.disconnect()
   window.removeEventListener('keydown', onEscKey)
 })
 </script>
@@ -306,7 +296,7 @@ onUnmounted(() => {
           <button 
             v-for="t in filteredIntervals" 
             :key="t"
-            class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 md:py-1 rounded transition-colors uppercase font-mono"
+            class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 md:py-1 rounded transition-colors font-mono"
             :class="t === activeInterval ? 'bg-slate-700 text-white shadow-[0_0_5px_rgba(255,255,255,0.1)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/60'"
             @click="setActiveInterval(t)"
           >
@@ -340,7 +330,7 @@ onUnmounted(() => {
             <div class="flex bg-[#111827] rounded border border-slate-800 p-0.5">
               <button v-for="t in filteredIntervals" :key="t"
                 @click="setActiveInterval(t)"
-                class="text-[10px] font-bold px-2 py-1 rounded transition-colors"
+                class="text-[10px] font-bold px-2 py-1 rounded transition-colors font-mono"
                 :class="t === activeInterval ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'">
                 {{ displayIntervals[t] }}
               </button>

@@ -19,3 +19,50 @@ export const setActiveInterval = (interval: string) => {
 export const formattedActiveSymbol = computed(() => {
   return activeSymbol.value.replace('USDT', '/USDT')
 })
+
+// --- Global Data Store for Site-wide Monitoring ---
+
+export interface Mover {
+  id: number
+  title: string
+  slug: string
+  image: string
+  detectedPrice: number
+  peakPrice: number
+  currentPrice: number
+  changePercent: number
+  isUp: boolean
+  detectedTimeStr: string
+  peakTimeStr: string
+  detectionDurationStr: string
+  volumeStr: string
+  news: string
+  newsTimeStr: string
+  sparklineData: number[]
+}
+
+export interface NewsItem {
+  id: string
+  source: string
+  ts: number
+  time: string
+  cat: string
+  headline: string
+  summary: string
+  image: string
+  url: string
+  severity: string
+  accentColor: string
+  avatar: string
+  isCritical: boolean
+  handle?: string
+  isOfficial?: boolean
+  tags?: any[]
+}
+
+export const globalMovers = ref<Mover[]>([])
+export const globalNews = ref<NewsItem[]>([])
+export const isMoversLoading = ref(true)
+export const isNewsLoading = ref(true)
+export const lastMoversUpdate = ref('')
+export const lastNewsUpdate = ref('')

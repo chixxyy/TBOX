@@ -63,4 +63,5 @@ npm run build
 
 ## 📌 開發路線 (Next)
 
-...
+測試新聞音效：testNewsSound()
+測試異動音效：testMoversSound()

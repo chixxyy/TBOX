@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { activeSymbol } from '../store'
 import NewsFeed from './NewsFeed.vue'
 
-const currentView = ref('ORDERBOOK')
+const currentView = ref('FEED')
 const isCrypto = computed(() => activeSymbol.value.toLowerCase().endsWith('usdt'))
 
 // Live orderbook data state

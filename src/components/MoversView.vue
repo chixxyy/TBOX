@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import Sparkline from './Sparkline.vue'
+import { 
+  globalMovers as movers, 
+  isMoversLoading as isLoading, 
+  lastMoversUpdate as lastUpdateTime,
+  type Mover
+} from '../store'
 
 // ---------- Inline Translation (mymemory API) ----------
 interface CardTranslation {
@@ -92,28 +98,6 @@ function getLabel(key: keyof typeof UI_LABELS.en, isTranslated: boolean): string
   return isTranslated ? UI_LABELS.zh[key] : UI_LABELS.en[key]
 }
 
-interface Mover {
-  id: number
-  title: string
-  slug: string
-  image: string
-  detectedPrice: number
-  peakPrice: number
-  currentPrice: number
-  changePercent: number
-  isUp: boolean
-  detectedTimeStr: string
-  peakTimeStr: string
-  detectionDurationStr: string
-  volumeStr: string
-  news: string
-  newsTimeStr: string
-  sparklineData: number[]
-}
-
-const movers = ref<Mover[]>([])
-const isLoading = ref(true)
-
 // ---------- Filtering & Stats ----------
 const filterTabs = [
   { label: '全部異動', tag: 'all' },
@@ -142,203 +126,6 @@ const stats = computed(() => {
     down,
     maxMove: maxMove.toFixed(1) + '%'
   }
-})
-
-// 初始化時間即採用 24 小時制
-const get24hTime = () => new Date().toLocaleTimeString('zh-TW', { 
-  hour12: false, 
-  hour: '2-digit', 
-  minute: '2-digit', 
-  second: '2-digit' 
-})
-const lastUpdateTime = ref(get24hTime())
-
-// Generate realistic mock history for a given real price
-function generateSparklineData(start: number, end: number, points: number = 24): number[] {
-  const data = [start]
-  let current = start
-  const trend = (end - start) / points
-  const volatility = Math.abs(end - start) * 0.2 || 5
-  
-  for (let i = 1; i < points - 1; i++) {
-    current += trend + (Math.random() - 0.5) * volatility
-    current = Math.max(0.5, Math.min(99.5, current))
-    data.push(current)
-  }
-  data.push(end)
-  return data
-}
-
-// Map real Polymarket event to our Mover interface
-function mapEventToMover(ev: any, index: number): Mover {
-  const market = ev.markets && ev.markets[0]
-  if (!market) return null as any
-
-  let currentPrice = 50
-  try {
-    const prices = JSON.parse(market.outcomePrices)
-    currentPrice = Math.round(parseFloat(prices[0]) * 100)
-  } catch (e) {
-    if (market.outcomePrices && Array.isArray(market.outcomePrices)) {
-      currentPrice = Math.round(parseFloat(market.outcomePrices[0]) * 100)
-    }
-  }
-
-  // Synthesize history based on a real current price (to simulate the "Detected" feature)
-  const isUp = Math.random() > 0.4
-  let detected, peak
-  if (isUp) {
-    detected = Math.max(1, currentPrice - Math.floor(Math.random() * 30 + 10))
-    peak = Math.min(99, currentPrice + Math.floor(Math.random() * 15))
-  } else {
-    detected = Math.min(99, currentPrice + Math.floor(Math.random() * 30 + 10))
-    peak = detected
-  }
-
-  const changePercent = ((currentPrice - detected) / detected) * 100
-  const vol = parseFloat(ev.volume) || 0
-
-  return {
-    id: index + 1, // original ID, used for tracking
-    title: ev.title,
-    slug: ev.slug || '',
-    image: ev.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(ev.title.substring(0,2))}&background=random`,
-    detectedPrice: detected,
-    peakPrice: peak,
-    currentPrice: currentPrice,
-    changePercent: Math.abs(changePercent),
-    isUp: changePercent >= 0,
-    detectedTimeStr: `${Math.floor(Math.random() * 20 + 2)}h ${Math.floor(Math.random() * 50 + 1)}m ago`,
-    peakTimeStr: `${Math.floor(Math.random() * 5 + 1)}h ${Math.floor(Math.random() * 50 + 1)}m ago`,
-    detectionDurationStr: `${Math.floor(Math.random() * 5 + 1)}m ${Math.floor(Math.random() * 50 + 1)}s`,
-    volumeStr: vol > 1000000 ? `$${(vol/1000000).toFixed(2)}M` : `$${(vol/1000).toFixed(1)}K`,
-    news: Math.random() > 0.7 ? "REUTERS: BREAKING NEWS DEVELOPMENT REPORTED" : "",
-    newsTimeStr: `${Math.floor(Math.random() * 20 + 2)}h ${Math.floor(Math.random() * 50 + 1)}m ago`,
-    sparklineData: generateSparklineData(detected, currentPrice)
-  }
-}
-
-let updateInterval: any = null
-
-function playMoversChime() {
-  try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    // Two-note rising chime in sequence
-    const notes = [
-      { freq: 880, delay: 0 },
-      { freq: 1320, delay: 0.13 },
-      { freq: 1760, delay: 0.26 }
-    ]
-    notes.forEach(({ freq, delay }) => {
-      const osc = audioCtx.createOscillator()
-      const gainNode = audioCtx.createGain()
-      osc.type = 'triangle'
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay)
-      gainNode.gain.setValueAtTime(0, audioCtx.currentTime + delay)
-      gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + delay + 0.03)
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.4)
-      osc.connect(gainNode)
-      gainNode.connect(audioCtx.destination)
-      osc.start(audioCtx.currentTime + delay)
-      osc.stop(audioCtx.currentTime + delay + 0.5)
-    })
-  } catch (e) {
-    // Ignore audio errors
-  }
-}
-
-async function loadRealData() {
-  try {
-    const res = await fetch('/polymarket/events?closed=false&limit=50&active=true')
-    const raw = await res.json()
-    const validEvents = raw.filter((ev: any) => ev.markets && ev.markets.length > 0)
-    
-    let parsed = validEvents.map(mapEventToMover).filter((m: Mover) => m !== null)
-    
-    // Sort by absolute change to simulate "Movers"
-    parsed.sort((a: Mover, b: Mover) => b.changePercent - a.changePercent)
-    parsed.forEach((m: Mover, i: number) => m.id = i + 1)
-    
-    movers.value = parsed
-    lastUpdateTime.value = get24hTime()
-  } catch(e) {
-    console.error("Failed to fetch Polymarket events", e)
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// Poll for price updates to drive the sparklines live
-async function pollUpdates() {
-  if (movers.value.length === 0) return
-  try {
-    const res = await fetch('/polymarket/events?closed=false&limit=50&active=true')
-    const raw = await res.json()
-    const validEvents = raw.filter((ev: any) => ev.markets && ev.markets.length > 0)
-    
-    // Process new data
-    let newDataProcessed = validEvents.map(mapEventToMover).filter((m: Mover) => m !== null)
-    
-    let hasSignificantRankChange = false
-
-    newDataProcessed.forEach((newItem: Mover) => {
-      // Re-use historical sparkline data if the item already existed
-      const existing = movers.value.find(m => m.title === newItem.title)
-      if (existing) {
-        newItem.detectedPrice = existing.detectedPrice // Preserve original detected price
-        newItem.peakPrice = Math.max(existing.peakPrice, newItem.currentPrice)
-        newItem.sparklineData = [...existing.sparklineData]
-        
-        // Push to sparkline if price changed
-        if (newItem.currentPrice !== existing.currentPrice) {
-          newItem.sparklineData.push(newItem.currentPrice)
-          if (newItem.sparklineData.length > 30) {
-            newItem.sparklineData.shift()
-          }
-        }
-        
-        // Recalculate Change Percent based on preserved detected price
-        const changePercent = ((newItem.currentPrice - newItem.detectedPrice) / newItem.detectedPrice) * 100
-        newItem.changePercent = Math.abs(changePercent)
-        newItem.isUp = changePercent >= 0
-      } else {
-        // Completely new item entering the top events
-        hasSignificantRankChange = true
-      }
-    })
-
-    // Sort by absolute change
-    newDataProcessed.sort((a: Mover, b: Mover) => b.changePercent - a.changePercent)
-    
-    // Assign numerical ranking ids
-    newDataProcessed.forEach((m: Mover, i: number) => {
-      m.id = i + 1
-    })
-
-    // Check if the top 3 items changed from previous
-    const oldTop3Ids = movers.value.slice(0, 3).map((m: Mover) => m.title).join(',')
-    const newTop3Ids = newDataProcessed.slice(0, 3).map((m: Mover) => m.title).join(',')
-    if (oldTop3Ids !== newTop3Ids) {
-      hasSignificantRankChange = true
-    }
-
-    if (hasSignificantRankChange) {
-      playMoversChime()
-    }
-
-    movers.value = newDataProcessed
-    lastUpdateTime.value = get24hTime()
-  } catch(e) {}
-}
-
-onMounted(() => {
-  loadRealData()
-  // Poll every 10 seconds for live updates
-  updateInterval = setInterval(pollUpdates, 10000)
-})
-
-onUnmounted(() => {
-  if (updateInterval) clearInterval(updateInterval)
 })
 </script>
 
