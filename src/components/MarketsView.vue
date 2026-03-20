@@ -200,7 +200,7 @@ onUnmounted(() => {
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
           <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">Polymarket Live</span>
         </div>
-        <span class="text-[10px] text-slate-500 font-mono italic">最後更新: {{ lastUpdateTime }}</span>
+        <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateTime }}</span>
       </div>
     </div>
 

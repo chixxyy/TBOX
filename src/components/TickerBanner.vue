@@ -152,9 +152,8 @@ const resetCache = () => {
 }
 
 .animate-marquee {
-  /* slower animation, from 80s to 150s */
-  animation: marquee 150s linear infinite;
-  /* Start immediately from the left, no offset needed because it's duplicated */
+  /* 調慢速度：秒數大 = 慢（例如 240s），秒數小 = 快（例如 80s） */
+  animation: marquee 600s linear infinite;
 }
 
 .animate-marquee:hover {

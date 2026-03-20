@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Sparkline from './Sparkline.vue'
 
 // ---------- Inline Translation (mymemory API) ----------
@@ -65,6 +65,45 @@ interface Mover {
 
 const movers = ref<Mover[]>([])
 const isLoading = ref(true)
+
+// ---------- Filtering & Stats ----------
+const filterTabs = [
+  { label: '全部異動', tag: 'all' },
+  { label: '快速上漲', tag: 'gainers' },
+  { label: '極速下跌', tag: 'losers' },
+  { label: '高壓波動', tag: 'high_vol' },
+]
+const activeFilter = ref('all')
+
+const filteredMovers = computed(() => {
+  if (activeFilter.value === 'all') return movers.value
+  if (activeFilter.value === 'gainers') return movers.value.filter(m => m.isUp)
+  if (activeFilter.value === 'losers') return movers.value.filter(m => !m.isUp)
+  if (activeFilter.value === 'high_vol') return movers.value.filter(m => m.changePercent > 15)
+  return movers.value
+})
+
+const stats = computed(() => {
+  const up = movers.value.filter(m => m.isUp).length
+  const down = movers.value.length - up
+  const maxMove = movers.value.length > 0 ? Math.max(...movers.value.map(m => m.changePercent)) : 0
+  
+  return {
+    total: movers.value.length,
+    up,
+    down,
+    maxMove: maxMove.toFixed(1) + '%'
+  }
+})
+
+// 初始化時間即採用 24 小時制
+const get24hTime = () => new Date().toLocaleTimeString('zh-TW', { 
+  hour12: false, 
+  hour: '2-digit', 
+  minute: '2-digit', 
+  second: '2-digit' 
+})
+const lastUpdateTime = ref(get24hTime())
 
 // Generate realistic mock history for a given real price
 function generateSparklineData(start: number, end: number, points: number = 24): number[] {
@@ -173,6 +212,7 @@ async function loadRealData() {
     parsed.forEach((m: Mover, i: number) => m.id = i + 1)
     
     movers.value = parsed
+    lastUpdateTime.value = get24hTime()
   } catch(e) {
     console.error("Failed to fetch Polymarket events", e)
   } finally {
@@ -239,10 +279,9 @@ async function pollUpdates() {
     }
 
     movers.value = newDataProcessed
+    lastUpdateTime.value = get24hTime()
   } catch(e) {}
 }
-
-import { onUnmounted } from 'vue'
 
 onMounted(() => {
   loadRealData()
@@ -258,6 +297,72 @@ onUnmounted(() => {
 <template>
   <div class="flex flex-col h-full w-full bg-[#05080f] text-slate-300">
 
+    <!-- Stats Header (Markets Style) -->
+    <div class="h-16 md:h-20 border-b border-slate-800 flex items-center px-4 md:px-6 space-x-2 md:space-x-4 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
+      <!-- Total Movers -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div class="min-w-0 font-mono">
+          <div class="text-[8px] md:text-[10px] text-slate-500 tracking-widest uppercase truncate">監控中異動</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ stats.total }}</div>
+        </div>
+      </div>
+
+      <!-- Gainers Count -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center text-green-400 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </div>
+        <div class="min-w-0 font-mono">
+          <div class="text-[8px] md:text-[10px] text-slate-500 tracking-widest uppercase truncate">上漲信號</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ stats.up }}</div>
+        </div>
+      </div>
+
+      <!-- Peak Move -->
+      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-red-900/30 border border-red-800/50 flex items-center justify-center text-red-500 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+        </div>
+        <div class="min-w-0 font-mono">
+          <div class="text-[8px] md:text-[10px] text-slate-500 tracking-widest uppercase truncate">峰值波動</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ stats.maxMove }}</div>
+        </div>
+      </div>
+
+      <!-- Update Info -->
+      <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto">
+        <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
+          <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+          <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">Movers Live</span>
+        </div>
+        <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateTime }}</span>
+      </div>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="min-h-10 md:h-12 border-b border-slate-800 flex items-center px-4 md:px-6 shrink-0 bg-[#0a0f1c] overflow-x-auto scrollbar-hide">
+      <div class="flex space-x-1 h-full items-center">
+        <button 
+          v-for="tab in filterTabs" 
+          :key="tab.tag"
+          @click="activeFilter = tab.tag"
+          class="h-8 md:h-12 px-3 md:px-4 border-b-2 transition-colors relative text-[12px] md:text-[13px] font-medium whitespace-nowrap"
+          :class="activeFilter === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+    </div>
+
     <!-- Content List -->
     <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
       
@@ -269,7 +374,7 @@ onUnmounted(() => {
         
         <!-- Mover Card -->
         <div 
-          v-for="item in movers" 
+          v-for="item in filteredMovers" 
           :key="item.id"
           class="bg-[#111827] border border-slate-800/80 rounded-xl p-3 md:p-5 hover:border-slate-700 transition-colors flex flex-col"
         >
