@@ -35,14 +35,6 @@
 - **Mobile-First**：針對手機端深度優化的垂直布局與導覽控制。
 - **橫向導覽**：所有工具列在小螢幕下自動轉為水平滑動，避免破版。
 
-## 🛠️ 技術棧
-
-- **Frontend**: Vue 3 (Composition API), Vite
-- **Styling**: Tailwind CSS (Termianl Dark Mode)
-- **Charts**: TradingView Lightweight Charts / SVG Sparklines
-- **APIs**: Polymarket REST API, MyMemory Translation API
-- **Audio**: Web Audio API
-
 ### 安裝依賴
 
 ```bash
@@ -62,5 +54,3 @@ npm run build
 ```
 
 ---
-
-## 📌 開發路線 (Next)
