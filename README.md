@@ -1,5 +1,7 @@
 # TradingBox
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-線上體驗-blue?style=for-the-badge&logo=vercel)](https://trading-box.vercel.app/)
+
 現代化終端風格 (Terminal Style) 預測市場交易儀表板，深度整合 Polymarket 數據與多維度分析工具。
 
 ## 主要核心功能
@@ -34,31 +36,3 @@
 
 - **Mobile-First**：針對手機端深度優化的垂直布局與導覽控制。
 - **橫向導覽**：所有工具列在小螢幕下自動轉為水平滑動，避免破版。
-
----
-
-## 🛠️ 技術棧
-
-- **Frontend**: Vue 3 (Composition API), Vite 7
-- **Styling**: Tailwind CSS 4 (Custom Design Tokens)
-- **Charts**: TradingView Lightweight Charts / SVG Sparklines
-- **APIs**: Polymarket REST API, Finnhub API
-- **Deployment**: Vercel ready
-
----
-
-## 🚀 部署至 Vercel
-
-1. **上傳至 GitHub**: 確保您的最新代碼已推送至遠端。
-2. **導入專案**: 在 Vercel 控制台選擇 `Import Project`。
-3. **設定環境變量**: 在 `Environment Variables` 中加入：
-   - `VITE_FINNHUB_TOKEN`: 填入您的 Finnhub API Key。
-4. **部屬**: 點擊 `Deploy`。由於已包含 `vercel.json`，SPA 路由將會自動正確配置。
-
----
-
-## 📌 開發路線 (Next)
-
-- [ ] 實作多語言切換架構。
-- [ ] 整合即時報價音效提醒。
-- [ ] 加入資產投資組合 (Portfolio) 追蹤功能。
