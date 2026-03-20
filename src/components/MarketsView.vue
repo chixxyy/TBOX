@@ -204,19 +204,18 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="min-h-11 md:h-12 border-b border-slate-800 flex items-center justify-between px-4 md:px-6 shrink-0 bg-[#0a0f1c] overflow-x-auto scrollbar-hide">
-      <div class="flex space-x-1 h-full items-center">
+    <div class="min-h-11 md:h-12 border-b border-slate-800 flex items-center px-1.5 md:px-6 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
+      <div class="flex w-full items-center">
         <button 
           v-for="cat in categories" 
           :key="cat.tag"
           @click="selectCategory(cat)"
-          class="h-8 md:h-12 px-3 md:px-4 border-b-2 transition-colors relative text-[12px] md:text-[13px] font-medium whitespace-nowrap"
-          :class="activeCategory.tag === cat.tag ? 'border-blue-400 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'"
+          class="flex-1 h-11 md:h-12 px-1 md:px-4 border-b-2 transition-colors relative text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center"
+          :class="activeCategory.tag === cat.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
           {{ cat.label }}
         </button>
       </div>
-
       <div class="hidden sm:flex items-center space-x-3 text-[10px] text-slate-500 ml-4 shrink-0">
         <span>Probability:</span>
         <div class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span><span>≥70%</span></div>

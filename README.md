@@ -26,6 +26,8 @@
 ### 4. 音效與反饋系統
 
 - **多頻提示音**：為市場異動與新消息定制的 3 音符上行和聲 (Gain 0.5)。
+- **測試新聞音效**：`testNewsSound()`
+- **測試異動音效**：`testMoversSound()`
 - **即時狀態**：每個頁面均有「最後更新時間」與「Live 狀態燈」。
 
 ### 5. 極致響應式設計 (RWD)
@@ -62,6 +64,3 @@ npm run build
 ---
 
 ## 📌 開發路線 (Next)
-
-測試新聞音效：testNewsSound()
-測試異動音效：testMoversSound()

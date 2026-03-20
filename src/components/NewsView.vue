@@ -166,9 +166,17 @@ onUnmounted(() => {
     </div>
 
     <!-- Header Filters -->
-    <div class="sticky top-0 z-20 bg-[#0a0f1c]/95 backdrop-blur-md border-b border-slate-800/80 px-2 md:px-4 py-2 md:py-0 flex flex-col md:flex-row md:items-center gap-1.5 md:gap-3">
-      <div class="flex items-center w-full md:w-auto h-full space-x-0.5 md:space-x-1">
-        <button v-for="tab in filterTabs" :key="tab.tag" @click="activeFilter = tab" class="flex-1 md:flex-none h-9 md:h-12 px-1.5 md:px-4 border-b-2 transition-all text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center" :class="activeFilter.tag === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'">{{ tab.label }}</button>
+    <div class="sticky top-0 z-20 bg-[#0a0f1c]/95 backdrop-blur-md border-b border-slate-800/80 px-1.5 md:px-6 py-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-3">
+      <div class="flex items-center w-full md:w-auto flex-1 h-full">
+        <button 
+          v-for="tab in filterTabs" 
+          :key="tab.tag" 
+          @click="activeFilter = tab" 
+          class="flex-1 h-11 md:h-12 px-1 md:px-4 border-b-2 transition-all text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center" 
+          :class="activeFilter.tag === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
+        >
+          {{ tab.label }}
+        </button>
       </div>
       
       <div class="flex items-center justify-between md:justify-end gap-1.5 md:ml-auto shrink-0 w-full md:w-auto pb-1 md:pb-0">
