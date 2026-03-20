@@ -39,6 +39,17 @@ function disp(item: any) {
   }
   return { ...item, txd: false }
 }
+
+const getTagColor = (tag: any) => {
+  if (tag.type === 'critical') return 'border-red-600/50 text-red-500 bg-red-950/30'
+  const label = (tag.label || '').toUpperCase()
+  if (label === 'CRYPTO' || label === 'BTC' || label === 'ETH') return 'border-blue-600/50 text-blue-400 bg-blue-950/10'
+  if (label === 'MARKETS' || label === 'GENERAL' || label === 'FINANCE') return 'border-emerald-600/50 text-emerald-400 bg-emerald-950/10'
+  if (label === 'FOREX') return 'border-amber-600/50 text-amber-400 bg-amber-950/10'
+  if (label === 'REGULATION') return 'border-purple-600/50 text-purple-400 bg-purple-950/10'
+  if (label === 'DEFI' || label === 'ETF') return 'border-indigo-600/50 text-indigo-400 bg-indigo-950/10'
+  return 'border-slate-700 text-slate-500 bg-slate-800/20'
+}
 </script>
 
 <template>
@@ -49,7 +60,7 @@ function disp(item: any) {
     <div class="flex-1 overflow-y-auto p-3 space-y-4">
       <div v-for="item in newsItems" :key="item.id" class="news-card bg-[#111827] border border-slate-800 rounded-lg p-4 relative overflow-hidden group">
         <!-- Left accent line -->
-        <div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500/50"></div>
+        <div class="absolute left-0 top-0 bottom-0 w-1" :class="item.accentColor || 'bg-slate-700/50'"></div>
 
         <div class="flex flex-col gap-3 overflow-hidden">
           
@@ -69,12 +80,8 @@ function disp(item: any) {
 
           <div class="flex flex-wrap gap-1.5">
             <span v-for="tag in item.tags" :key="tag.label" 
-              class="px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-wider font-mono flex items-center whitespace-nowrap"
-              :class="{
-                'border-yellow-600/50 text-yellow-500': tag.type === 'quote',
-                'border-red-600/50 text-red-500 bg-red-950/30': tag.type === 'critical',
-                'border-blue-600/50 text-blue-400': tag.type === 'news',
-              }">
+              class="px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-wider font-mono flex items-center whitespace-nowrap transition-colors"
+              :class="getTagColor(tag)">
               <span v-if="tag.icon" class="mr-1 scale-90">{{ tag.icon }}</span>
               {{ tag.label }}
             </span>

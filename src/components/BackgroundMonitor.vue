@@ -31,7 +31,7 @@ function getSeverity(headline: string): string {
   const h = (headline || '').toLowerCase()
   if (h.includes('hack') || h.includes('attack') || h.includes('exploit') || h.includes('scam')) return 'critical'
   if (h.includes('sec ') || h.includes('fed ') || h.includes('cpi') || h.includes('binance')) return 'high'
-  return 'normal'
+  return 'low'
 }
 
 function getAccentColor(category: string, isCritical: boolean): string {
@@ -62,18 +62,19 @@ async function fetchFinnhub(): Promise<any[]> {
   const results = await Promise.all(
     cats.map(c => fetch(`https://finnhub.io/api/v1/news?category=${c}&token=d5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag`).then(r => r.json()).catch(() => []))
   )
-  return results.flat().map((item: any, i: number) => ({
-    uid: `fh-${item.id || i}`,
-    source: item.source,
-    cat: (item.category || 'general').toLowerCase(),
-    ts: item.datetime * 1000,
-    headline: item.headline,
-    summary: item.summary || '',
-    image: item.image || '',
-    url: item.url || '#',
-    avatarBg: item.category === 'crypto' ? '3b82f6' : item.category === 'forex' ? 'f59e0b' : '10b981',
-    isCritical: (item.headline || '').toLowerCase().includes('hack') || (item.headline || '').toLowerCase().includes('sec'),
-  }))
+  return results.flat().map((item: any, i: number) => {
+    return {
+      uid: `fh-${item.id || i}`,
+      source: item.source,
+      cat: (item.category || 'general').toLowerCase(),
+      ts: item.datetime * 1000,
+      headline: item.headline,
+      summary: item.summary || '',
+      url: item.url || '#',
+      avatarBg: item.category === 'crypto' ? '3b82f6' : item.category === 'forex' ? 'f59e0b' : '10b981',
+      provider: 'finnhub'
+    }
+  })
 }
 
 async function fetchCC(): Promise<any[]> {
@@ -88,6 +89,8 @@ async function fetchCC(): Promise<any[]> {
     if (categories.includes('ETF')) tags.push('etf')
     if (tags.length === 0) tags.push('crypto')
 
+    if (tags.length === 0) tags.push('crypto')
+
     return {
       uid: `cc-${item.id}`,
       source: item.source_info?.name || item.source,
@@ -98,7 +101,7 @@ async function fetchCC(): Promise<any[]> {
       image: item.imageurl || '',
       url: item.url || '#',
       avatarBg: '7c3aed',
-      isCritical: false,
+      provider: 'cryptocompare'
     }
   })
 }
@@ -129,7 +132,7 @@ async function syncNews() {
     
     globalNews.value = sorted.slice(0, 150).map(item => {
       const severity = getSeverity(item.headline)
-      const isCritical = severity === 'critical' || item.isCritical
+      const isCritical = severity === 'critical'
       const bg = item.avatarBg || (providerColors[item.provider as any] || '1d4ed8')
       
       const categoryLabel = item.cat.toUpperCase()

@@ -88,6 +88,30 @@ function getDisplayItem(item: any) {
   return { ...item, isTranslated: false }
 }
 
+const getSentiment = (item: any) => {
+  const text = (item.headline + (item.summary || '')).toLowerCase()
+  if (/\b(bull|surge|rally|gain|record|high|growth|buy|positive|up|top)\b/.test(text)) return { label: 'BULLISH', color: 'border-green-900/40 bg-green-950/20 text-green-500' }
+  if (/\b(bear|crash|plunge|drop|loss|inflation|hike|sell|negative|down)\b/.test(text)) return { label: 'BEARISH', color: 'border-red-900/40 bg-red-950/20 text-red-500' }
+  return { label: 'NEUTRAL', color: 'border-slate-800 bg-slate-800/20 text-slate-500' }
+}
+
+const getReadTime = (item: any) => {
+  const content = item.headline + (item.summary || '')
+  const mins = Math.max(1, Math.ceil(content.length / 500))
+  return `${mins} MIN READ`
+}
+
+const getTagColor = (item: any) => {
+  if (item.severity === 'critical') return 'bg-red-950/30 text-red-400 border-red-900/50 shadow-[0_0_8px_rgba(239,68,68,0.15)]'
+  const c = (item.cat || '').toLowerCase()
+  if (c === 'crypto' || c === 'bitcoin' || c === 'eth') return 'bg-blue-950/30 text-blue-400 border-blue-900/50'
+  if (c === 'markets' || c === 'general' || c === 'finance') return 'bg-emerald-950/30 text-emerald-400 border-emerald-900/50'
+  if (c === 'forex') return 'bg-amber-950/30 text-amber-400 border-amber-900/50'
+  if (c === 'regulation') return 'bg-purple-950/30 text-purple-400 border-purple-900/50'
+  if (c === 'defi' || c === 'etf') return 'bg-indigo-950/30 text-indigo-400 border-indigo-900/50'
+  return 'bg-slate-800/80 text-slate-500 border-slate-700/50'
+}
+
 onMounted(() => {
   // Data is now handled by BackgroundMonitor.vue
 })
@@ -142,8 +166,23 @@ onUnmounted(() => {
       <div class="flex space-x-1 h-full items-center overflow-x-auto scrollbar-hide">
         <button v-for="tab in filterTabs" :key="tab.tag" @click="activeFilter = tab" class="h-8 md:h-12 px-3 md:px-4 border-b-2 transition-all text-[12px] md:text-[13px] font-medium whitespace-nowrap" :class="activeFilter.tag === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'">{{ tab.label }}</button>
       </div>
-      <div class="flex items-center space-x-2 md:ml-auto pr-0 md:pr-4 md:border-r border-slate-800 overflow-x-auto scrollbar-hide shrink-0">
-        <button v-for="s in severityFilters" :key="s" @click="toggleSeverity(s)" class="text-[9px] md:text-[10px] font-bold px-2 md:px-3 py-1 rounded-md border transition-all whitespace-nowrap" :class="activeSeverity.includes(s) ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'border-slate-800 text-slate-600 hover:border-slate-700'">{{ s.toUpperCase() }}</button>
+      <div class="flex items-center space-x-2 md:ml-auto pr-0 md:pr-4 md:border-r border-slate-800 overflow-x-auto shrink-0">
+          <div class="flex items-center gap-2">
+            <button
+              v-for="s in severityFilters" :key="s"
+              @click="toggleSeverity(s)"
+              class="px-5 py-1.5 rounded-lg border text-[11px] font-bold tracking-widest transition-all"
+              :class="[
+                activeSeverity.includes(s)
+                  ? (s === 'Critical' ? 'bg-red-950/20 border-red-500 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' :
+                     s === 'High' ? 'bg-amber-950/20 border-amber-500 text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]' :
+                     'bg-blue-900/20 border-blue-500 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]')
+                  : 'border-slate-800 text-slate-500 hover:border-slate-600 bg-slate-900/40'
+              ]"
+            >
+              {{ s.toUpperCase() }}
+            </button>
+          </div>
       </div>
       <div class="flex items-center bg-[#05080f] border border-slate-700 rounded-md px-3 py-1.5 w-full md:w-64 md:ml-4 focus-within:border-blue-500 transition-all shrink-0">
         <input v-model="searchQuery" type="text" placeholder="搜尋全站新聞..." class="bg-transparent outline-none text-[11px] md:text-xs text-slate-300 w-full" />
@@ -163,33 +202,42 @@ onUnmounted(() => {
 
           <div class="flex-1 min-w-0">
             <!-- Meta Row -->
-            <div class="flex items-center space-x-2 mb-1">
-              <span class="text-white font-bold text-[13px] group-hover:text-blue-400 transition-colors uppercase tracking-tight">{{ item.source }}</span>
-              <span class="text-slate-600 text-[11px] font-mono">· {{ item.time }}</span>
-              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-500 border border-slate-700/50 uppercase">{{ item.cat }}</span>
-              
-              <button @click.stop="toggleTranslate(item)" class="ml-auto flex items-center space-x-1.5 text-[9px] font-bold px-2.5 py-1 rounded border border-slate-700/50 text-slate-500 hover:border-blue-500 hover:text-blue-400 transition-all bg-black/20">
-                <svg v-if="translatingIds.has(item.id)" class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
-                </svg>
-                <span>{{ translatedIds.has(item.id) ? 'ORIGINAL' : '翻譯' }}</span>
-              </button>
-            </div>
-
-            <!-- Content Area: Flex Row for text and optional image -->
-            <a :href="item.url" target="_blank" class="flex items-start gap-4">
-              <div class="flex-1 min-w-0">
-                <h4 class="text-slate-100 font-semibold text-[14px] leading-snug mb-1 group-hover:text-sky-300 transition-colors line-clamp-1">{{ getDisplayItem(item).headline }}</h4>
-                <p v-if="item.summary" class="text-slate-500 text-[11px] leading-relaxed font-mono line-clamp-2">{{ getDisplayItem(item).summary }}</p>
+              <div class="flex items-center space-x-2">
+                <span class="text-white font-bold text-[13px] group-hover:text-sky-400 transition-colors uppercase tracking-tight">{{ item.source }}</span>
+                <span class="text-slate-600 text-[11px] font-mono">· {{ item.time }}</span>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase transition-all duration-300" :class="getTagColor(item)">{{ item.cat }}</span>
+                <button @click.stop="toggleTranslate(item)" class="flex items-center space-x-1.5 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-700/50 text-slate-500 hover:border-blue-500 hover:text-blue-400 transition-all bg-black/20">
+                  <svg v-if="translatingIds.has(item.id)" class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+                  </svg>
+                  <span>{{ translatedIds.has(item.id) ? 'ORIGINAL' : '翻譯' }}</span>
+                </button>
               </div>
 
-              <!-- Compact Fixed Image -->
-              <div v-if="item.image" class="shrink-0">
-                <img :src="item.image" class="w-32 h-20 rounded border border-slate-800 object-cover brightness-75 group-hover:brightness-100 transition-all" alt="Thumb" />
+            <!-- Content Area: Flex Row for text and optional image -->
+            <a :href="item.url" target="_blank" class="flex items-start gap-5 py-1">
+              <div class="flex-1 min-w-0 flex flex-col min-h-[112px]">
+                <h4 class="text-slate-100 font-bold text-[15px] leading-snug mb-2 group-hover:text-sky-400 transition-colors line-clamp-2 max-w-[800px]">{{ getDisplayItem(item).headline }}</h4>
+                <p v-if="getDisplayItem(item).summary" class="text-slate-500 text-[11px] leading-relaxed font-mono line-clamp-2 mb-3">{{ getDisplayItem(item).summary }}</p>
+                
+                <!-- New Rich Data Row (Fills the gap) -->
+                <div class="mt-auto flex items-center gap-4 text-[9px] font-bold tracking-wider font-mono opacity-90 pt-2 border-t border-slate-800/20">
+                  <span class="flex items-center gap-1.5 text-slate-500 bg-slate-800/30 px-2 py-0.5 rounded shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    {{ getReadTime(item) }}
+                  </span>
+                  <span class="px-2 py-0.5 rounded border shadow-sm transition-colors" :class="getSentiment(item).color">{{ getSentiment(item).label }}</span>
+                  <span class="text-blue-500/80 hover:text-blue-400 font-bold transition-colors ml-auto flex items-center gap-1">SOURCE ↗</span>
+                </div>
+              </div>
+
+              <!-- Compact Fixed Image - Explicitly Top Aligned -->
+              <div v-if="item.image" class="shrink-0 self-start">
+                <img :src="item.image" class="w-44 h-28 rounded border border-slate-700/50 object-cover brightness-90 group-hover:brightness-100 group-hover:border-slate-500 transition-all opacity-95 shadow-md" alt="Thumb" />
               </div>
             </a>
           </div>
