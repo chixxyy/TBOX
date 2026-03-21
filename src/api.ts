@@ -8,7 +8,7 @@ const FINNHUB_TOKEN = import.meta.env.VITE_FINNHUB_TOKEN as string;
 /**
  * Universal fetch wrapper with optional custom headers
  */
-export async function apiFetch(url: string, options: RequestInit = {}) {
+async function apiFetch(url: string, options: RequestInit = {}) {
   const isFinnhub = url.includes('finnhub.io');
 
   let finalUrl = url;

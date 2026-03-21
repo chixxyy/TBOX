@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 
 // Only track these 4 assets as requested
-export const SUPPORTED_ASSETS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
+const SUPPORTED_ASSETS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT']
 
 export const activeSymbol = ref('BTCUSDT')
 export const activeInterval = ref('1d')
@@ -41,7 +41,7 @@ export interface Mover {
   sparklineData: number[]
 }
 
-export interface NewsItem {
+interface NewsItem {
   id: string
   source: string
   ts: number
