@@ -66,3 +66,10 @@ export const isMoversLoading = ref(true)
 export const isNewsLoading = ref(true)
 export const lastMoversUpdate = ref('')
 export const lastNewsUpdate = ref('')
+
+// --- Mobile UX State ---
+export const scrollProgress = ref(0) // 0 to 100
+export const isChangingTab = ref(false)
+export const setScrollProgress = (progress: number) => {
+  scrollProgress.value = Math.max(0, Math.min(100, progress))
+}

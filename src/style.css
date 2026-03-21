@@ -33,7 +33,34 @@
   background-color: var(--color-slate-500);
 }
 
-/* Scrollbar Hide Utility */
+/* Hide scrollbars on mobile but keep functionality */
+@media (max-width: 767px) {
+  * {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+  
+  /* Exception: Keep scrollbar for specific elements */
+  .scrollbar-visible, .scrollbar-visible * {
+    -ms-overflow-style: auto !important;
+    scrollbar-width: auto !important;
+  }
+  .scrollbar-visible::-webkit-scrollbar, 
+  .scrollbar-visible *::-webkit-scrollbar {
+    display: block !important;
+    width: 3px !important;
+  }
+  .scrollbar-visible::-webkit-scrollbar-thumb,
+  .scrollbar-visible *::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.4) !important;
+    border-radius: 10px !important;
+  }
+}
+
+/* Scrollbar Hide Utility (Legacy) */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

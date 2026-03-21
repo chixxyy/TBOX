@@ -204,7 +204,7 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
     </div>
 
     <!-- Asset List -->
-    <div class="h-[180px] md:h-auto md:flex-1 overflow-y-auto scrollbar-hide">
+    <div class="h-[180px] md:h-auto md:flex-1 overflow-y-auto scrollbar-visible">
       <div 
         v-for="asset in filteredAssets" 
         :key="asset.symbol"

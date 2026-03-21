@@ -1,10 +1,28 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { 
   globalNews as newsItems, 
   isNewsLoading as isLoading, 
-  lastNewsUpdate as lastUpdateTime 
+  lastNewsUpdate as lastUpdateTime,
+  setScrollProgress,
+  isChangingTab
 } from '../store'
+
+
+let rafId: number | null = null
+const handleScroll = (e: Event) => {
+  if (rafId) cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(() => {
+    const el = e.target as HTMLElement
+    const scrollMax = el.scrollHeight - el.clientHeight
+    if (scrollMax <= 0) {
+      setScrollProgress(0)
+    } else {
+      const progress = (el.scrollTop / scrollMax) * 100
+      setScrollProgress(progress)
+    }
+  })
+}
 
 const totalFetched = computed(() => newsItems.value.length)
 
@@ -24,10 +42,15 @@ const activeFilter = ref({ label: '全部', tag: '' })
 const activeSeverity = ref<string[]>([])
 const searchQuery = ref('')
 
-// -- Helper functions now in BackgroundMonitor.vue --
-
-// -- Data is now managed by BackgroundMonitor.vue via global store --
-
+const setFilter = async (tab: any) => {
+  isChangingTab.value = true
+  activeFilter.value = tab
+  setScrollProgress(0)
+  await nextTick()
+  setTimeout(() => {
+    isChangingTab.value = false
+  }, 50)
+}
 
 const filteredNews = computed(() => {
   return newsItems.value.filter(item => {
@@ -39,12 +62,20 @@ const filteredNews = computed(() => {
 })
 
 function toggleSeverity(s: string) {
+  isChangingTab.value = true
   const i = activeSeverity.value.indexOf(s)
   if (i === -1) activeSeverity.value.push(s)
   else activeSeverity.value.splice(i, 1)
+  
+  setScrollProgress(0)
+  nextTick().then(() => {
+    setTimeout(() => {
+      isChangingTab.value = false
+    }, 50)
+  })
 }
 
-// 翻譯功能相關邏輯...
+// 翻譯功能相關邏輯
 const translationCache = new Map<string | number, { headline: string; summary: string }>()
 const translatingIds = ref<Set<string | number>>(new Set())
 const translatedIds = ref<Set<string | number>>(new Set())
@@ -113,16 +144,18 @@ const getTagColor = (item: any) => {
 }
 
 onMounted(() => {
-  // Data is now handled by BackgroundMonitor.vue
+  // Data handled by BackgroundMonitor.vue
 })
+
 onUnmounted(() => {
+  if (rafId) cancelAnimationFrame(rafId)
 })
 </script>
 
 <template>
   <div class="flex flex-col h-full w-full bg-[#05080f] text-slate-300 overflow-hidden font-sans">
     <div class="h-16 md:h-20 border-b border-slate-800 flex items-center px-2 md:px-6 space-x-2 md:space-x-4 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
-      <!-- Signal Box 1 -->
+      <!--今日訊號-->
       <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
         <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -133,7 +166,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Signal Box 2 -->
+      <!--載入新聞-->
       <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
         <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-emerald-900/30 border border-emerald-800/50 flex items-center justify-center text-emerald-400 shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -144,7 +177,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Signal Box 3 (Latest News) -->
+      <!--最新頭條-->
       <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0 cursor-pointer hover:bg-slate-800/50 transition-all group overflow-hidden">
         <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-amber-900/30 border border-amber-800/50 flex items-center justify-center text-amber-400 shrink-0">⚡</div>
         <div class="min-w-0 flex-1">
@@ -155,7 +188,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Update Info -->
       <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto">
         <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
@@ -165,13 +197,12 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Header Filters -->
     <div class="sticky top-0 z-20 bg-[#0a0f1c]/95 backdrop-blur-md border-b border-slate-800/80 px-1.5 md:px-6 py-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-3">
       <div class="flex items-center w-full md:w-auto flex-1 h-full">
         <button 
           v-for="tab in filterTabs" 
           :key="tab.tag" 
-          @click="activeFilter = tab" 
+          @click="setFilter(tab)" 
           class="flex-1 h-11 md:h-12 px-1 md:px-4 border-b-2 transition-all text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center" 
           :class="activeFilter.tag === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
@@ -202,7 +233,8 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto scrollbar-hide p-6 pb-24 md:pb-6">
+    <!-- Scrollable Content -->
+    <div @scroll="handleScroll" class="flex-1 overflow-y-auto scrollbar-hide p-6 pb-24 md:pb-6">
       <div v-if="isLoading" class="flex items-center justify-center h-full">
         <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
@@ -220,7 +252,6 @@ onUnmounted(() => {
           </div>
 
           <div class="flex-1 min-w-0">
-            <!-- Meta Row -->
               <div class="flex items-center space-x-2">
                 <span class="text-white font-bold text-[13px] group-hover:text-sky-400 transition-colors uppercase tracking-tight">{{ item.source }}</span>
                 <span class="text-slate-600 text-[11px] font-mono">· {{ item.time }}</span>
@@ -237,13 +268,11 @@ onUnmounted(() => {
                 </button>
               </div>
 
-            <!-- Content Area: Flex Row for text and optional image -->
             <a :href="item.url" target="_blank" class="flex items-start gap-5 py-1">
               <div class="flex-1 min-w-0 flex flex-col min-h-[112px]">
                 <h4 class="text-slate-100 font-bold text-[15px] leading-snug mb-2 group-hover:text-sky-400 transition-colors line-clamp-2 max-w-[800px]">{{ getDisplayItem(item).headline }}</h4>
                 <p v-if="getDisplayItem(item).summary" class="text-slate-500 text-[11px] leading-relaxed font-mono line-clamp-2 mb-3">{{ getDisplayItem(item).summary }}</p>
                 
-                <!-- New Rich Data Row (Fills the gap) -->
                 <div class="mt-auto flex items-center gap-4 text-[9px] font-bold tracking-wider font-mono opacity-90 pt-2 border-t border-slate-800/20">
                   <span class="flex items-center gap-1.5 text-slate-500 bg-slate-800/30 px-2 py-0.5 rounded shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -254,7 +283,6 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <!-- Compact Fixed Image - Explicitly Top Aligned -->
               <div v-if="item.image" class="shrink-0 self-start">
                 <img :src="item.image" class="w-44 h-28 rounded border border-slate-700/50 object-cover brightness-90 group-hover:brightness-100 group-hover:border-slate-500 transition-all opacity-95 shadow-md" alt="Thumb" />
               </div>

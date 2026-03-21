@@ -1,11 +1,40 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import {
   globalNews,
-  isNewsLoading as isLoading
+  isNewsLoading as isLoading,
+  setScrollProgress,
+  isChangingTab
 } from '../store'
 
+const scrollContainer = ref<HTMLElement | null>(null)
+
+let rafId: number | null = null
+const handleScroll = (e: Event) => {
+  if (rafId) cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(() => {
+    const el = e.target as HTMLElement
+    const scrollMax = el.scrollHeight - el.clientHeight
+    if (scrollMax <= 0) {
+      setScrollProgress(0)
+    } else {
+      const progress = (el.scrollTop / scrollMax) * 100
+      setScrollProgress(progress)
+    }
+  })
+}
+
 const activeFilter = ref('All')
+const setFilter = async (f: string) => {
+  isChangingTab.value = true
+  activeFilter.value = f
+  visibleCount.value = 5
+  setScrollProgress(0)
+  await nextTick()
+  setTimeout(() => {
+    isChangingTab.value = false
+  }, 50)
+}
 const filters = ['All', 'Critical', 'High', 'Low']
 const visibleCount = ref(5)
 
@@ -41,8 +70,17 @@ const visibleNews = computed(() => {
   })).map(item => disp(item))
 })
 
-const loadMore = () => {
+const loadMore = async () => {
   visibleCount.value += 5
+  await nextTick()
+  // Small delay to ensure browser layout is stable
+  setTimeout(() => {
+    if (scrollContainer.value) {
+      const el = scrollContainer.value
+      const progress = (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100
+      setScrollProgress(progress)
+    }
+  }, 50)
 }
 
 const txCache = new Map<string, { headline: string; content: string }>()
@@ -99,7 +137,7 @@ const getTagColor = (tag: any) => {
       <button 
         v-for="f in filters" 
         :key="f"
-        @click="activeFilter = f; visibleCount = 5"
+        @click="setFilter(f)"
         class="w-full py-1.5 rounded text-[10px] font-bold border transition-all"
         :class="activeFilter === f 
           ? (severityColors[f] || '').replace('bg-', 'bg-opacity-40 bg-') + ' border-opacity-100 shadow-[0_0_10px_rgba(0,0,0,0.3)]'
@@ -110,7 +148,7 @@ const getTagColor = (tag: any) => {
     </div>
 
     <!-- Feed Content -->
-    <div class="flex-1 overflow-y-auto p-3 space-y-4">
+    <div ref="scrollContainer" @scroll="handleScroll" class="flex-1 overflow-y-auto p-3 space-y-4">
       <div v-for="item in visibleNews" :key="item.id" class="news-card bg-[#111827] border border-slate-800 rounded-lg p-4 relative overflow-hidden group">
         <!-- Left accent line -->
         <div class="absolute left-0 top-0 bottom-0 w-1 transition-colors duration-500" :class="item.accentColor"></div>

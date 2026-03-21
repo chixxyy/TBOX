@@ -1,12 +1,29 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import Sparkline from './Sparkline.vue'
 import { 
   globalMovers as movers, 
   isMoversLoading as isLoading, 
   lastMoversUpdate as lastUpdateTime,
-  type Mover
+  type Mover,
+  setScrollProgress,
+  isChangingTab
 } from '../store'
+
+let rafId: number | null = null
+const handleScroll = (e: Event) => {
+  if (rafId) cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(() => {
+    const el = e.target as HTMLElement
+    const scrollMax = el.scrollHeight - el.clientHeight
+    if (scrollMax <= 0) {
+      setScrollProgress(0)
+    } else {
+      const progress = (el.scrollTop / scrollMax) * 100
+      setScrollProgress(progress)
+    }
+  })
+}
 
 // ---------- Inline Translation (mymemory API) ----------
 interface CardTranslation {
@@ -107,6 +124,16 @@ const filterTabs = [
 ]
 const activeFilter = ref('all')
 
+const setTab = async (tag: string) => {
+  isChangingTab.value = true
+  activeFilter.value = tag
+  setScrollProgress(0)
+  await nextTick()
+  setTimeout(() => {
+    isChangingTab.value = false
+  }, 50)
+}
+
 const filteredMovers = computed(() => {
   if (activeFilter.value === 'all') return movers.value
   if (activeFilter.value === 'gainers') return movers.value.filter(m => m.isUp)
@@ -183,7 +210,7 @@ const stats = computed(() => {
         <button 
           v-for="tab in filterTabs" 
           :key="tab.tag"
-          @click="activeFilter = tab.tag"
+          @click="setTab(tab.tag)"
           class="flex-1 h-11 md:h-12 px-1 md:px-4 border-b-2 transition-colors relative text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center"
           :class="activeFilter === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
@@ -193,7 +220,7 @@ const stats = computed(() => {
     </div>
 
     <!-- Content List -->
-    <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 space-y-4">
+    <div @scroll="handleScroll" class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 space-y-4">
       <div v-if="isLoading" class="flex justify-center items-center h-full">
         <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>

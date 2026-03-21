@@ -1,7 +1,23 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import MarketCard from './MarketCard.vue'
 import { api } from '../api'
+import { setScrollProgress, isChangingTab } from '../store'
+
+let rafId: number | null = null
+const handleScroll = (e: Event) => {
+  if (rafId) cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(() => {
+    const el = e.target as HTMLElement
+    const scrollMax = el.scrollHeight - el.clientHeight
+    if (scrollMax <= 0) {
+      setScrollProgress(0)
+    } else {
+      const progress = (el.scrollTop / scrollMax) * 100
+      setScrollProgress(progress)
+    }
+  })
+}
 
 type Category = { label: string; tag: string }
 
@@ -125,8 +141,14 @@ async function fetchMarkets() {
   }
 }
 
-function selectCategory(cat: Category) {
+async function selectCategory(cat: Category) {
+  isChangingTab.value = true
   activeCategory.value = cat
+  setScrollProgress(0)
+  await nextTick()
+  setTimeout(() => {
+    isChangingTab.value = false
+  }, 50)
 }
 
 onMounted(() => {
@@ -224,7 +246,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 scrollbar-dark">
+    <div @scroll="handleScroll" class="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 scrollbar-dark">
       <div v-if="isLoading" class="flex items-center justify-center h-full">
         <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>

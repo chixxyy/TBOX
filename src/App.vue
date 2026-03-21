@@ -9,8 +9,36 @@ import NewsView from './components/NewsView.vue'
 import MoversView from './components/MoversView.vue'
 import BackgroundMonitor from './components/BackgroundMonitor.vue'
 import SiteFooter from './components/SiteFooter.vue'
-import { ref, onMounted, onUnmounted } from 'vue'
-import { activeTab } from './store'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { activeTab, setScrollProgress, isChangingTab } from './store'
+
+// Reset scroll progress instantly on tab change
+watch(activeTab, async () => {
+  isChangingTab.value = true
+  setScrollProgress(0)
+  await nextTick()
+  // Brief delay to allow the "reset" frame to render without transition
+  setTimeout(() => {
+    isChangingTab.value = false
+  }, 50)
+})
+
+// High-performance scroll tracking using rAF
+let rafId: number | null = null
+const handleScroll = (e: Event) => {
+  if (rafId) cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(() => {
+    const el = e.target as HTMLElement
+    // Safety check for division by zero
+    const scrollMax = el.scrollHeight - el.clientHeight
+    if (scrollMax <= 0) {
+      setScrollProgress(0)
+    } else {
+      const progress = (el.scrollTop / scrollMax) * 100
+      setScrollProgress(progress)
+    }
+  })
+}
 
 const windowWidth = ref(window.innerWidth)
 const isMobile = ref(window.innerWidth < 768)
@@ -35,7 +63,7 @@ onUnmounted(() => {
     <TickerBanner />
     <BackgroundMonitor />
     
-    <main v-if="activeTab === '交易'" class="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden pb-12 md:pb-0">
+    <main v-if="activeTab === '交易'" @scroll="handleScroll" class="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden pb-12 md:pb-0">
       <!-- Left Sidebar: Asset List -->
       <aside class="w-full md:w-[260px] h-auto md:h-full border-b md:border-b-0 md:border-r border-slate-800 bg-[#0a0f1c] flex flex-col shrink-0">
         <AssetList />
@@ -60,7 +88,7 @@ onUnmounted(() => {
       <MarketsView />
     </main>
 
-    <main v-else-if="activeTab === '異動'" class="flex-1 flex overflow-hidden bg-[#05080f] overflow-y-auto">
+    <main v-else-if="activeTab === '異動'" class="flex-1 flex overflow-hidden bg-[#05080f]">
       <MoversView />
     </main>
 

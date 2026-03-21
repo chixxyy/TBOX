@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { scrollProgress, isChangingTab } from '../store'
 
 const uptime = ref('00:00:00')
 const startTime = Date.now()
@@ -18,7 +19,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <footer class="h-6 md:h-7 bg-[#0a0f1c] border-t border-slate-800 flex items-center px-3 md:px-4 shrink-0 overflow-hidden font-mono z-50">
+  <footer class="relative h-6 md:h-7 bg-[#0a0f1c] border-t border-slate-800 flex items-center px-3 md:px-4 shrink-0 overflow-hidden font-mono z-50">
+    <!-- Mobile Scroll Progress Bar -->
+    <div class="md:hidden absolute top-0 left-0 w-full h-[1px] bg-slate-900 z-10">
+      <div 
+        class="h-full bg-blue-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-[0_0_8px_rgba(59,130,246,0.7)]"
+        :class="isChangingTab ? 'transition-none' : 'transition-all duration-500'"
+        :style="{ width: `${scrollProgress}%` }"
+      ></div>
+    </div>
     <div class="flex items-center space-x-4 w-full">
       <!-- Status Indicator -->
       <div class="flex items-center space-x-1.5 shrink-0">
