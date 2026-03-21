@@ -7,6 +7,7 @@ import {
   type Mover
 } from '../store'
 import { playNewsChime, playMoversChime } from '../utils/audio'
+import { api } from '../api'
 
 const knownNewsIds = new Set<string>()
 
@@ -60,10 +61,7 @@ function generateSparklineData(start: number, end: number, points: number = 24):
 async function fetchFinnhub(): Promise<any[]> {
   const cats = ['crypto', 'general', 'forex']
   const results = await Promise.all(
-    cats.map(c => {
-      const token = import.meta.env.VITE_FINNHUB_TOKEN || 'd5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag'
-      return fetch(`https://finnhub.io/api/v1/news?category=${c}&token=${token}`).then(r => r.json()).catch(() => [])
-    })
+    cats.map(c => api.getFinnhubNews(c).catch(() => []))
   )
   return results.flat().map((item: any, i: number) => {
     return {
@@ -216,9 +214,8 @@ function mapEventToMover(ev: any, index: number): Mover {
 
 async function syncMovers() {
   try {
-    const res = await fetch('/polymarket/events?closed=false&limit=50&active=true')
-    const raw = await res.json()
-    const validEvents = raw.filter((ev: any) => ev.markets && ev.markets.length > 0)
+    const data = await api.getPolyEvents('closed=false&limit=50&active=true')
+    const validEvents = data.filter((ev: any) => ev.markets && ev.markets.length > 0)
     let newDataProcessed = validEvents.map(mapEventToMover).filter((m: any) => m !== null)
 
     let hasSignificantRankChange = false

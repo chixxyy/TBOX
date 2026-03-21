@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import MarketCard from './MarketCard.vue'
+import { api } from '../api'
 
 type Category = { label: string; tag: string }
 
@@ -82,9 +83,7 @@ async function fetchMarkets() {
   if (allEvents.value.length === 0) isLoading.value = true
   
   try {
-    const res = await fetch('/polymarket/markets?active=true&closed=false&limit=100&order=volumeNum&ascending=false')
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json()
+    const data = await api.getPolyMarkets('active=true&closed=false&limit=100&order=volumeNum&ascending=false')
     let formattedData = Array.isArray(data) ? data : []
 
     const seenTitles = new Set()

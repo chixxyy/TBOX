@@ -64,16 +64,15 @@ const formatPrice = (priceStr: string) => {
   return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+import { api } from '../api'
+
 onMounted(async () => {
-  const finnhubToken = import.meta.env.VITE_FINNHUB_TOKEN as string
-  
   // Fetch initial stock prices from Finnhub directly
   try {
     const stockAssets = assets.value.filter(a => a.type === 'stock')
     await Promise.all(stockAssets.map(async (asset) => {
       try {
-        const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${asset.symbol}&token=${finnhubToken}`)
-        const quote = await res.json()
+        const quote = await api.getFinnhubQuote(asset.symbol)
         if (quote && quote.c) {
           asset.rawPrice = quote.c
           asset.price = formatPrice(quote.c.toString())
@@ -120,7 +119,8 @@ onMounted(async () => {
   }
 
   // 2. 美股 WebSocket (Finnhub)
-  wsFinnhub = new WebSocket(`wss://ws.finnhub.io?token=${finnhubToken}`)
+  const token = import.meta.env.VITE_FINNHUB_TOKEN as string
+  wsFinnhub = new WebSocket(`wss://ws.finnhub.io?token=${token}`)
 
   wsFinnhub.onopen = () => {
     ['NVDA', 'AMD', 'CRCL', 'AMZN', 'TSLA', 'ORCL', 'PLTR'].forEach(sym => {

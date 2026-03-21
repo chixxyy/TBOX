@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { api } from '../api'
 
 const alerts = ref<any[]>([])
 let refreshInterval: ReturnType<typeof setInterval>
@@ -15,12 +16,9 @@ function getRelativeTime(timestamp: number) {
 async function fetchTickerNews() {
   try {
     const categories = ['crypto', 'general', 'forex']
-    const promises = categories.map(cat => {
-      const token = import.meta.env.VITE_FINNHUB_TOKEN || 'd5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag'
-      return fetch(`https://finnhub.io/api/v1/news?category=${cat}&token=${token}`).then(res => res.json())
-    })
-    
-    const results = await Promise.all(promises)
+    const results = await Promise.all(
+      categories.map(cat => api.getFinnhubNews(cat).catch(() => []))
+    )
     let allNews = results.flat()
     
     allNews.sort((a, b) => b.datetime - a.datetime)
