@@ -35,19 +35,19 @@ onUnmounted(() => {
     <TickerBanner />
     <BackgroundMonitor />
     
-    <main v-if="activeTab === '交易'" class="flex-1 flex flex-col md:flex-row overflow-hidden">
+    <main v-if="activeTab === '交易'" class="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden pb-12 md:pb-0">
       <!-- Left Sidebar: Asset List -->
-      <aside class="w-full md:w-[260px] h-[180px] md:h-full border-b md:border-b-0 md:border-r border-slate-800 bg-[#0a0f1c] flex flex-col shrink-0">
+      <aside class="w-full md:w-[260px] h-auto md:h-full border-b md:border-b-0 md:border-r border-slate-800 bg-[#0a0f1c] flex flex-col shrink-0">
         <AssetList />
       </aside>
 
       <!-- Center: Chart Area -->
-      <section class="flex-1 bg-[#05080f] flex flex-col border-b md:border-b-0 md:border-r border-slate-800 relative min-h-[350px] md:min-h-0">
+      <section class="flex-1 bg-[#05080f] flex flex-col border-b md:border-b-0 md:border-r border-slate-800 relative min-h-[400px] md:min-h-0">
         <ChartArea />
       </section>
 
       <!-- Right Sidebar: Trading Panel & Order Book -->
-      <aside class="bg-[#0a0f1c] flex flex-col overflow-hidden relative shrink-0 h-[300px] md:h-full w-full md:w-[380px]">
+      <aside class="bg-[#0a0f1c] flex flex-col relative shrink-0 h-auto md:h-full w-full md:w-[380px]">
         <RightPanel />
       </aside>
     </main>
