@@ -1,9 +1,49 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { 
-  globalNews as newsItems, 
-  isNewsLoading as isLoading 
+import { ref, computed } from 'vue'
+import {
+  globalNews,
+  isNewsLoading as isLoading
 } from '../store'
+
+const activeFilter = ref('All')
+const filters = ['All', 'Critical', 'High', 'Low']
+const visibleCount = ref(5)
+
+const getSeverity = (item: any) => {
+  const h = (item.headline || '').toLowerCase()
+  const s = (item.summary || '').toLowerCase()
+  const text = h + ' ' + s
+  
+  if (text.includes('urgent') || text.includes('alert') || text.includes('sec') || text.includes('crash') || text.includes('hack')) return 'Critical'
+  if (text.includes('surge') || text.includes('plunge') || text.includes('breakthrough') || text.includes('etf')) return 'High'
+  return 'Low'
+}
+
+const severityColors: Record<string, string> = {
+  'Critical': 'text-red-400 bg-red-900/20 border-red-500/30',
+  'High': 'text-orange-400 bg-orange-900/20 border-orange-500/30',
+  'Low': 'text-emerald-400 bg-emerald-900/20 border-emerald-500/30',
+  'All': 'text-slate-400 bg-slate-800/40 border-slate-700'
+}
+
+const filteredAll = computed(() => {
+  let items = globalNews.value
+  if (activeFilter.value !== 'All') {
+    items = items.filter(item => getSeverity(item) === activeFilter.value)
+  }
+  return items
+})
+
+const visibleNews = computed(() => {
+  return filteredAll.value.slice(0, visibleCount.value).map(item => ({
+    ...item,
+    severity: getSeverity(item)
+  })).map(item => disp(item))
+})
+
+const loadMore = () => {
+  visibleCount.value += 5
+}
 
 const txCache = new Map<string, { headline: string; content: string }>()
 const txing = ref(new Set<string>())
@@ -23,7 +63,7 @@ async function toggleTx(item: any) {
   try {
     const [h, c] = await Promise.all([
       tx(item.headline),
-      tx(item.content?.slice(0, 400) || '')
+      tx(item.summary?.slice(0, 400) || '')
     ])
     txCache.set(item.id, { headline: h, content: c })
     txed.value.add(item.id)
@@ -35,7 +75,7 @@ async function toggleTx(item: any) {
 function disp(item: any) {
   if (txed.value.has(item.id) && txCache.has(item.id)) {
     const t = txCache.get(item.id)!
-    return { ...item, headline: t.headline, content: t.content, txd: true }
+    return { ...item, headline: t.headline, summary: t.content, txd: true }
   }
   return { ...item, txd: false }
 }
@@ -53,62 +93,74 @@ const getTagColor = (tag: any) => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-[#0a0f1c] text-xs">
-
+  <div class="flex-1 flex flex-col h-full bg-[#0a0f1c] text-slate-300">
+    <!-- Severity Filters -->
+    <div class="grid grid-cols-4 gap-2 p-3 border-b border-slate-800 bg-[#070b14]">
+      <button 
+        v-for="f in filters" 
+        :key="f"
+        @click="activeFilter = f; visibleCount = 5"
+        class="w-full py-1.5 rounded text-[10px] font-bold border transition-all"
+        :class="activeFilter === f 
+          ? (severityColors[f] || '').replace('bg-', 'bg-opacity-40 bg-') + ' border-opacity-100 shadow-[0_0_10px_rgba(0,0,0,0.3)]'
+          : 'bg-[#111827] text-slate-500 border-slate-800 hover:text-slate-300'"
+      >
+        {{ f }}
+      </button>
+    </div>
 
     <!-- Feed Content -->
-    <div class="flex-1 overflow-y-auto p-3 pb-24 md:pb-6 space-y-4">
-      <div v-for="item in newsItems" :key="item.id" class="news-card bg-[#111827] border border-slate-800 rounded-lg p-4 relative overflow-hidden group">
+    <div class="flex-1 overflow-y-auto p-3 space-y-4">
+      <div v-for="item in visibleNews" :key="item.id" class="news-card bg-[#111827] border border-slate-800 rounded-lg p-4 relative overflow-hidden group">
         <!-- Left accent line -->
-        <div class="absolute left-0 top-0 bottom-0 w-1" :class="item.accentColor || 'bg-slate-700/50'"></div>
+        <div class="absolute left-0 top-0 bottom-0 w-1 transition-colors duration-500" :class="item.accentColor"></div>
 
-        <div class="flex flex-col gap-3 overflow-hidden">
+        <!-- Severity Badge -->
+        <div class="absolute top-3 right-3 flex items-center space-x-2">
+          <div v-if="item.severity" :class="severityColors[item.severity]" class="text-[8px] px-1.5 py-0.5 rounded border border-opacity-30 uppercase font-black tracking-tighter shadow-sm">
+            {{ item.severity }}
+          </div>
+          <button @click="toggleTx(item)" class="p-1 hover:bg-slate-800 rounded bg-[#070b14]/50 border border-slate-800/50 text-slate-500 transition-colors">
+            <span v-if="txing.has(item.id)" class="block w-2 h-2 border border-violet-400 border-t-transparent rounded-full animate-spin"></span>
+            <span v-else class="text-[9px] font-bold">譯</span>
+          </button>
+        </div>
           
-          <!-- Avatar + Meta Area -->
-          <div class="flex items-center space-x-3">
-            <img :src="item.avatar" class="w-8 h-8 rounded-full flex-shrink-0" alt="" />
-            <div class="flex-1 min-w-0 flex flex-col">
-              <div class="flex items-center gap-1.5 text-[11px] font-mono leading-none">
-                <span class="font-bold text-white truncate text-xs">{{ item.source }}</span>
-                <span v-if="item.isOfficial" class="text-green-500 font-bold bg-green-500/10 px-1 rounded text-[8px] scale-90 origin-left">OFFICIAL</span>
-                <span class="text-slate-600">·</span>
-                <span class="text-slate-500 whitespace-nowrap">{{ item.time }}</span>
-              </div>
-              <span class="text-slate-600 text-[10px] truncate leading-tight">{{ item.handle }}</span>
+        <!-- Avatar + Meta Area -->
+        <div class="flex items-center space-x-3 mb-3">
+          <img :src="item.avatar" class="w-8 h-8 rounded-full flex-shrink-0" alt="" />
+          <div class="flex-1 min-w-0 flex flex-col">
+            <div class="flex items-center gap-1.5 text-[11px] font-mono leading-none">
+              <span class="font-bold text-white truncate text-xs">{{ item.source }}</span>
+              <span v-if="item.isOfficial" class="text-green-500 font-bold bg-green-500/10 px-1 rounded text-[8px] scale-90 origin-left">OFFICIAL</span>
+              <span class="text-slate-600">·</span>
+              <span class="text-slate-500 whitespace-nowrap">{{ item.time }}</span>
             </div>
+            <span class="text-slate-600 text-[10px] truncate leading-tight">{{ item.handle }}</span>
           </div>
-
-          <div class="flex flex-wrap gap-1.5">
-            <span v-for="tag in item.tags" :key="tag.label" 
-              class="px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-wider font-mono flex items-center whitespace-nowrap transition-colors"
-              :class="getTagColor(tag)">
-              <span v-if="tag.icon" class="mr-1 scale-90">{{ tag.icon }}</span>
-              {{ tag.label }}
-            </span>
-          </div>
-
-          <a :href="item.url" target="_blank" class="block group/link">
-            <div class="flex items-start justify-between gap-2 mb-1.5">
-              <h4 class="text-blue-400 font-bold text-sm leading-snug group-hover/link:underline break-words flex-1" v-if="item.headline">
-                {{ disp(item).headline }}
-                <span v-if="disp(item).txd" class="text-[9px] text-violet-400 font-mono">[譯]</span>
-              </h4>
-              <button
-                @click.prevent.stop="toggleTx(item)"
-                class="shrink-0 flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border border-slate-700 text-slate-500 hover:border-violet-700 hover:text-violet-400 transition-colors bg-black/20"
-              >
-                <span v-if="txing.has(item.id)" class="w-2 h-2 border border-violet-400 border-t-transparent rounded-full animate-spin"></span>
-                <span v-else>譯</span>
-              </button>
-            </div>
-            <p class="text-slate-400 text-[11px] leading-relaxed font-mono line-clamp-3 break-words mb-3" v-html="disp(item).content"></p>
-            
-            <!-- Featured Image 100% -->
-            <img v-if="item.image" :src="item.image" class="rounded border border-slate-700/50 w-full aspect-video object-cover brightness-90 group-hover:brightness-100 transition-all mb-3" alt="News" />
-          </a>
         </div>
 
-        <a :href="item.url" target="_blank" class="block w-full text-center py-2 mt-1 bg-blue-900/10 border border-blue-900/30 rounded text-blue-500 font-bold tracking-widest text-[9px] hover:bg-blue-900/20 hover:text-blue-400 transition-colors font-mono cursor-pointer">
+        <div class="flex flex-wrap gap-1.5 mb-3">
+          <span v-for="tag in item.tags" :key="tag.label" 
+            class="px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-wider font-mono flex items-center whitespace-nowrap transition-colors"
+            :class="getTagColor(tag)">
+            <span v-if="tag.icon" class="mr-1 scale-90">{{ tag.icon }}</span>
+            {{ tag.label }}
+          </span>
+        </div>
+
+        <a :href="item.url" target="_blank" class="block group/link">
+          <h4 class="text-blue-400 font-bold text-sm leading-snug group-hover/link:underline break-words mb-2">
+            {{ item.headline }}
+            <span v-if="item.txd" class="text-[9px] text-violet-400 font-mono">[譯]</span>
+          </h4>
+          <p class="text-slate-400 text-[11px] leading-relaxed font-mono line-clamp-3 break-words mb-3" v-html="item.summary"></p>
+          
+          <!-- Featured Image -->
+          <img v-if="item.image" :src="item.image" class="rounded border border-slate-700/50 w-full aspect-video object-cover brightness-90 group-hover:brightness-100 transition-all mb-3" alt="News" />
+        </a>
+
+        <a :href="item.url" target="_blank" class="block w-full text-center py-2 mt-2 bg-blue-900/10 border border-blue-900/30 rounded text-blue-500 font-bold tracking-widest text-[9px] hover:bg-blue-900/20 hover:text-blue-400 transition-colors font-mono cursor-pointer">
           VIEW SOURCE
         </a>
       </div>
@@ -116,6 +168,16 @@ const getTagColor = (tag: any) => {
       <!-- Placeholder for more items -->
       <div v-if="isLoading" class="bg-[#111827] border border-slate-800 rounded-lg p-4 opacity-50 flex items-center justify-center h-24">
         <div class="w-4 h-4 border-2 border-slate-600 border-t-slate-400 rounded-full animate-spin"></div>
+      </div>
+
+      <!-- Load More Button -->
+      <div v-if="filteredAll.length > visibleCount" class="pt-2 pb-24 md:pb-6 flex justify-center">
+        <button 
+          @click="loadMore"
+          class="px-6 py-2 bg-[#111827] hover:bg-slate-800 border border-slate-800 rounded text-[10px] font-bold text-slate-400 transition-all font-mono shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+        >
+          LOAD MORE ({{ Math.min(visibleCount, filteredAll.length) }} / {{ filteredAll.length }})
+        </button>
       </div>
     </div>
   </div>

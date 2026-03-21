@@ -10,6 +10,7 @@ const chart = shallowRef<any>(null)
 const series = shallowRef<any>(null)
 const volumeSeries = shallowRef<any>(null)
 const isFullscreen = ref(false)
+const isInteracting = ref(false)
 const intervals = ['1s', '1m', '1h', '1d', '1w', '1M']
 const filteredIntervals = computed(() => {
   const isCrypto = activeSymbol.value.endsWith('USDT')
@@ -47,6 +48,7 @@ const displayIntervals: Record<string, string> = {
 let ws: WebSocket | null = null
 
 function createChartInContainer(container: HTMLElement) {
+  const isMobile = window.innerWidth < 768;
   const c = createChart(container, {
     layout: {
       background: { type: ColorType.Solid, color: 'transparent' },
@@ -55,6 +57,10 @@ function createChartInContainer(container: HTMLElement) {
     grid: {
       vertLines: { color: 'rgba(30, 41, 59, 0.5)' },
       horzLines: { color: 'rgba(30, 41, 59, 0.5)' },
+    },
+    // Mobile Touch Optimization: Disable vertical touch drag to allow page scrolling
+    handleScroll: {
+      vertTouchDrag: !isMobile,
     },
     rightPriceScale: {
       borderColor: 'rgba(30, 41, 59, 0.8)',
@@ -313,7 +319,31 @@ onUnmounted(() => {
     </div>
 
     <!-- Normal Chart -->
-    <div ref="chartContainer" class="flex-1 relative w-full cursor-crosshair"></div>
+    <div class="h-[320px] md:flex-1 relative w-full overflow-hidden">
+      <div ref="chartContainer" class="w-full h-full cursor-crosshair touch-pan-y"></div>
+      
+      <!-- Mobile Scroll Protection Overlay -->
+      <div 
+        v-if="!isInteracting"
+        class="md:hidden absolute inset-0 z-20 bg-transparent flex items-center justify-center group/overlay"
+        @click="isInteracting = true"
+      >
+        <div class="bg-blue-600/10 backdrop-blur-[1px] border border-blue-500/20 px-4 py-2 rounded-full text-[10px] text-blue-400 font-bold opacity-0 group-hover/overlay:opacity-100 transition-opacity">
+          TOUCH TO INTERACT
+        </div>
+      </div>
+      
+      <!-- Close interaction button -->
+      <button 
+        v-if="isInteracting"
+        @click="isInteracting = false"
+        class="md:hidden absolute top-2 right-2 z-30 bg-slate-900/80 p-1.5 rounded-full text-slate-400 border border-slate-700"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
   </div>
 
   <!-- Fullscreen Modal (Teleport to body so it's above everything) -->

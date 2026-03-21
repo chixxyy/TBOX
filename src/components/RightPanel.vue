@@ -97,7 +97,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full overflow-hidden text-xs">
+  <div class="flex-1 flex flex-col h-full overflow-hidden text-xs">
     <!-- View Switcher -->
     <div class="flex h-10 md:h-12 border-b border-slate-800 bg-[#070b14] shrink-0">
       <button 
@@ -113,7 +113,7 @@ onUnmounted(() => {
     </div>
 
     <!-- News Feed Section -->
-    <div v-show="currentView === 'FEED'" class="h-[300px] md:h-auto md:flex-1 overflow-hidden">
+    <div v-show="currentView === 'FEED'" class="min-h-[200px] h-auto md:h-auto md:flex-1 overflow-visible md:overflow-hidden">
       <NewsFeed />
     </div>
 
