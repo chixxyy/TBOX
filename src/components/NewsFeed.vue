@@ -57,7 +57,7 @@ const getTagColor = (tag: any) => {
 
 
     <!-- Feed Content -->
-    <div class="flex-1 overflow-y-auto p-3 space-y-4">
+    <div class="flex-1 overflow-y-auto p-3 pb-24 md:pb-6 space-y-4">
       <div v-for="item in newsItems" :key="item.id" class="news-card bg-[#111827] border border-slate-800 rounded-lg p-4 relative overflow-hidden group">
         <!-- Left accent line -->
         <div class="absolute left-0 top-0 bottom-0 w-1" :class="item.accentColor || 'bg-slate-700/50'"></div>

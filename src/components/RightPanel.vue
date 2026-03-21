@@ -118,7 +118,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Order Book Section -->
-    <div v-show="currentView === 'ORDERBOOK'" class="flex-1 flex flex-col min-h-0 p-1 md:p-2 relative">
+    <div v-show="currentView === 'ORDERBOOK'" class="flex-1 flex flex-col min-h-0 p-1 md:p-2 pb-12 md:pb-2 relative">
       
       <!-- Unavailable Overlay for Stocks -->
       <div v-if="!isCrypto" class="absolute inset-0 z-50 bg-[#070b14]/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 md:p-6 text-center border-t border-slate-800">

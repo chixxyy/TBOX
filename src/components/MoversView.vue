@@ -193,7 +193,7 @@ const stats = computed(() => {
     </div>
 
     <!-- Content List -->
-    <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
+    <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 space-y-4">
       <div v-if="isLoading" class="flex justify-center items-center h-full">
         <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>

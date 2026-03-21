@@ -202,7 +202,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto scrollbar-hide p-6">
+    <div class="flex-1 overflow-y-auto scrollbar-hide p-6 pb-24 md:pb-6">
       <div v-if="isLoading" class="flex items-center justify-center h-full">
         <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>

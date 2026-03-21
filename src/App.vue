@@ -8,6 +8,7 @@ import MarketsView from './components/MarketsView.vue'
 import NewsView from './components/NewsView.vue'
 import MoversView from './components/MoversView.vue'
 import BackgroundMonitor from './components/BackgroundMonitor.vue'
+import SiteFooter from './components/SiteFooter.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { activeTab } from './store'
 
@@ -29,7 +30,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-screen w-screen bg-[#070b14] text-slate-300 flex flex-col font-sans overflow-hidden">
+  <div class="h-[100dvh] w-screen bg-[#070b14] text-slate-300 flex flex-col font-sans overflow-hidden">
     <TopHeader />
     <TickerBanner />
     <BackgroundMonitor />
@@ -62,6 +63,9 @@ onUnmounted(() => {
     <main v-else-if="activeTab === '異動'" class="flex-1 flex overflow-hidden bg-[#05080f] overflow-y-auto">
       <MoversView />
     </main>
+
+    <!-- Global Site Footer -->
+    <SiteFooter />
   </div>
 </template>
 
