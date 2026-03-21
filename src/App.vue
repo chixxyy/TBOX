@@ -9,6 +9,7 @@ import NewsView from './components/NewsView.vue'
 import MoversView from './components/MoversView.vue'
 import BackgroundMonitor from './components/BackgroundMonitor.vue'
 import SiteFooter from './components/SiteFooter.vue'
+import ReloadPrompt from './components/ReloadPrompt.vue'
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { activeTab, setScrollProgress, isChangingTab } from './store'
 
@@ -94,6 +95,9 @@ onUnmounted(() => {
 
     <!-- Global Site Footer -->
     <SiteFooter />
+    
+    <!-- PWA Update Prompt -->
+    <ReloadPrompt />
   </div>
 </template>
 
