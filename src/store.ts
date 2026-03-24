@@ -170,7 +170,10 @@ export interface ChatMessage {
 
 export const chatSession = ref<any>(null)
 export const chatUser = computed(() => chatSession.value?.user?.user_metadata?.nickname || chatSession.value?.user?.email?.split('@')[0] || 'GUEST')
-export const isAdmin = computed(() => chatSession.value?.user?.email === 'admin@tradingbox.com')
+export const isAdmin = computed(() => {
+  const email = chatSession.value?.user?.email || ''
+  return email.toLowerCase() === 'a27976566@gmail.com' || email.toLowerCase() === 'admin@tradingbox.com'
+})
 export const chatAvatar = computed(() => `https://ui-avatars.com/api/?name=${encodeURIComponent(chatUser.value)}&background=3b82f6&color=fff&rounded=true`)
 
 export const chatMessages = ref<ChatMessage[]>([])
@@ -241,7 +244,11 @@ export const addChatMessage = async (msg: Omit<ChatMessage, 'id' | 'timestamp'>)
 
 export const removeChatMessage = async (id: string) => {
   if (!chatSession.value) return
-  await supabase.from('messages').delete().eq('id', id)
+  const { error } = await supabase.from('messages').delete().eq('id', id)
+  if (error) {
+    console.error('刪除留言失敗:', error.message)
+    alert('刪除留言失敗，可能沒有權限：' + error.message)
+  }
 }
 
 export const chatSignOut = async () => {
