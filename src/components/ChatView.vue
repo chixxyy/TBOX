@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, nextTick, computed, onMounted, watch } from 'vue'
-import { chatMessages, addChatMessage, removeChatMessage, globalNews, chatUser, chatSession, chatLoading, isAdmin } from '../store'
+import { chatMessages, addChatMessage, removeChatMessage, globalNews, chatUser, chatSession, chatLoading, isAdmin, activeTab } from '../store'
 import LoginModal from './LoginModal.vue'
+
+const handleCloseLogin = () => {
+  activeTab.value = '交易'
+}
 
 const currentUser = chatUser
 const currentAvatar = computed(() => `https://ui-avatars.com/api/?name=${currentUser.value}&background=3b82f6&color=fff&rounded=true`)
@@ -219,7 +223,7 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
 
   <!-- Login Modal Overlay -->
   <div v-if="!chatSession && !chatLoading" class="absolute inset-0 z-[100] bg-[#05080f]/90 backdrop-blur-sm flex items-center justify-center p-4">
-    <LoginModal />
+    <LoginModal @close="handleCloseLogin" />
   </div>
 </template>
 

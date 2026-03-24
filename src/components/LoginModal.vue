@@ -63,7 +63,17 @@ const handleAuth = async () => {
 </script>
 
 <template>
-  <div class="bg-[#111827] border border-slate-700 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-fade-in-up">
+  <div class="bg-[#111827] border border-slate-700 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-fade-in-up relative">
+    <!-- Close Button -->
+    <button 
+      @click="emit('close')" 
+      class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+      title="返回市場"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
     <div class="text-center mb-6">
       <h2 class="text-xl font-bold text-white mb-2">{{ isRegister ? '加入投資討論區' : '登入討論區' }}</h2>
       <p class="text-xs text-slate-400">與全球投資者即時交流市場觀點</p>
@@ -122,13 +132,20 @@ const handleAuth = async () => {
         {{ isRegister ? '立即註冊' : '登入' }}
       </button>
 
-      <div class="text-center pt-2 border-t border-slate-800">
+      <div class="space-y-2 pt-2 border-t border-slate-800 flex flex-col items-center">
         <button 
           type="button" 
           @click="isRegister = !isRegister; errorMsg = ''; successMsg = ''"
           class="text-xs text-slate-400 hover:text-white transition-colors"
         >
           {{ isRegister ? '已有帳號？返回登入' : '還沒有帳號？立即註冊' }}
+        </button>
+        <button 
+          type="button"
+          @click="emit('close')"
+          class="text-[10px] text-slate-500 hover:text-slate-300 transition-colors uppercase tracking-widest mt-1"
+        >
+          暫不加入，返回市場
         </button>
       </div>
     </form>
