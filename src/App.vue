@@ -8,6 +8,7 @@ import RightPanel from './components/RightPanel.vue'
 import MarketsView from './components/MarketsView.vue'
 import NewsView from './components/NewsView.vue'
 import MoversView from './components/MoversView.vue'
+import ChatView from './components/ChatView.vue'
 import BackgroundMonitor from './components/BackgroundMonitor.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import ReloadPrompt from './components/ReloadPrompt.vue'
@@ -93,6 +94,10 @@ onUnmounted(() => {
 
     <main v-else-if="activeTab === '異動'" class="flex-1 flex overflow-hidden bg-[#05080f]">
       <MoversView />
+    </main>
+
+    <main v-else-if="activeTab === '討論'" class="flex-1 flex overflow-hidden bg-[#05080f]">
+      <ChatView />
     </main>
 
     <!-- Global Site Footer -->

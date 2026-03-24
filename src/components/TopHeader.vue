@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog } from '../store'
 import { onClickOutside } from '@vueuse/core'
 
-const tabs = ['交易', '新聞', '市場', '異動']
+const tabs = ['交易', '新聞', '市場', '異動', '討論']
 
 const showNotifications = ref(false)
 const notificationDropdown = ref<HTMLElement | null>(null)

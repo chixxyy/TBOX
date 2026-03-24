@@ -151,3 +151,57 @@ export const removeNotificationLog = (id: string) => {
 }
 
 export const unreadNotificationsCount = computed(() => notificationHistory.value.filter(n => !n.isRead).length)
+
+// --- Chat & Discussion ---
+export interface ChatMessage {
+  id: string
+  user: string
+  avatar: string
+  text: string
+  timestamp: number
+  newsShare?: {
+    headline: string
+    url: string
+    source: string
+  }
+}
+
+export const chatUser = useStorage('tbox-chat-user', 'GUEST_' + Math.floor(Math.random() * 10000))
+
+export const chatMessages = useStorage<ChatMessage[]>('tbox-chat-messages', [
+  {
+    id: 'msg-1',
+    user: 'System Admin',
+    avatar: 'https://ui-avatars.com/api/?name=Admin&background=ef4444&color=fff',
+    text: '歡迎來到 TBOX 討論區！您可以在這裡與大家分享對市場的看法，或從右側分享最新的熱門新聞。',
+    timestamp: Date.now() - 3600000
+  }
+])
+
+// 7-day Retention Policy
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+const cleanupOldMessages = () => {
+  const now = Date.now()
+  chatMessages.value = chatMessages.value.filter(m => (now - m.timestamp) < SEVEN_DAYS_MS)
+  // Hard cap to prevent memory bloat even within 7 days
+  if (chatMessages.value.length > 500) {
+    chatMessages.value = chatMessages.value.slice(-500)
+  }
+}
+cleanupOldMessages()
+
+export const addChatMessage = (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+  chatMessages.value.push({
+    ...msg,
+    id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+    timestamp: Date.now()
+  })
+  
+  if (chatMessages.value.length > 500) {
+    chatMessages.value.shift()
+  }
+}
+
+export const removeChatMessage = (id: string) => {
+  chatMessages.value = chatMessages.value.filter(m => m.id !== id)
+}
