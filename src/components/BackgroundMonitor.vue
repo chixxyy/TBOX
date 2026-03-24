@@ -300,7 +300,8 @@ function connectAlertMonitor() {
     priceAlerts.value.forEach(alert => {
       if (alert.triggered) return
       
-      const currentPrice = prices[alert.symbol.toUpperCase()] || prices[alert.symbol.toLowerCase()] || prices[alert.symbol]
+      const normalizedSymbol = alert.symbol.replace('/', '').toUpperCase()
+      const currentPrice = prices[normalizedSymbol]
       if (!currentPrice) return
 
       let isTriggered = false

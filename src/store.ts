@@ -107,7 +107,7 @@ export const addPriceAlert = async (symbol: string, targetPrice: number, conditi
   }
 }
 
-export const fetchPriceAlerts = async (userId: string) => {
+const fetchPriceAlerts = async (userId: string) => {
   const { data: alerts, error } = await supabase
     .from('price_alerts')
     .select('*')
@@ -140,6 +140,10 @@ export const removePriceAlert = async (id: string) => {
 export const updatePriceAlertTriggered = async (id: string) => {
   if (!chatSession.value) return
   await supabase.from('price_alerts').update({ triggered: true }).eq('id', id)
+  
+  // Update local state immediately
+  const alert = priceAlerts.value.find(a => a.id === id)
+  if (alert) alert.triggered = true
 }
 
 // --- Global UI Toast Alerts & History ---
@@ -205,8 +209,7 @@ export const unreadNotificationsCount = computed(() => {
 })
 
 // --- Global Auth UI State ---
-export const showLoginModal = ref(false)
-export const previousTab = ref('交易')
+const previousTab = ref('交易')
 
 export const goToLogin = () => {
   previousTab.value = activeTab.value === '登入' ? '交易' : activeTab.value
@@ -217,17 +220,10 @@ export const handleLoginSuccess = () => {
   activeTab.value = previousTab.value
 }
 
-export const openLoginModal = () => {
-  showLoginModal.value = true
-}
-export const closeLoginModal = () => {
-  showLoginModal.value = false
-}
-
 // --- Supabase Realtime Chat & Auth ---
 import { supabase } from './supabase'
 
-export interface ChatMessage {
+interface ChatMessage {
   id: string
   user: string
   userId: string
@@ -247,13 +243,12 @@ export const isAdmin = computed(() => {
   const email = chatSession.value?.user?.email || ''
   return email.toLowerCase() === 'a27976566@gmail.com' || email.toLowerCase() === 'admin@tradingbox.com'
 })
-export const chatAvatar = computed(() => `https://ui-avatars.com/api/?name=${encodeURIComponent(chatUser.value)}&background=3b82f6&color=fff&rounded=true`)
 
 export const chatMessages = ref<ChatMessage[]>([])
 export const chatLoading = ref(true)
 
 // --- User Profile State ---
-export interface UserProfile {
+interface UserProfile {
   id: string
   full_name: string
   avatar_url: string
@@ -262,7 +257,7 @@ export interface UserProfile {
 }
 export const userProfile = ref<UserProfile | null>(null)
 
-export const fetchUserProfile = async (userId: string) => {
+const fetchUserProfile = async (userId: string) => {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -299,6 +294,19 @@ export const updateUserProfile = async (updates: Partial<UserProfile>) => {
     .from('profiles')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', chatSession.value.user.id)
+  
+  // Also update all historical messages for this user (Global Sync)
+  if (!error) {
+    const msgUpdates: any = {}
+    if (updates.full_name) msgUpdates.user_name = updates.full_name
+    if (updates.avatar_url) msgUpdates.avatar = updates.avatar_url
+    
+    if (Object.keys(msgUpdates).length > 0) {
+      await supabase.from('messages')
+        .update(msgUpdates)
+        .eq('user_id', chatSession.value.user.id)
+    }
+  }
   
   if (!error && userProfile.value) {
     userProfile.value = { ...userProfile.value, ...updates }
@@ -385,7 +393,28 @@ export const initSupabaseChat = async () => {
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, payload => {
       chatMessages.value = chatMessages.value.filter(msg => msg.id !== payload.old.id)
     })
-    .subscribe()
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, payload => {
+      const idx = chatMessages.value.findIndex(msg => msg.id === payload.new.id)
+      if (idx !== -1) {
+        const m = payload.new
+        const existing = chatMessages.value[idx]
+        if (!existing) return
+        
+        chatMessages.value[idx] = {
+          id: m.id || existing.id,
+          user: m.user_name || existing.user,
+          userId: m.user_id || existing.userId,
+          avatar: m.avatar || existing.avatar,
+          text: m.text || existing.text,
+          timestamp: m.created_at ? new Date(m.created_at).getTime() : existing.timestamp,
+          newsShare: m.news_share !== undefined ? m.news_share : existing.newsShare
+        }
+      }
+    })
+    .subscribe((status, err) => {
+      if (err) console.error('Realtime subscription error:', err)
+      if (status === 'SUBSCRIBED') console.log('Successfully connected to chat realtime')
+    })
 }
 
 export const addChatMessage = async (msg: Omit<ChatMessage, 'id' | 'timestamp' | 'userId'>) => {
