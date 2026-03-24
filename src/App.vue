@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import TopHeader from './components/TopHeader.vue'
+import GlobalToast from './components/GlobalToast.vue'
 import TickerBanner from './components/TickerBanner.vue'
 import AssetList from './components/AssetList.vue'
 import ChartArea from './components/ChartArea.vue'
@@ -60,6 +61,7 @@ onUnmounted(() => {
 
 <template>
   <div class="h-[100dvh] w-screen bg-[#070b14] text-slate-300 flex flex-col font-sans overflow-hidden">
+    <GlobalToast />
     <TopHeader />
     <TickerBanner />
     <BackgroundMonitor />

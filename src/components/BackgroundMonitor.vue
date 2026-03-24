@@ -4,6 +4,8 @@ import {
   globalMovers, globalNews, 
   isMoversLoading, isNewsLoading, 
   lastMoversUpdate, lastNewsUpdate,
+  priceAlerts,
+  showToast,
   type Mover
 } from '../store'
 import { playNewsChime, playMoversChime } from '../utils/audio'
@@ -139,6 +141,10 @@ async function syncNews() {
           newItems.length === 1 ? '市場新快訊 (News)' : `${newItems.length} 則新快訊`,
           newItems.length === 1 ? newItems[0].headline : newItems.map(n => n.headline).join('\n')
         )
+        showToast(
+          newItems.length === 1 ? '市場新快訊' : `${newItems.length} 則新快訊`,
+          newItems.length === 1 ? newItems[0].headline : newItems.map(n => n.headline).join('\n')
+        )
       }
     }
 
@@ -260,6 +266,7 @@ async function syncMovers() {
     if (globalMovers.value.length > 0 && (oldTop3 !== newTop3 || hasSignificantRankChange)) {
       playMoversChime()
       sendDesktopNotification('大行情異動 (Market Movers)', 'Top 3 排行發生變化或有顯著價格波動')
+      showToast('大行情異動', 'Top 3 排行發生變化或有顯著價格波動')
     }
 
     globalMovers.value = newDataProcessed
@@ -272,11 +279,53 @@ async function syncMovers() {
 }
 
 let newsTimer: any, moversTimer: any
+let alertWs: WebSocket | null = null
+
+function connectAlertMonitor() {
+  if (alertWs) alertWs.close()
+  alertWs = new WebSocket('wss://stream.binance.com:9443/ws/!miniTicker@arr')
+  
+  alertWs.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    if (!Array.isArray(data)) return
+    
+    const prices: Record<string, number> = {}
+    for (const d of data) {
+      prices[d.s] = parseFloat(d.c)
+    }
+
+    priceAlerts.value.forEach(alert => {
+      if (alert.triggered) return
+      
+      const currentPrice = prices[alert.symbol.toUpperCase()]
+      if (!currentPrice) return
+
+      let isTriggered = false
+      if (alert.condition === 'above' && currentPrice >= alert.targetPrice) isTriggered = true
+      if (alert.condition === 'below' && currentPrice <= alert.targetPrice) isTriggered = true
+
+      if (isTriggered) {
+        alert.triggered = true
+        playMoversChime()
+        sendDesktopNotification(
+          '🔔 到價提醒觸發',
+          `${alert.symbol} 已達到設定價格 ${alert.targetPrice} (目前: ${currentPrice})`
+        )
+        showToast('🔔 到價提醒觸發', `${alert.symbol} 已達到設定價格 ${alert.targetPrice} (目前: ${currentPrice})`)
+      }
+    })
+  }
+
+  alertWs.onclose = () => {
+    setTimeout(connectAlertMonitor, 5000)
+  }
+}
 
 onMounted(() => {
   initDesktopNotifications()
   syncNews()
   syncMovers()
+  connectAlertMonitor()
   newsTimer = setInterval(syncNews, 30000)
   moversTimer = setInterval(syncMovers, 10000)
 })
@@ -284,6 +333,7 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(newsTimer)
   clearInterval(moversTimer)
+  if (alertWs) alertWs.close()
 })
 </script>
 <template><div style="display:none"></div></template>

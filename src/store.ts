@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { useStorage } from '@vueuse/core'
 
 // Only track these 4 assets as requested
 
@@ -71,4 +72,49 @@ export const scrollProgress = ref(0) // 0 to 100
 export const isChangingTab = ref(false)
 export const setScrollProgress = (progress: number) => {
   scrollProgress.value = Math.max(0, Math.min(100, progress))
+}
+
+// --- Price Alerts ---
+export interface PriceAlert {
+  id: string
+  symbol: string
+  targetPrice: number
+  condition: 'above' | 'below'
+  triggered: boolean
+}
+
+export const priceAlerts = useStorage<PriceAlert[]>('tbox-price-alerts', [])
+
+export const addPriceAlert = (symbol: string, targetPrice: number, condition: 'above' | 'below') => {
+  priceAlerts.value.push({
+    id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+    symbol,
+    targetPrice,
+    condition,
+    triggered: false
+  })
+}
+
+export const removePriceAlert = (id: string) => {
+  priceAlerts.value = priceAlerts.value.filter(a => a.id !== id)
+}
+
+// --- Global UI Toast Alerts ---
+interface ToastItem {
+  id: string
+  title: string
+  message: string
+}
+export const toasts = ref<ToastItem[]>([])
+
+export const showToast = (title: string, message: string) => {
+  toasts.value.push({
+    id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+    title,
+    message
+  })
+}
+
+export const removeToast = (id: string) => {
+  toasts.value = toasts.value.filter(t => t.id !== id)
 }
