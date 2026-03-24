@@ -89,7 +89,7 @@ const handleAuth = async () => {
           type="text" 
           placeholder="例如：幣圈韭菜、航海王"
           required
-          class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+          class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-[16px] md:text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
         />
       </div>
 
@@ -100,7 +100,7 @@ const handleAuth = async () => {
           type="email" 
           placeholder="your@email.com"
           required
-          class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+          class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-[16px] md:text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
         />
       </div>
 
@@ -112,7 +112,7 @@ const handleAuth = async () => {
           :placeholder="isRegister ? '輸入大於 6 碼的密碼' : '請輸入密碼'"
           required
           minlength="6"
-          class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+          class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-[16px] md:text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
         />
       </div>
 
@@ -124,7 +124,7 @@ const handleAuth = async () => {
           placeholder="請再次輸入密碼"
           required
           minlength="6"
-          class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+          class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-[16px] md:text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
         />
       </div>
 

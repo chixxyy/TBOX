@@ -216,7 +216,7 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
             v-model="inputText"
             type="text" 
             placeholder="與大家分享您的看法..." 
-            class="flex-1 bg-[#05080f] border border-slate-700 rounded-lg px-4 py-2 text-xs md:text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
+            class="flex-1 bg-[#05080f] border border-slate-700 rounded-lg px-4 py-2 text-[16px] md:text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
           >
           <button 
             type="submit"
