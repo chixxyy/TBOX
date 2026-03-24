@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled } from '../store'
+import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, chatSession, chatSignOut, goToLogin, isAdmin, chatUser, userProfile } from '../store'
 import { onClickOutside } from '@vueuse/core'
+
+const showUserMenu = ref(false)
+const userMenuRef = ref(null)
+onClickOutside(userMenuRef, () => {
+  showUserMenu.value = false
+})
+
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
+}
 
 const tabs = ['交易', '新聞', '市場', '異動', '討論']
 
@@ -112,6 +122,78 @@ const formatTime = (ts: number) => {
           </div>
         </div>
       </transition>
+    </div>
+
+    <!-- Right Side: User Profile / Login -->
+    <div class="flex items-center ml-1 md:ml-3 relative" ref="userMenuRef">
+      <!-- Not Logged In -->
+      <button 
+        v-if="!chatSession" 
+        @click="goToLogin"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-all text-[11px] md:text-sm font-bold whitespace-nowrap"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+        </svg>
+        登入
+      </button>
+
+      <!-- Logged In -->
+      <div v-else class="relative">
+        <button 
+          @click="toggleUserMenu"
+          class="flex items-center gap-2 p-1 rounded-full hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700"
+        >
+          <img 
+            :src="chatSession.user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${chatSession.user.user_metadata.full_name || 'User'}&background=random`" 
+            class="h-7 w-7 md:h-8 md:w-8 rounded-full border border-slate-700"
+          />
+          <span class="hidden md:block text-xs font-medium text-slate-200 truncate max-w-[80px]">
+            {{ userProfile?.full_name || chatUser }}
+          </span>
+        </button>
+
+        <!-- User Dropdown -->
+        <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-2 scale-95" enter-to-class="opacity-100 translate-y-0 scale-100" leave-active-class="transition ease-in duration-100" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 translate-y-2 scale-95">
+          <div v-if="showUserMenu" class="absolute right-0 top-full mt-2 w-56 md:w-64 bg-[#0d1425] border border-slate-800 rounded-2xl shadow-2xl py-2 z-50 overflow-hidden backdrop-blur-xl bg-opacity-95">
+          <div class="px-4 py-3 border-b border-slate-800/50">
+            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">目前登入為</p>
+            <p class="text-xs md:text-sm font-black text-white truncate">{{ chatUser }}</p>
+            <p class="text-[9px] text-slate-500 font-mono truncate opacity-60 mt-0.5">{{ chatSession?.user.email }}</p>
+          </div>
+          
+          <div class="py-1">
+            <button 
+              @click="activeTab = '個人檔案'; showUserMenu = false"
+              class="w-full px-4 py-2.5 text-left text-xs md:text-sm text-slate-300 hover:bg-blue-600/10 hover:text-blue-400 flex items-center gap-3 transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              個人檔案
+            </button>
+            <button 
+              v-if="isAdmin"
+              class="w-full px-4 py-2.5 text-left text-xs md:text-sm text-amber-500 hover:bg-amber-500/10 flex items-center gap-3 transition-all cursor-default"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              管理員權限已啟動
+            </button>
+            <button 
+              @click="chatSignOut(); showUserMenu = false"
+              class="w-full px-4 py-2.5 text-left text-xs md:text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-3 transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              帳號登出
+            </button>
+          </div>
+        </div>
+        </transition>
+      </div>
     </div>
   </header>
 </template>

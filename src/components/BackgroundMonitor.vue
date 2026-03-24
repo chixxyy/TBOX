@@ -7,6 +7,7 @@ import {
   priceAlerts,
   showToast,
   isNotificationsEnabled,
+  updatePriceAlertTriggered,
   type Mover
 } from '../store'
 import { initDesktopNotifications, sendDesktopNotification } from '../utils/notify'
@@ -299,7 +300,7 @@ function connectAlertMonitor() {
     priceAlerts.value.forEach(alert => {
       if (alert.triggered) return
       
-      const currentPrice = prices[alert.symbol.toUpperCase()]
+      const currentPrice = prices[alert.symbol.toUpperCase()] || prices[alert.symbol.toLowerCase()] || prices[alert.symbol]
       if (!currentPrice) return
 
       let isTriggered = false
@@ -315,6 +316,7 @@ function connectAlertMonitor() {
           )
         }
         showToast('🔔 到價提醒觸發', `${alert.symbol} 已達到設定價格 ${alert.targetPrice} (目前: ${currentPrice})`)
+        updatePriceAlertTriggered(alert.id)
       }
     })
   }

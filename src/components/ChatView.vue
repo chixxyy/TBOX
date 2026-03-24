@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { ref, nextTick, computed, onMounted, watch } from 'vue'
-import { chatMessages, addChatMessage, removeChatMessage, globalNews, chatUser, chatSession, chatLoading, isAdmin, activeTab, chatSignOut } from '../store'
-import LoginModal from './LoginModal.vue'
-
-const handleCloseLogin = () => {
-  activeTab.value = '交易'
-}
+import { 
+  chatMessages, addChatMessage, removeChatMessage, 
+  globalNews, chatUser, chatSession, chatLoading, 
+  isAdmin, goToLogin, userProfile 
+} from '../store'
 
 const currentUser = chatUser
 const currentAvatar = computed(() => `https://ui-avatars.com/api/?name=${currentUser.value}&background=3b82f6&color=fff&rounded=true`)
@@ -13,12 +12,6 @@ const currentAvatar = computed(() => `https://ui-avatars.com/api/?name=${current
 const inputText = ref('')
 const chatContainer = ref<HTMLElement | null>(null)
 const visibleCount = ref(15)
-
-const showLogoutConfirm = ref(false)
-const confirmLogout = () => {
-  chatSignOut()
-  showLogoutConfirm.value = false
-}
 
 const confirmDeleteId = ref<string | null>(null)
 const confirmDelete = () => {
@@ -34,7 +27,6 @@ const translatingIds = ref<Set<string>>(new Set())
 
 const translateNews = async (news: any) => {
   if (translatedNews.value[news.id]) {
-    // Toggle off if already translated
     delete translatedNews.value[news.id]
     return
   }
@@ -54,19 +46,19 @@ const translateNews = async (news: any) => {
 }
 
 const visibleMessages = computed(() => {
+  if (!Array.isArray(chatMessages.value)) return []
   return chatMessages.value.slice(Math.max(0, chatMessages.value.length - visibleCount.value))
 })
 
 const onScroll = async (e: Event) => {
   const el = e.target as HTMLElement
-  // Check if scrolled to top
   if (el.scrollTop <= 5) {
     if (visibleCount.value < chatMessages.value.length) {
       const oldScrollHeight = el.scrollHeight
-      visibleCount.value += 15 // Load 15 more messages
+      visibleCount.value += 15
       await nextTick()
       const newScrollHeight = el.scrollHeight
-      el.scrollTop = newScrollHeight - oldScrollHeight // Keep scroll position stable
+      el.scrollTop = newScrollHeight - oldScrollHeight
     }
   }
 }
@@ -77,7 +69,6 @@ const scrollToBottom = () => {
   }
 }
 
-// Auto scroll on new messages only when length increases
 watch(() => chatMessages.value.length, (newLen, oldLen) => {
   if (newLen > oldLen) {
     nextTick(() => scrollToBottom())
@@ -97,8 +88,8 @@ const sendMessage = () => {
   if (!inputText.value.trim()) return
   
   addChatMessage({
-    user: currentUser.value,
-    avatar: currentAvatar.value,
+    user: userProfile.value?.full_name || currentUser.value,
+    avatar: userProfile.value?.avatar_url || currentAvatar.value,
     text: inputText.value.trim()
   })
   
@@ -117,8 +108,8 @@ const formatMessage = (text: string) => {
 
 const shareNews = (news: any) => {
   addChatMessage({
-    user: currentUser.value,
-    avatar: currentAvatar.value,
+    user: userProfile.value?.full_name || currentUser.value,
+    avatar: userProfile.value?.avatar_url || currentAvatar.value,
     text: '快看這則重要新聞！',
     newsShare: {
       headline: news.headline,
@@ -140,18 +131,13 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
       <!-- Chat Header -->
       <div class="h-12 border-b border-slate-800 bg-[#0a0f1c] flex items-center px-4 shrink-0 shadow-sm">
         <h2 class="font-bold text-slate-200 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
           全球投資者討論區
         </h2>
         <div class="ml-auto flex items-center gap-3">
           <span class="hidden xs:block text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded font-mono">{{ chatMessages.length }} 則留言</span>
-          <button 
-            @click="showLogoutConfirm = true" 
-            class="flex items-center gap-1 text-[10px] text-slate-400 hover:text-red-400 transition-colors px-2 py-1 rounded border border-slate-800 hover:border-red-900/30 bg-slate-800/30"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            登出
-          </button>
         </div>
       </div>
 
@@ -175,11 +161,11 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
         </div>
 
         <div v-for="msg in visibleMessages" :key="msg.id" class="flex gap-3 group animate-fade-in-up">
-          <img :src="msg.avatar" class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-800 shrink-0 shadow-sm border border-slate-700" loading="lazy" />
+          <img :src="msg.avatar || `https://ui-avatars.com/api/?name=U&background=random`" class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-800 shrink-0 shadow-sm border border-slate-700" loading="lazy" />
           <div class="flex flex-col min-w-0 flex-1">
             <div class="flex items-baseline gap-2 mb-1">
-              <span class="font-bold text-slate-200 text-xs md:text-sm shadow-sm">{{ msg.user }}</span>
-              <span class="text-[10px] text-slate-500 font-mono">{{ formatTime(msg.timestamp) }}</span>
+              <span class="font-bold text-slate-200 text-xs md:text-sm shadow-sm">{{ msg.user || '匿名使用者' }}</span>
+              <span class="text-[10px] text-slate-500 font-mono">{{ formatTime(msg.timestamp || Date.now()) }}</span>
               <button 
                 v-if="msg.user === chatUser || isAdmin"
                 @click="confirmDeleteId = msg.id"
@@ -194,7 +180,6 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
             <div class="bg-[#0a0f1c] border border-slate-800/80 rounded-b-xl rounded-tr-xl px-3 py-2 text-xs md:text-sm text-slate-300 w-fit max-w-[90%] md:max-w-[75%] shadow hover:border-slate-700 transition-colors">
               <span class="leading-relaxed whitespace-pre-wrap" v-html="formatMessage(msg.text)"></span>
               
-              <!-- Embedded News Card -->
               <a v-if="msg.newsShare" :href="msg.newsShare.url" target="_blank" rel="noopener noreferrer" class="mt-2 block w-full bg-[#111827] border border-blue-900/40 rounded-lg p-3 hover:border-blue-500/50 transition-colors group/news overflow-hidden box-border">
                 <div class="flex items-center gap-1.5 mb-1.5 opacity-80 group-hover/news:opacity-100">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" /></svg>
@@ -210,23 +195,30 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
       </div>
 
       <!-- Input Area -->
-      <div class="p-3 md:p-4 bg-[#0a0f1c] border-t border-slate-800 shrink-0">
-        <form @submit.prevent="sendMessage" class="flex gap-2">
+      <div class="h-14 md:h-16 px-4 flex items-center bg-[#05080f] border-t border-slate-800">
+        <template v-if="chatSession">
           <input 
             v-model="inputText"
             type="text" 
             placeholder="與大家分享您的看法..." 
             class="flex-1 bg-[#05080f] border border-slate-700 rounded-lg px-4 py-2 text-[16px] md:text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
+            @keyup.enter="sendMessage"
           >
           <button 
-            type="submit"
-            :disabled="!inputText.trim()"
-            class="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 md:px-6 py-2 rounded-lg text-xs md:text-sm font-bold transition-colors flex items-center gap-1 shrink-0"
+            @click="sendMessage"
+            class="ml-3 p-2 text-blue-400 hover:text-blue-300 transition-colors"
           >
-            <span>傳送</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden md:block border-l pl-1 border-white/20 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
           </button>
-        </form>
+        </template>
+        <template v-else>
+          <div @click="goToLogin" class="flex-1 flex items-center justify-center gap-2 cursor-pointer bg-[#0a0f1c] hover:bg-slate-800 rounded-lg border border-slate-800 py-2 transition-all">
+            <span class="text-xs md:text-sm text-slate-400">登入後即可參與討論</span>
+            <span class="text-xs md:text-sm font-bold text-blue-400 hover:underline">去登入</span>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -279,53 +271,29 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
       </div>
     </div>
 
-  </div>
+    <!-- Delete Confirmation Modal Overlay -->
+    <transition name="fade">
+      <div v-if="confirmDeleteId !== null" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-[#111827] border border-red-900/50 rounded-xl p-6 w-full max-w-sm shadow-2xl text-center">
+          <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">確定要刪除這則留言嗎？</h3>
+          <p class="text-xs text-slate-400 mb-6">此動作無法復原，其他人將無法再看到此留言。</p>
+          <div class="flex gap-3">
+            <button @click="confirmDeleteId = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
+              取消
+            </button>
+            <button @click="confirmDelete" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold">
+              確定刪除
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
 
-  <!-- Login Modal Overlay -->
-  <div v-if="!chatSession && !chatLoading" class="absolute inset-0 z-[100] bg-[#05080f]/90 backdrop-blur-sm flex items-center justify-center p-4">
-    <LoginModal @close="handleCloseLogin" />
-  </div>
-
-  <!-- Delete Confirmation Modal Overlay -->
-  <div v-if="confirmDeleteId !== null" class="absolute inset-0 z-[100] bg-[#05080f]/90 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-[#111827] border border-red-900/50 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-fade-in-up text-center">
-      <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-      </div>
-      <h3 class="text-lg font-bold text-white mb-2">確定要刪除這則留言嗎？</h3>
-      <p class="text-xs text-slate-400 mb-6">此動作無法復原，其他人將無法再看到此留言。</p>
-      <div class="flex gap-3">
-        <button @click="confirmDeleteId = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
-          取消
-        </button>
-        <button @click="confirmDelete" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold">
-          確定刪除
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Logout Confirmation Modal Overlay -->
-  <div v-if="showLogoutConfirm" class="absolute inset-0 z-[101] bg-[#05080f]/95 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-[#111827] border border-slate-700 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-fade-in-up text-center">
-      <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-      </div>
-      <h3 class="text-lg font-bold text-white mb-2">確定要登出討論區嗎？</h3>
-      <p class="text-xs text-slate-400 mb-6">登出後將無法即時留言，需重新登入才能繼續參與討論。</p>
-      <div class="flex gap-3">
-        <button @click="showLogoutConfirm = false" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
-          取消
-        </button>
-        <button @click="confirmLogout" class="flex-1 py-2.5 rounded bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold shadow-lg shadow-blue-900/20">
-          確定登出
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -336,5 +304,12 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
 }
 .animate-fade-in-up {
   animation: fade-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>

@@ -9,6 +9,8 @@ import MarketsView from './components/MarketsView.vue'
 import NewsView from './components/NewsView.vue'
 import MoversView from './components/MoversView.vue'
 import ChatView from './components/ChatView.vue'
+import LoginView from './components/LoginView.vue'
+import ProfileView from './components/ProfileView.vue'
 import BackgroundMonitor from './components/BackgroundMonitor.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import ReloadPrompt from './components/ReloadPrompt.vue'
@@ -100,6 +102,14 @@ onUnmounted(() => {
 
     <main v-else-if="activeTab === '討論'" class="flex-1 flex overflow-hidden bg-[#05080f]">
       <ChatView />
+    </main>
+
+    <main v-else-if="activeTab === '登入'" class="flex-1 flex overflow-hidden bg-[#05080f]">
+      <LoginView />
+    </main>
+
+    <main v-else-if="activeTab === '個人檔案'" class="flex-1 flex overflow-hidden bg-[#05080f]">
+      <ProfileView />
     </main>
 
     <!-- Global Site Footer -->

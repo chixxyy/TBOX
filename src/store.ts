@@ -84,20 +84,62 @@ interface PriceAlert {
   triggered: boolean
 }
 
-export const priceAlerts = useStorage<PriceAlert[]>('tbox-price-alerts', [])
+export const priceAlerts = ref<PriceAlert[]>([])
 
-export const addPriceAlert = (symbol: string, targetPrice: number, condition: 'above' | 'below') => {
-  priceAlerts.value.push({
-    id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
-    symbol,
-    targetPrice,
+export const addPriceAlert = async (symbol: string, targetPrice: number, condition: 'above' | 'below') => {
+  if (!chatSession.value) return
+  const { data, error } = await supabase.from('price_alerts').insert({
+    user_id: chatSession.value.user.id,
+    symbol: symbol.toUpperCase(),
+    target_price: targetPrice,
     condition,
     triggered: false
-  })
+  }).select().single()
+  
+  if (!error && data) {
+    priceAlerts.value.push({
+      id: data.id,
+      symbol: data.symbol,
+      targetPrice: Number(data.target_price),
+      condition: data.condition as 'above' | 'below',
+      triggered: data.triggered
+    })
+  }
 }
 
-export const removePriceAlert = (id: string) => {
-  priceAlerts.value = priceAlerts.value.filter(a => a.id !== id)
+export const fetchPriceAlerts = async (userId: string) => {
+  const { data: alerts, error } = await supabase
+    .from('price_alerts')
+    .select('*')
+    .eq('user_id', userId)
+  
+  if (error) {
+    console.error('Error fetching price alerts:', error)
+    return
+  }
+  
+  if (alerts) {
+    priceAlerts.value = alerts.map(a => ({
+      id: a.id,
+      symbol: a.symbol,
+      targetPrice: Number(a.target_price),
+      condition: a.condition as 'above' | 'below',
+      triggered: a.triggered
+    }))
+  }
+}
+
+export const removePriceAlert = async (id: string) => {
+  if (!chatSession.value) return
+  const { error } = await supabase.from('price_alerts').delete().eq('id', id)
+  if (!error) {
+    priceAlerts.value = priceAlerts.value.filter(a => a.id !== id)
+  }
+}
+
+export const updatePriceAlertTriggered = async (id: string) => {
+  if (!chatSession.value) return
+  await supabase.from('price_alerts').update({ triggered: true }).eq('id', id)
 }
 
 // --- Global UI Toast Alerts & History ---
@@ -158,9 +200,31 @@ export const removeNotificationLog = (id: string) => {
   notificationHistory.value = notificationHistory.value.filter(n => n.id !== id)
 }
 
-export const unreadNotificationsCount = computed(() => notificationHistory.value.filter(n => !n.isRead).length)
+export const unreadNotificationsCount = computed(() => {
+  return notificationHistory.value.filter(n => !n.isRead).length
+})
 
-// --- Chat & Discussion & Auth ---
+// --- Global Auth UI State ---
+export const showLoginModal = ref(false)
+export const previousTab = ref('交易')
+
+export const goToLogin = () => {
+  previousTab.value = activeTab.value === '登入' ? '交易' : activeTab.value
+  activeTab.value = '登入'
+}
+
+export const handleLoginSuccess = () => {
+  activeTab.value = previousTab.value
+}
+
+export const openLoginModal = () => {
+  showLoginModal.value = true
+}
+export const closeLoginModal = () => {
+  showLoginModal.value = false
+}
+
+// --- Supabase Realtime Chat & Auth ---
 import { supabase } from './supabase'
 
 export interface ChatMessage {
@@ -187,33 +251,115 @@ export const chatAvatar = computed(() => `https://ui-avatars.com/api/?name=${enc
 export const chatMessages = ref<ChatMessage[]>([])
 export const chatLoading = ref(true)
 
-export const initSupabaseChat = async () => {
-  const { data: { session } } = await supabase.auth.getSession()
-  chatSession.value = session
+// --- User Profile State ---
+export interface UserProfile {
+  id: string
+  full_name: string
+  avatar_url: string
+  bio: string
+  email?: string
+}
+export const userProfile = ref<UserProfile | null>(null)
 
-  supabase.auth.onAuthStateChange((_event, session) => {
-    chatSession.value = session
-  })
-
-  // Fetch initial messages
-  const { data: msgs } = await supabase
-    .from('messages')
+export const fetchUserProfile = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
     .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100)
-    
-  if (msgs) {
-    chatMessages.value = msgs.reverse().map(m => ({
-      id: m.id,
-      user: m.user_name,
-      avatar: m.avatar,
-      text: m.text,
-      timestamp: new Date(m.created_at).getTime(),
-      newsShare: m.news_share
-    }))
+    .eq('id', userId)
+    .single()
+  
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching profile:', error)
+    return
   }
   
-  chatLoading.value = false
+  if (data) {
+    userProfile.value = data
+  } else {
+    // If no profile, create a default one from user metadata
+    const user = (await supabase.auth.getUser()).data.user
+    if (user) {
+      const newProfile = {
+        id: user.id,
+        full_name: user.user_metadata.full_name || '無名氏',
+        avatar_url: user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=User&background=random`,
+        bio: ''
+      }
+      const { error: insError } = await supabase.from('profiles').insert([newProfile])
+      if (!insError) userProfile.value = newProfile
+    }
+  }
+}
+
+export const updateUserProfile = async (updates: Partial<UserProfile>) => {
+  if (!chatSession.value?.user.id) return { error: 'Not logged in' }
+  
+  const { error } = await supabase
+    .from('profiles')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', chatSession.value.user.id)
+  
+  if (!error && userProfile.value) {
+    userProfile.value = { ...userProfile.value, ...updates }
+  }
+  return { error }
+}
+
+// --- Supabase Interaction ---
+export const initSupabaseChat = async () => {
+  chatLoading.value = true
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    chatSession.value = session
+    if (session?.user.id) {
+      await fetchUserProfile(session.user.id)
+    } else {
+      userProfile.value = null
+    }
+
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      chatSession.value = session
+      if (session?.user.id) {
+        await fetchUserProfile(session.user.id)
+        await fetchPriceAlerts(session.user.id)
+      } else {
+        userProfile.value = null
+        priceAlerts.value = []
+      }
+    })
+
+    // Fetch initial messages
+    const { data: msgs, error: msgsError } = await supabase
+      .from('messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100)
+      
+    if (msgsError) throw msgsError
+    
+    if (msgs) {
+      chatMessages.value = [...msgs].reverse().map(m => ({
+        id: m.id,
+        user: m.user_name || '匿名使用者',
+        avatar: m.avatar || `https://ui-avatars.com/api/?name=User&background=random`,
+        text: m.text || '',
+        timestamp: new Date(m.created_at).getTime(),
+        newsShare: m.news_share
+      }))
+    }
+
+    // Fetch initial price alerts if logged in
+    if (session?.user.id) {
+      await fetchPriceAlerts(session.user.id)
+    } else {
+      priceAlerts.value = []
+    }
+  } catch (err) {
+    console.error('Supabase init error:', err)
+  } finally {
+    chatLoading.value = false
+  }
+
 
   // Realtime Subscriptions
   supabase
@@ -261,6 +407,7 @@ export const removeChatMessage = async (id: string) => {
 
 export const chatSignOut = async () => {
   await supabase.auth.signOut()
+  priceAlerts.value = [] // Clear alerts on logout
 }
 
 
