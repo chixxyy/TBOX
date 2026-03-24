@@ -10,7 +10,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'prompt', // We will use ReloadPrompt.vue
-      includeAssets: ['pwa-icon.svg'],
+      includeAssets: ['pwa-icon.png'],
       manifest: {
         name: 'TradingBox',
         short_name: 'TradingBox',
@@ -20,9 +20,9 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: 'pwa-icon.svg',
+            src: 'pwa-icon.png',
             sizes: '192x192 512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any maskable'
           }
         ]
