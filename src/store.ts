@@ -75,7 +75,7 @@ export const setScrollProgress = (progress: number) => {
 }
 
 // --- Price Alerts ---
-export interface PriceAlert {
+interface PriceAlert {
   id: string
   symbol: string
   targetPrice: number
@@ -99,22 +99,55 @@ export const removePriceAlert = (id: string) => {
   priceAlerts.value = priceAlerts.value.filter(a => a.id !== id)
 }
 
-// --- Global UI Toast Alerts ---
+// --- Global UI Toast Alerts & History ---
 interface ToastItem {
   id: string
   title: string
   message: string
 }
+
+interface NotificationLog {
+  id: string
+  title: string
+  message: string
+  timestamp: number
+  isRead: boolean
+}
+
 export const toasts = ref<ToastItem[]>([])
+export const notificationHistory = useStorage<NotificationLog[]>('tbox-notification-history', [])
 
 export const showToast = (title: string, message: string) => {
-  toasts.value.push({
-    id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+  const id = Date.now().toString() + Math.random().toString(36).substring(2, 7)
+  toasts.value.push({ id, title, message })
+  
+  notificationHistory.value.unshift({
+    id,
     title,
-    message
+    message,
+    timestamp: Date.now(),
+    isRead: false
   })
+  
+  if (notificationHistory.value.length > 50) {
+    notificationHistory.value.pop()
+  }
 }
 
 export const removeToast = (id: string) => {
   toasts.value = toasts.value.filter(t => t.id !== id)
 }
+
+export const markAllNotificationsRead = () => {
+  notificationHistory.value.forEach(n => n.isRead = true)
+}
+
+export const clearNotifications = () => {
+  notificationHistory.value = []
+}
+
+export const removeNotificationLog = (id: string) => {
+  notificationHistory.value = notificationHistory.value.filter(n => n.id !== id)
+}
+
+export const unreadNotificationsCount = computed(() => notificationHistory.value.filter(n => !n.isRead).length)
