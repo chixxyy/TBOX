@@ -6,6 +6,7 @@ const emit = defineEmits(['close', 'login-success'])
 
 const email = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const nickname = ref('') // Optional for registration
 const isRegister = ref(false)
 const errorMsg = ref('')
@@ -20,6 +21,7 @@ const handleAuth = async () => {
   try {
     if (isRegister.value) {
       if (!nickname.value.trim()) throw new Error('請輸入討論區暱稱')
+      if (password.value !== confirmPassword.value) throw new Error('兩次輸入的密碼不一致')
       // SignUp
       const { data, error } = await supabase.auth.signUp({
         email: email.value,
@@ -107,7 +109,19 @@ const handleAuth = async () => {
         <input 
           v-model="password" 
           type="password" 
-          placeholder="輸入大於 6 碼的密碼"
+          :placeholder="isRegister ? '輸入大於 6 碼的密碼' : '請輸入密碼'"
+          required
+          minlength="6"
+          class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+        />
+      </div>
+
+      <div v-if="isRegister">
+        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">確認密碼</label>
+        <input 
+          v-model="confirmPassword" 
+          type="password" 
+          placeholder="請再次輸入密碼"
           required
           minlength="6"
           class="w-full bg-[#0a0f1c] border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
@@ -135,7 +149,7 @@ const handleAuth = async () => {
       <div class="space-y-2 pt-2 border-t border-slate-800 flex flex-col items-center">
         <button 
           type="button" 
-          @click="isRegister = !isRegister; errorMsg = ''; successMsg = ''"
+          @click="isRegister = !isRegister; errorMsg = ''; successMsg = ''; confirmPassword = ''"
           class="text-xs text-slate-400 hover:text-white transition-colors"
         >
           {{ isRegister ? '已有帳號？返回登入' : '還沒有帳號？立即註冊' }}

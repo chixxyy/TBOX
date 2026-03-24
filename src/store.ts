@@ -244,4 +244,8 @@ export const removeChatMessage = async (id: string) => {
   await supabase.from('messages').delete().eq('id', id)
 }
 
+export const chatSignOut = async () => {
+  await supabase.auth.signOut()
+}
+
 

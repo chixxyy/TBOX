@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, nextTick, computed, onMounted, watch } from 'vue'
-import { chatMessages, addChatMessage, removeChatMessage, globalNews, chatUser, chatSession, chatLoading, isAdmin, activeTab } from '../store'
+import { chatMessages, addChatMessage, removeChatMessage, globalNews, chatUser, chatSession, chatLoading, isAdmin, activeTab, chatSignOut } from '../store'
 import LoginModal from './LoginModal.vue'
 
 const handleCloseLogin = () => {
@@ -104,7 +104,16 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
           全球投資者討論區
         </h2>
-        <span class="ml-auto text-xs text-slate-500 bg-slate-800/50 px-2 py-1 rounded font-mono">{{ chatMessages.length }} 則留言</span>
+        <div class="ml-auto flex items-center gap-3">
+          <span class="hidden xs:block text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded font-mono">{{ chatMessages.length }} 則留言</span>
+          <button 
+            @click="chatSignOut" 
+            class="flex items-center gap-1 text-[10px] text-slate-400 hover:text-red-400 transition-colors px-2 py-1 rounded border border-slate-800 hover:border-red-900/30 bg-slate-800/30"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            登出
+          </button>
+        </div>
       </div>
 
       <!-- Messages List -->
