@@ -192,7 +192,7 @@ const confirmLogout = () => {
               管理員權限已啟動
             </button>
             <button 
-              @click="handleLogout"
+              @click.stop="handleLogout"
               class="w-full px-4 py-2.5 text-left text-xs md:text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-3 transition-all"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

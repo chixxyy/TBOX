@@ -168,7 +168,7 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
               <span class="text-[10px] text-slate-500 font-mono">{{ formatTime(msg.timestamp || Date.now()) }}</span>
               <button 
                 v-if="msg.userId === chatSession?.user?.id || isAdmin"
-                @click="confirmDeleteId = msg.id"
+                @click.stop="confirmDeleteId = msg.id"
                 class="ml-auto flex items-center gap-1 text-[10px] transition-colors px-2 py-0.5 rounded bg-slate-800/30 hover:bg-slate-800"
                 :class="isAdmin && msg.user !== chatUser ? 'text-amber-500 hover:text-amber-400' : 'text-slate-500 hover:text-red-500'"
               >
