@@ -14,6 +14,14 @@ const inputText = ref('')
 const chatContainer = ref<HTMLElement | null>(null)
 const visibleCount = ref(15)
 
+const confirmDeleteId = ref<string | null>(null)
+const confirmDelete = () => {
+  if (confirmDeleteId.value) {
+    removeChatMessage(confirmDeleteId.value)
+    confirmDeleteId.value = null
+  }
+}
+
 const visibleMessages = computed(() => {
   return chatMessages.value.slice(Math.max(0, chatMessages.value.length - visibleCount.value))
 })
@@ -143,7 +151,7 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
               <span class="text-[10px] text-slate-500 font-mono">{{ formatTime(msg.timestamp) }}</span>
               <button 
                 v-if="msg.user === chatUser || isAdmin"
-                @click="removeChatMessage(msg.id)"
+                @click="confirmDeleteId = msg.id"
                 class="ml-auto flex items-center gap-1 text-[10px] transition-colors px-2 py-0.5 rounded bg-slate-800/30 hover:bg-slate-800"
                 :class="isAdmin && msg.user !== chatUser ? 'text-amber-500 hover:text-amber-400' : 'text-slate-500 hover:text-red-500'"
               >
@@ -233,6 +241,27 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
   <!-- Login Modal Overlay -->
   <div v-if="!chatSession && !chatLoading" class="absolute inset-0 z-[100] bg-[#05080f]/90 backdrop-blur-sm flex items-center justify-center p-4">
     <LoginModal @close="handleCloseLogin" />
+  </div>
+
+  <!-- Delete Confirmation Modal Overlay -->
+  <div v-if="confirmDeleteId !== null" class="absolute inset-0 z-[100] bg-[#05080f]/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#111827] border border-red-900/50 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-fade-in-up text-center">
+      <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-bold text-white mb-2">確定要刪除這則留言嗎？</h3>
+      <p class="text-xs text-slate-400 mb-6">此動作無法復原，其他人將無法再看到此留言。</p>
+      <div class="flex gap-3">
+        <button @click="confirmDeleteId = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
+          取消
+        </button>
+        <button @click="confirmDelete" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold">
+          確定刪除
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
