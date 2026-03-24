@@ -145,7 +145,7 @@ onUnmounted(() => {
         <span class="text-slate-500 text-[9px] md:text-[10px] mt-1 md:mt-2 leading-relaxed">Level 2 market depth data is restricted for traditional equities.</span>
       </div>
       <div class="flex items-center justify-between mb-1 md:mb-2 px-1 md:px-2">
-        <h3 class="text-[10px] md:text-xs font-bold text-slate-300">訂單簿</h3>
+        <h3 class="text-[10px] md:text-xs font-bold text-slate-300">訂單</h3>
         <div class="flex space-x-1">
           <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></button>
           <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></button>

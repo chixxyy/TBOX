@@ -10,7 +10,7 @@
 
 - **整合圖表**：使用 TradingView Lightweight Charts 顯示即時價格走勢。
 - **資產列表**：快速搜尋並切換加密貨幣、政治、股票等不同市場。
-- **買賣介面**：緊湊的訂單簿與交易操作面版（Right Panel）。
+- **買賣介面**：緊湊的訂單與交易操作面版（Right Panel）。
 
 ### 2. 即時異動監控 (Movers)
 
@@ -43,29 +43,36 @@
 ## 🚀 快速開始 & 可用指令
 
 ### 安裝相依套件
+
 請確保您的環境已有 Node.js (建議 v18 以上)。
+
 ```bash
 npm install
 ```
 
 ### 啟動本地開發伺服器
+
 ```bash
 npm run dev
 ```
 
 ### 編譯與打包生產版本
+
 ```bash
 npm run build
 ```
 
 ### 健壯性自動化檢查 (Code Quality Check)
+
 這是一支我們自製的進階檢查指令，它會自動掃描專案內的多餘程式碼。
 使用了 **Knip** 來捕捉未被使用到的 `import`、`export` 與未呼叫的套件；並使用 **jscpd** 來偵測重複的代碼片段。
+
 ```bash
 npm run check
 ```
 
 ### 本地預覽打包結果
+
 ```bash
 npm run preview
 ```

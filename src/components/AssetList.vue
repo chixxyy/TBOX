@@ -181,12 +181,12 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
       </div>
 
       <!-- Filters -->
-      <div class="flex space-x-2 mt-3 overflow-x-auto scrollbar-hide">
+      <div class="grid grid-cols-3 gap-2 mt-3 w-full">
         <button 
           v-for="(f, i) in filters" 
           :key="f"
           @click="activeFilterIndex = i"
-          class="px-3 py-1 rounded text-[10px] font-bold font-mono transition-all shrink-0 uppercase tracking-tighter"
+          class="py-1.5 rounded-md text-[10px] md:text-xs font-bold font-mono transition-all uppercase tracking-wider text-center"
           :class="activeFilterIndex === i ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.1)]' : 'bg-[#111827] text-slate-500 border border-slate-800 hover:text-slate-300 hover:bg-slate-800'"
         >
           {{ f }}

@@ -138,11 +138,11 @@ async function syncNews() {
       playNewsChime()
       if (newItems.length > 0) {
         sendDesktopNotification(
-          newItems.length === 1 ? '市場新快訊 (News)' : `${newItems.length} 則新快訊`,
+          newItems.length === 1 ? '新快訊 (News)' : `${newItems.length} 則新快訊`,
           newItems.length === 1 ? newItems[0].headline : newItems.map(n => n.headline).join('\n')
         )
         showToast(
-          newItems.length === 1 ? '市場新快訊' : `${newItems.length} 則新快訊`,
+          newItems.length === 1 ? '新快訊' : `${newItems.length} 則新快訊`,
           newItems.length === 1 ? newItems[0].headline : newItems.map(n => n.headline).join('\n')
         )
       }
