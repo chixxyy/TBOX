@@ -78,7 +78,7 @@ const handleAuth = async () => {
     </button>
     <div class="text-center mb-6">
       <h2 class="text-xl font-bold text-white mb-2">{{ isRegister ? '加入投資討論區' : '登入討論區' }}</h2>
-      <p class="text-xs text-slate-400">與全球投資者即時交流市場觀點</p>
+      <p class="text-xs text-slate-400">與投資者即時交流市場觀點</p>
     </div>
 
     <form @submit.prevent="handleAuth" class="space-y-4">

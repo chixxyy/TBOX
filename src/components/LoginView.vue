@@ -62,7 +62,7 @@ const handleAuth = async () => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-[150] flex items-center justify-center bg-[#05080f] overflow-y-auto py-10">
+  <div class="fixed inset-0 z-[150] flex items-center justify-center bg-[#05080f] overflow-hidden">
     <!-- Dynamic high-end background -->
     <div class="fixed inset-0 bg-gradient-to-br from-[#05080f] via-[#0a1120] to-[#05080f]"></div>
     <div class="fixed top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/10 rounded-full blur-[150px] animate-pulse"></div>
@@ -71,7 +71,7 @@ const handleAuth = async () => {
     <!-- Pattern Overlay -->
     <div class="fixed inset-0 opacity-[0.03] pointer-events-none" style="background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png')"></div>
 
-    <div class="relative z-10 w-full max-w-md p-6 md:p-10 mx-4 my-auto">
+    <div class="relative z-10 w-full max-w-md p-4 md:p-6 mx-4">
       <!-- Close Button -->
       <button 
         @click="handleLoginSuccess"
@@ -84,9 +84,9 @@ const handleAuth = async () => {
       </button>
 
       <!-- Logo Section -->
-      <div class="text-center mb-10 group">
-        <div class="inline-flex items-center justify-center mb-6">
-          <svg class="w-16 h-16 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-transform duration-700 group-hover:rotate-[360deg] group-hover:scale-110" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <div class="text-center mb-6 group">
+        <div class="inline-flex items-center justify-center mb-4">
+          <svg class="w-12 h-12 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-transform duration-700 group-hover:rotate-[360deg] group-hover:scale-110" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="boxGradLogin" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stop-color="#3B82F6" /> <stop offset="100%" stop-color="#6366F1" /> </linearGradient>
@@ -101,25 +101,25 @@ const handleAuth = async () => {
             <rect x="21" y="12" width="3" height="12" rx="1.5" fill="#6366F1" fill-opacity="0.8"/>
           </svg>
         </div>
-        <h1 class="text-5xl font-black tracking-tighter mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-indigo-500">
+        <h1 class="text-3xl font-black tracking-tighter mb-1 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-indigo-500">
           TBOX
         </h1>
-        <div class="h-1 w-12 bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto rounded-full mb-6 opacity-50"></div>
-        <p class="text-slate-400 text-sm font-medium tracking-wide">
+        <div class="h-1 w-10 bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto rounded-full mb-4 opacity-50"></div>
+        <p class="text-slate-400 text-xs font-medium tracking-wide">
           {{ isRegister ? '開啟您的全球交易視野' : '歡迎回到專業交易社群' }}
         </p>
       </div>
 
       <!-- Auth Form Card -->
-      <div class="glass-card p-6 md:p-8 rounded-3xl border border-slate-800/50 shadow-2xl backdrop-blur-xl bg-slate-900/40">
-        <div class="space-y-4">          <div v-if="isRegister" class="space-y-1.5 animate-slide-down">
+      <div class="glass-card p-5 md:p-6 rounded-[2rem] border border-slate-800/50 shadow-2xl backdrop-blur-xl bg-slate-900/40">
+        <div class="space-y-3">          <div v-if="isRegister" class="space-y-1.5 animate-slide-down">
             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">暱稱</label>
             <input 
               v-model="nickname"
               type="text" 
               placeholder="如何稱呼您？"
               @keyup.enter="handleAuth"
-              class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+              class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
             />
           </div>
 
@@ -130,7 +130,7 @@ const handleAuth = async () => {
               type="email" 
               placeholder="you@example.com"
               @keyup.enter="handleAuth"
-              class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+              class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
             />
           </div>
 
@@ -141,7 +141,7 @@ const handleAuth = async () => {
               type="password" 
               placeholder="••••••••"
               @keyup.enter="handleAuth"
-              class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+              class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
             />
           </div>
 
@@ -152,22 +152,22 @@ const handleAuth = async () => {
               type="password" 
               placeholder="••••••••"
               @keyup.enter="handleAuth"
-              class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+              class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
             />
           </div>
 
           <button 
             @click="handleAuth"
             :disabled="loading"
-            class="w-full mt-6 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            class="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <svg v-if="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             {{ isRegister ? '立即註冊' : '登入帳號' }}
           </button>
         </div>
 
-        <div class="mt-8 pt-6 border-t border-slate-800/50 text-center">
-          <p class="text-slate-500 text-sm">
+        <div class="mt-4 pt-4 border-t border-slate-800/50 text-center">
+          <p class="text-slate-500 text-xs">
             {{ isRegister ? '已經有帳號了？' : '還沒有帳號嗎？' }}
             <button 
               @click="isRegister = !isRegister"
@@ -180,7 +180,7 @@ const handleAuth = async () => {
       </div>
 
       <!-- Back to Market -->
-      <div class="text-center mt-8">
+      <div class="text-center mt-4">
         <button 
           @click="handleLoginSuccess"
           class="inline-flex items-center gap-2 text-slate-500 hover:text-slate-300 text-sm font-medium transition-colors"

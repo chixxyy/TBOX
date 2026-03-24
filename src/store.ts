@@ -230,6 +230,7 @@ import { supabase } from './supabase'
 export interface ChatMessage {
   id: string
   user: string
+  userId: string
   avatar: string
   text: string
   timestamp: number
@@ -341,6 +342,7 @@ export const initSupabaseChat = async () => {
       chatMessages.value = [...msgs].reverse().map(m => ({
         id: m.id,
         user: m.user_name || '匿名使用者',
+        userId: m.user_id,
         avatar: m.avatar || `https://ui-avatars.com/api/?name=User&background=random`,
         text: m.text || '',
         timestamp: new Date(m.created_at).getTime(),
@@ -371,6 +373,7 @@ export const initSupabaseChat = async () => {
         chatMessages.value.push({
           id: m.id,
           user: m.user_name,
+          userId: m.user_id,
           avatar: m.avatar,
           text: m.text,
           timestamp: new Date(m.created_at).getTime(),
@@ -385,7 +388,7 @@ export const initSupabaseChat = async () => {
     .subscribe()
 }
 
-export const addChatMessage = async (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+export const addChatMessage = async (msg: Omit<ChatMessage, 'id' | 'timestamp' | 'userId'>) => {
   if (!chatSession.value) return
   await supabase.from('messages').insert({
     user_id: chatSession.value.user.id,
@@ -408,6 +411,7 @@ export const removeChatMessage = async (id: string) => {
 export const chatSignOut = async () => {
   await supabase.auth.signOut()
   priceAlerts.value = [] // Clear alerts on logout
+  showToast('登出成功', '您已安全退出 TradingBox')
 }
 
 

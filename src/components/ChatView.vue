@@ -7,7 +7,7 @@ import {
 } from '../store'
 
 const currentUser = chatUser
-const currentAvatar = computed(() => `https://ui-avatars.com/api/?name=${currentUser.value}&background=3b82f6&color=fff&rounded=true`)
+const currentAvatar = computed(() => userProfile.value?.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.value}&background=3b82f6&color=fff&rounded=true`)
 
 const inputText = ref('')
 const chatContainer = ref<HTMLElement | null>(null)
@@ -134,7 +134,7 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
-          全球投資者討論區
+          討論區
         </h2>
         <div class="ml-auto flex items-center gap-3">
           <span class="hidden xs:block text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded font-mono">{{ chatMessages.length }} 則留言</span>
@@ -161,13 +161,13 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
         </div>
 
         <div v-for="msg in visibleMessages" :key="msg.id" class="flex gap-3 group animate-fade-in-up">
-          <img :src="msg.avatar || `https://ui-avatars.com/api/?name=U&background=random`" class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-800 shrink-0 shadow-sm border border-slate-700" loading="lazy" />
+          <img :src="(msg.userId === chatSession?.user?.id ? userProfile?.avatar_url : msg.avatar) || `https://ui-avatars.com/api/?name=U&background=random`" class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-800 shrink-0 shadow-sm border border-slate-700" loading="lazy" />
           <div class="flex flex-col min-w-0 flex-1">
             <div class="flex items-baseline gap-2 mb-1">
-              <span class="font-bold text-slate-200 text-xs md:text-sm shadow-sm">{{ msg.user || '匿名使用者' }}</span>
+              <span class="font-bold text-slate-200 text-xs md:text-sm shadow-sm">{{ msg.userId === chatSession?.user?.id ? userProfile?.full_name : (msg.user || '匿名使用者') }}</span>
               <span class="text-[10px] text-slate-500 font-mono">{{ formatTime(msg.timestamp || Date.now()) }}</span>
               <button 
-                v-if="msg.user === chatUser || isAdmin"
+                v-if="msg.userId === chatSession?.user?.id || isAdmin"
                 @click="confirmDeleteId = msg.id"
                 class="ml-auto flex items-center gap-1 text-[10px] transition-colors px-2 py-0.5 rounded bg-slate-800/30 hover:bg-slate-800"
                 :class="isAdmin && msg.user !== chatUser ? 'text-amber-500 hover:text-amber-400' : 'text-slate-500 hover:text-red-500'"

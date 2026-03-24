@@ -33,6 +33,16 @@ const formatTime = (ts: number) => {
   const d = new Date(ts)
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
+
+const showLogoutConfirm = ref(false)
+const handleLogout = () => {
+  showLogoutConfirm.value = true
+}
+const confirmLogout = () => {
+  chatSignOut()
+  showLogoutConfirm.value = false
+  showUserMenu.value = false
+}
 </script>
 
 <template>
@@ -145,7 +155,7 @@ const formatTime = (ts: number) => {
           class="flex items-center gap-2 p-1 rounded-full hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700"
         >
           <img 
-            :src="chatSession.user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${chatSession.user.user_metadata.full_name || 'User'}&background=random`" 
+            :src="userProfile?.avatar_url || `https://ui-avatars.com/api/?name=${chatUser || 'User'}&background=3b82f6&color=fff&rounded=true`" 
             class="h-7 w-7 md:h-8 md:w-8 rounded-full border border-slate-700"
           />
           <span class="hidden md:block text-xs font-medium text-slate-200 truncate max-w-[80px]">
@@ -182,7 +192,7 @@ const formatTime = (ts: number) => {
               管理員權限已啟動
             </button>
             <button 
-              @click="chatSignOut(); showUserMenu = false"
+              @click="handleLogout"
               class="w-full px-4 py-2.5 text-left text-xs md:text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-3 transition-all"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -195,10 +205,39 @@ const formatTime = (ts: number) => {
         </transition>
       </div>
     </div>
+
+    <!-- Logout Confirmation Modal Overlay -->
+    <transition name="fade">
+      <div v-if="showLogoutConfirm" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-[#111827] border border-blue-900/40 rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+          <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">確定要登出嗎？</h3>
+          <p class="text-xs text-slate-400 mb-6">登出後將無法使用討論區並清除目前的自定義設定。</p>
+          <div class="flex gap-3">
+            <button @click="showLogoutConfirm = false" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors text-sm font-bold">
+              取消
+            </button>
+            <button @click="confirmLogout" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold">
+              確定登出
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </header>
 </template>
 
 <style scoped>
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
 .neon-border-blue-sm {
   box-shadow: 0 0 5px rgba(56, 189, 248, 0.2) inset, 0 0 5px rgba(56, 189, 248, 0.2);
 }
