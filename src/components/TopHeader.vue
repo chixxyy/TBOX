@@ -44,7 +44,7 @@ const formatTime = (ts: number) => {
           <rect x="10" y="8" width="12" height="4" rx="2" fill="url(#tGrad)"/>
           <rect x="21" y="12" width="3" height="12" rx="1.5" fill="#6366F1" fill-opacity="0.8"/>
         </svg>
-        <span class="font-extrabold text-base md:text-xl tracking-tighter md:tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-indigo-500 hidden xs:block">
+        <span class="font-extrabold text-base md:text-xl tracking-tighter md:tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-indigo-500 hidden sm:block">
           TBOX
         </span>
       </div>

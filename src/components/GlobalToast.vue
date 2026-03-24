@@ -5,10 +5,9 @@ import { toasts, removeToast } from '../store'
 // To handle multiple timers securely by their ID
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
 
-watch(toasts, (newVal, oldVal) => {
-  const oldIds = new Set(oldVal?.map(t => t.id) || [])
+watch(toasts, (newVal) => {
   newVal.forEach(toast => {
-    if (!oldIds.has(toast.id) && !timers.has(toast.id)) {
+    if (!timers.has(toast.id)) {
       resumeTimer(toast.id)
     }
   })
@@ -26,7 +25,7 @@ const resumeTimer = (id: string) => {
   const timerId = setTimeout(() => {
     removeToast(id)
     timers.delete(id)
-  }, 1500)
+  }, 3000)
   timers.set(id, timerId)
 }
 
