@@ -14,6 +14,12 @@ const inputText = ref('')
 const chatContainer = ref<HTMLElement | null>(null)
 const visibleCount = ref(15)
 
+const showLogoutConfirm = ref(false)
+const confirmLogout = () => {
+  chatSignOut()
+  showLogoutConfirm.value = false
+}
+
 const confirmDeleteId = ref<string | null>(null)
 const confirmDelete = () => {
   if (confirmDeleteId.value) {
@@ -140,7 +146,7 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
         <div class="ml-auto flex items-center gap-3">
           <span class="hidden xs:block text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded font-mono">{{ chatMessages.length }} 則留言</span>
           <button 
-            @click="chatSignOut" 
+            @click="showLogoutConfirm = true" 
             class="flex items-center gap-1 text-[10px] text-slate-400 hover:text-red-400 transition-colors px-2 py-1 rounded border border-slate-800 hover:border-red-900/30 bg-slate-800/30"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
@@ -296,6 +302,27 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
         </button>
         <button @click="confirmDelete" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold">
           確定刪除
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout Confirmation Modal Overlay -->
+  <div v-if="showLogoutConfirm" class="absolute inset-0 z-[101] bg-[#05080f]/95 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#111827] border border-slate-700 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-fade-in-up text-center">
+      <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-bold text-white mb-2">確定要登出討論區嗎？</h3>
+      <p class="text-xs text-slate-400 mb-6">登出後將無法即時留言，需重新登入才能繼續參與討論。</p>
+      <div class="flex gap-3">
+        <button @click="showLogoutConfirm = false" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
+          取消
+        </button>
+        <button @click="confirmLogout" class="flex-1 py-2.5 rounded bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold shadow-lg shadow-blue-900/20">
+          確定登出
         </button>
       </div>
     </div>
