@@ -13,7 +13,7 @@ import BackgroundMonitor from './components/BackgroundMonitor.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import ReloadPrompt from './components/ReloadPrompt.vue'
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { activeTab, setScrollProgress, isChangingTab } from './store'
+import { activeTab, setScrollProgress, isChangingTab, initSupabaseChat } from './store'
 
 // Reset scroll progress instantly on tab change
 watch(activeTab, async () => {
@@ -53,6 +53,8 @@ const updateWindowWidth = () => {
 
 onMounted(() => {
   window.addEventListener('resize', updateWindowWidth)
+  // Run exactly once on app load
+  initSupabaseChat()
 })
 
 onUnmounted(() => {

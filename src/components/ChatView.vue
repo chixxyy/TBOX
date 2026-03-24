@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, nextTick, computed, onMounted, watch } from 'vue'
-import { chatMessages, addChatMessage, removeChatMessage, globalNews, chatUser } from '../store'
+import { chatMessages, addChatMessage, removeChatMessage, globalNews, chatUser, chatSession, chatLoading, isAdmin } from '../store'
+import LoginModal from './LoginModal.vue'
 
 const currentUser = chatUser
 const currentAvatar = computed(() => `https://ui-avatars.com/api/?name=${currentUser.value}&background=3b82f6&color=fff&rounded=true`)
@@ -108,11 +109,16 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
         @scroll="onScroll"
         class="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-700 bg-[#070b14]/50"
       >
-        <div v-if="chatMessages.length === 0" class="flex items-center justify-center h-full text-slate-500">
+        <div v-if="chatLoading" class="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
+          <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+          載入對話紀錄中...
+        </div>
+
+        <div v-else-if="chatMessages.length === 0" class="flex items-center justify-center h-full text-slate-500">
           目前沒有任何留言，來做第一個發言的人吧！
         </div>
         
-        <div v-if="visibleCount < chatMessages.length" class="text-center text-[10px] text-slate-500 font-mono py-2">
+        <div v-if="!chatLoading && visibleCount < chatMessages.length" class="text-center text-[10px] text-slate-500 font-mono py-2">
           ↑ 向上滑動載入較早紀錄
         </div>
 
@@ -123,9 +129,10 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
               <span class="font-bold text-slate-200 text-xs md:text-sm shadow-sm">{{ msg.user }}</span>
               <span class="text-[10px] text-slate-500 font-mono">{{ formatTime(msg.timestamp) }}</span>
               <button 
-                v-if="msg.user === chatUser"
+                v-if="msg.user === chatUser || isAdmin"
                 @click="removeChatMessage(msg.id)"
-                class="ml-auto flex items-center gap-1 text-[10px] text-slate-500 hover:text-red-500 transition-colors px-2 py-0.5 rounded bg-slate-800/30 hover:bg-slate-800"
+                class="ml-auto flex items-center gap-1 text-[10px] transition-colors px-2 py-0.5 rounded bg-slate-800/30 hover:bg-slate-800"
+                :class="isAdmin && msg.user !== chatUser ? 'text-amber-500 hover:text-amber-400' : 'text-slate-500 hover:text-red-500'"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 刪除
@@ -208,6 +215,11 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
       </div>
     </div>
 
+  </div>
+
+  <!-- Login Modal Overlay -->
+  <div v-if="!chatSession && !chatLoading" class="absolute inset-0 z-[100] bg-[#05080f]/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <LoginModal />
   </div>
 </template>
 

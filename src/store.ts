@@ -152,7 +152,9 @@ export const removeNotificationLog = (id: string) => {
 
 export const unreadNotificationsCount = computed(() => notificationHistory.value.filter(n => !n.isRead).length)
 
-// --- Chat & Discussion ---
+// --- Chat & Discussion & Auth ---
+import { supabase } from './supabase'
+
 export interface ChatMessage {
   id: string
   user: string
@@ -166,42 +168,80 @@ export interface ChatMessage {
   }
 }
 
-export const chatUser = useStorage('tbox-chat-user', 'GUEST_' + Math.floor(Math.random() * 10000))
+export const chatSession = ref<any>(null)
+export const chatUser = computed(() => chatSession.value?.user?.user_metadata?.nickname || chatSession.value?.user?.email?.split('@')[0] || 'GUEST')
+export const isAdmin = computed(() => chatSession.value?.user?.email === 'admin@tradingbox.com')
+export const chatAvatar = computed(() => `https://ui-avatars.com/api/?name=${encodeURIComponent(chatUser.value)}&background=3b82f6&color=fff&rounded=true`)
 
-export const chatMessages = useStorage<ChatMessage[]>('tbox-chat-messages', [
-  {
-    id: 'msg-1',
-    user: 'System Admin',
-    avatar: 'https://ui-avatars.com/api/?name=Admin&background=ef4444&color=fff',
-    text: '歡迎來到 TBOX 討論區！您可以在這裡與大家分享對市場的看法，或從右側分享最新的熱門新聞。',
-    timestamp: Date.now() - 3600000
-  }
-])
+export const chatMessages = ref<ChatMessage[]>([])
+export const chatLoading = ref(true)
 
-// 7-day Retention Policy
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
-const cleanupOldMessages = () => {
-  const now = Date.now()
-  chatMessages.value = chatMessages.value.filter(m => (now - m.timestamp) < SEVEN_DAYS_MS)
-  // Hard cap to prevent memory bloat even within 7 days
-  if (chatMessages.value.length > 500) {
-    chatMessages.value = chatMessages.value.slice(-500)
-  }
-}
-cleanupOldMessages()
+export const initSupabaseChat = async () => {
+  const { data: { session } } = await supabase.auth.getSession()
+  chatSession.value = session
 
-export const addChatMessage = (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-  chatMessages.value.push({
-    ...msg,
-    id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
-    timestamp: Date.now()
+  supabase.auth.onAuthStateChange((_event, session) => {
+    chatSession.value = session
   })
-  
-  if (chatMessages.value.length > 500) {
-    chatMessages.value.shift()
+
+  // Fetch initial messages
+  const { data: msgs } = await supabase
+    .from('messages')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100)
+    
+  if (msgs) {
+    chatMessages.value = msgs.reverse().map(m => ({
+      id: m.id,
+      user: m.user_name,
+      avatar: m.avatar,
+      text: m.text,
+      timestamp: new Date(m.created_at).getTime(),
+      newsShare: m.news_share
+    }))
   }
+  
+  chatLoading.value = false
+
+  // Realtime Subscriptions
+  supabase
+    .channel('public:messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+      const m = payload.new
+      // Avoid duplicate insert if we already have it locally (though we don't do optimistic updates here yet)
+      if (!chatMessages.value.find(msg => msg.id === m.id)) {
+        chatMessages.value.push({
+          id: m.id,
+          user: m.user_name,
+          avatar: m.avatar,
+          text: m.text,
+          timestamp: new Date(m.created_at).getTime(),
+          newsShare: m.news_share
+        })
+        if (chatMessages.value.length > 500) chatMessages.value.shift()
+      }
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, payload => {
+      chatMessages.value = chatMessages.value.filter(msg => msg.id !== payload.old.id)
+    })
+    .subscribe()
 }
 
-export const removeChatMessage = (id: string) => {
-  chatMessages.value = chatMessages.value.filter(m => m.id !== id)
+export const addChatMessage = async (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+  if (!chatSession.value) return
+  await supabase.from('messages').insert({
+    user_id: chatSession.value.user.id,
+    user_name: msg.user,
+    avatar: msg.avatar,
+    text: msg.text,
+    news_share: msg.newsShare || null
+  })
 }
+
+export const removeChatMessage = async (id: string) => {
+  if (!chatSession.value) return
+  await supabase.from('messages').delete().eq('id', id)
+}
+
+
