@@ -7,6 +7,7 @@ import {
   type Mover
 } from '../store'
 import { playNewsChime, playMoversChime } from '../utils/audio'
+import { initDesktopNotifications, sendDesktopNotification } from '../utils/notify'
 import { api } from '../api'
 
 const knownNewsIds = new Set<string>()
@@ -120,14 +121,26 @@ async function syncNews() {
 
     const isFirstLoad = knownNewsIds.size === 0
     let hasNew = false
+    const newItems: any[] = []
     sorted.forEach(item => {
       if (!knownNewsIds.has(item.uid)) {
-        if (!isFirstLoad) hasNew = true
+        if (!isFirstLoad) {
+          hasNew = true
+          newItems.push(item)
+        }
         knownNewsIds.add(item.uid)
       }
     })
     
-    if (hasNew) playNewsChime()
+    if (hasNew) {
+      playNewsChime()
+      if (newItems.length > 0) {
+        sendDesktopNotification(
+          newItems.length === 1 ? '市場新快訊 (News)' : `${newItems.length} 則新快訊`,
+          newItems.length === 1 ? newItems[0].headline : newItems.map(n => n.headline).join('\n')
+        )
+      }
+    }
 
     const providerColors: Record<string, string> = { finnhub: '1d4ed8', cryptocompare: '7c3aed' }
     
@@ -246,6 +259,7 @@ async function syncMovers() {
     const newTop3 = newDataProcessed.slice(0, 3).map((m: Mover) => m.title).join(',')
     if (globalMovers.value.length > 0 && (oldTop3 !== newTop3 || hasSignificantRankChange)) {
       playMoversChime()
+      sendDesktopNotification('大行情異動 (Market Movers)', 'Top 3 排行發生變化或有顯著價格波動')
     }
 
     globalMovers.value = newDataProcessed
@@ -260,6 +274,7 @@ async function syncMovers() {
 let newsTimer: any, moversTimer: any
 
 onMounted(() => {
+  initDesktopNotifications()
   syncNews()
   syncMovers()
   newsTimer = setInterval(syncNews, 30000)

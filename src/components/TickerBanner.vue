@@ -79,7 +79,7 @@ const resetCache = () => {
     
     <!-- Ticker Scroll Container -->
     <div class="flex-1 flex overflow-hidden relative mask-edges h-full items-center">
-      <div class="flex whitespace-nowrap animate-marquee hover:pause shrink-0 items-center w-max">
+      <div v-if="alerts.length > 0" class="flex whitespace-nowrap animate-marquee hover:pause shrink-0 items-center w-max">
         
         <!-- Original Set -->
         <div class="flex space-x-8 pr-8 items-center">
@@ -160,9 +160,9 @@ const resetCache = () => {
 }
 
 @keyframes marquee {
-  0% { transform: translateX(0); }
+  0% { transform: translate3d(0, 0, 0); }
   /* At 100%, we have translated exactly half the width of the container. 
      Because the container has two identical halves, it will look like frame 0. */
-  100% { transform: translateX(-50%); }
+  100% { transform: translate3d(-50%, 0, 0); }
 }
 </style>
