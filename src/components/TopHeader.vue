@@ -46,7 +46,7 @@ const confirmLogout = () => {
 </script>
 
 <template>
-  <header class="h-12 md:h-14 bg-[#0a0f1c] border-b border-slate-800 flex items-center justify-between px-2 md:px-4 text-xs md:text-sm whitespace-nowrap">
+  <header class="h-12 md:h-14 bg-[#0a0f1c] border-b border-slate-800 flex items-center justify-between px-2 md:px-4 text-xs md:text-sm whitespace-nowrap sticky top-0 z-[100]">
     <div class="flex items-center h-full min-w-0 flex-1">
       <!-- Logo Section -->
       <div class="flex items-center space-x-2 md:space-x-3 cursor-pointer group shrink-0 pr-2 md:pr-4">
@@ -85,7 +85,7 @@ const confirmLogout = () => {
 
     <!-- Right Side: Notifications Bell -->
     <div class="flex items-center shrink-0 ml-2 relative" ref="notificationDropdown">
-      <button @click="toggleNotifications" class="p-2 relative text-slate-400 hover:text-white transition-colors cursor-pointer">
+      <button @click.stop="toggleNotifications" class="p-2 relative text-slate-400 hover:text-white transition-colors cursor-pointer">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
@@ -151,7 +151,7 @@ const confirmLogout = () => {
       <!-- Logged In -->
       <div v-else class="relative">
         <button 
-          @click="toggleUserMenu"
+          @click.stop="toggleUserMenu"
           class="flex items-center gap-2 p-1 rounded-full hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700"
         >
           <img 
@@ -208,7 +208,7 @@ const confirmLogout = () => {
 
     <!-- Logout Confirmation Modal Overlay -->
     <transition name="fade">
-      <div v-if="showLogoutConfirm" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+      <div v-if="showLogoutConfirm" class="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
         <div class="bg-[#111827] border border-blue-900/40 rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
           <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
