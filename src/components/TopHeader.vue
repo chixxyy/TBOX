@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog } from '../store'
+import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled } from '../store'
 import { onClickOutside } from '@vueuse/core'
 
 const tabs = ['交易', '新聞', '市場', '異動', '討論']
@@ -76,8 +76,23 @@ const formatTime = (ts: number) => {
       <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-2 scale-95" enter-to-class="opacity-100 translate-y-0 scale-100" leave-active-class="transition ease-in duration-100" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 translate-y-2 scale-95">
         <div v-show="showNotifications" class="fixed right-2 top-12 w-[calc(100vw-16px)] md:absolute md:right-0 md:top-full md:mt-2 md:w-80 border-slate-700 bg-slate-900 shadow-2xl z-[100] border border-slate-600 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex flex-col max-h-[400px]">
           <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800 rounded-t-lg">
-            <h3 class="font-bold text-white tracking-widest text-sm">通知中心</h3>
-            <button v-if="notificationHistory.length > 0" @click="clearNotifications" class="text-xs text-slate-400 hover:text-blue-400 transition-colors">清除全部</button>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-white tracking-widest text-sm">通知中心</h3>
+              <button 
+                @click.stop="isNotificationsEnabled = !isNotificationsEnabled" 
+                class="p-1 rounded-full hover:bg-slate-700 transition-all group/mute" 
+                :title="isNotificationsEnabled ? '點擊靜音通知與音效' : '點擊開啟通知與音效'"
+              >
+                <svg v-if="isNotificationsEnabled" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400 group-hover/mute:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 group-hover/mute:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                </svg>
+              </button>
+            </div>
+            <button v-if="notificationHistory.length > 0" @click="clearNotifications" class="text-xs text-slate-400 hover:text-blue-400 transition-colors border border-slate-700 px-2 py-0.5 rounded bg-slate-900/50">清除全部</button>
           </div>
           
           <div class="flex-1 overflow-y-auto p-2">

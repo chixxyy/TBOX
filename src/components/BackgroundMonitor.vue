@@ -6,6 +6,7 @@ import {
   lastMoversUpdate, lastNewsUpdate,
   priceAlerts,
   showToast,
+  isNotificationsEnabled,
   type Mover
 } from '../store'
 import { playNewsChime, playMoversChime } from '../utils/audio'
@@ -135,12 +136,13 @@ async function syncNews() {
     })
     
     if (hasNew) {
-      playNewsChime()
       if (newItems.length > 0) {
-        sendDesktopNotification(
-          newItems.length === 1 ? '新快訊 (News)' : `${newItems.length} 則新快訊`,
-          newItems.length === 1 ? newItems[0].headline : newItems.map(n => n.headline).join('\n')
-        )
+        if (isNotificationsEnabled.value) {
+          sendDesktopNotification(
+            newItems.length === 1 ? '新快訊 (News)' : `${newItems.length} 則新快訊`,
+            newItems.length === 1 ? newItems[0].headline : newItems.map(n => n.headline).join('\n')
+          )
+        }
         showToast(
           newItems.length === 1 ? '新快訊' : `${newItems.length} 則新快訊`,
           newItems.length === 1 ? newItems[0].headline : newItems.map(n => n.headline).join('\n')
@@ -264,8 +266,9 @@ async function syncMovers() {
     const oldTop3 = globalMovers.value.slice(0, 3).map((m: Mover) => m.title).join(',')
     const newTop3 = newDataProcessed.slice(0, 3).map((m: Mover) => m.title).join(',')
     if (globalMovers.value.length > 0 && (oldTop3 !== newTop3 || hasSignificantRankChange)) {
-      playMoversChime()
-      sendDesktopNotification('大行情異動 (Market Movers)', 'Top 3 排行發生變化或有顯著價格波動')
+      if (isNotificationsEnabled.value) {
+        sendDesktopNotification('大行情異動 (Market Movers)', 'Top 3 排行發生變化或有顯著價格波動')
+      }
       showToast('大行情異動', 'Top 3 排行發生變化或有顯著價格波動')
     }
 
@@ -306,11 +309,12 @@ function connectAlertMonitor() {
 
       if (isTriggered) {
         alert.triggered = true
-        playMoversChime()
-        sendDesktopNotification(
-          '🔔 到價提醒觸發',
-          `${alert.symbol} 已達到設定價格 ${alert.targetPrice} (目前: ${currentPrice})`
-        )
+        if (isNotificationsEnabled.value) {
+          sendDesktopNotification(
+            '🔔 到價提醒觸發',
+            `${alert.symbol} 已達到設定價格 ${alert.targetPrice} (目前: ${currentPrice})`
+          )
+        }
         showToast('🔔 到價提醒觸發', `${alert.symbol} 已達到設定價格 ${alert.targetPrice} (目前: ${currentPrice})`)
       }
     })

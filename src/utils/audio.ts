@@ -1,4 +1,4 @@
-// Centralized Audio Engine for TradingBox
+// Centralized Audio Engine for TradingBox - Pure Utility
 let audioCtx: AudioContext | null = null
 
 function getAudioCtx() {

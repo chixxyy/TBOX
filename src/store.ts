@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { useStorage } from '@vueuse/core'
+import { playNewsChime } from './utils/audio'
 
 // Only track these 4 assets as requested
 
@@ -116,11 +117,18 @@ interface NotificationLog {
 
 export const toasts = ref<ToastItem[]>([])
 export const notificationHistory = useStorage<NotificationLog[]>('tbox-notification-history', [])
+export const isNotificationsEnabled = useStorage('tbox-notifications-enabled', true)
 
 export const showToast = (title: string, message: string) => {
   const id = Date.now().toString() + Math.random().toString(36).substring(2, 7)
-  toasts.value.push({ id, title, message })
   
+  // Only show the popup and play sound if notifications are enabled
+  if (isNotificationsEnabled.value) {
+    toasts.value.push({ id, title, message })
+    playNewsChime()
+  }
+  
+  // Always record in history
   notificationHistory.value.unshift({
     id,
     title,
