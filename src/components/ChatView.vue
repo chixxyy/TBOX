@@ -22,6 +22,31 @@ const confirmDelete = () => {
   }
 }
 
+// News Translation Logic
+const translatedNews = ref<Record<string, string>>({})
+const translatingIds = ref<Set<string>>(new Set())
+
+const translateNews = async (news: any) => {
+  if (translatedNews.value[news.id]) {
+    // Toggle off if already translated
+    delete translatedNews.value[news.id]
+    return
+  }
+
+  translatingIds.value.add(news.id)
+  try {
+    const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(news.headline)}&langpair=en|zh-TW`)
+    const data = await response.json()
+    if (data.responseData?.translatedText) {
+      translatedNews.value[news.id] = data.responseData.translatedText
+    }
+  } catch (error) {
+    console.error('Translation failed:', error)
+  } finally {
+    translatingIds.value.delete(news.id)
+  }
+}
+
 const visibleMessages = computed(() => {
   return chatMessages.value.slice(Math.max(0, chatMessages.value.length - visibleCount.value))
 })
@@ -220,10 +245,22 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
                 <span class="text-[9px] font-bold px-1.5 py-0.5 rounded text-white tracking-wider" :class="news.accentColor">{{ news.cat.toUpperCase() }}</span>
                 <span class="text-[10px] text-slate-500 font-mono">{{ news.time }}</span>
               </div>
-              <h4 class="text-xs font-bold text-slate-200 leading-snug line-clamp-2 md:line-clamp-3 mb-2">{{ news.headline }}</h4>
+              <h4 class="text-xs font-bold text-slate-200 leading-snug line-clamp-2 md:line-clamp-3 mb-2">
+                {{ translatedNews[news.id] || news.headline }}
+              </h4>
             </div>
           </div>
-          <div class="flex justify-end border-t border-slate-800/80 pt-2 mt-1">
+          <div class="flex justify-between items-center border-t border-slate-800/80 pt-2 mt-1">
+            <button 
+              @click="translateNews(news)"
+              class="flex items-center gap-1.5 text-[10px] md:text-xs transition-colors px-2 py-1.5 rounded font-bold"
+              :class="translatedNews[news.id] ? 'text-blue-400 bg-blue-900/20' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'"
+              :disabled="translatingIds.has(news.id)"
+            >
+              <svg v-if="translatingIds.has(news.id)" class="animate-spin h-3.5 w-3.5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 11.37 9.198 15.297 5 18" /></svg>
+              {{ translatingIds.has(news.id) ? '翻譯中...' : (translatedNews[news.id] ? 'ORIGINAL' : '翻譯') }}
+            </button>
             <button 
               @click="shareNews(news)" 
               class="flex items-center gap-1.5 text-[10px] md:text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 px-2 py-1.5 rounded transition-colors font-bold"
