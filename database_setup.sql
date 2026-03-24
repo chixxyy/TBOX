@@ -1,8 +1,11 @@
 -- 在 Supabase 儀表板中的 SQL Editor 執行以下語法來建立資料表與權限
 
+-- 0. Drop existing table if it exists (for clean reset)
+DROP TABLE IF EXISTS messages;
+
 -- 1. Create messages table
 CREATE TABLE messages (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid REFERENCES auth.users NOT NULL,
   user_name text NOT NULL,
   avatar text NOT NULL,
