@@ -27,10 +27,10 @@ const formatTime = (ts: number) => {
 
 <template>
   <header class="h-12 md:h-14 bg-[#0a0f1c] border-b border-slate-800 flex items-center justify-between px-2 md:px-4 text-xs md:text-sm whitespace-nowrap">
-    <div class="flex items-center space-x-4 md:space-x-8 shrink-0 overflow-x-auto scrollbar-hide h-full flex-1">
-      
-      <div class="flex items-center space-x-2 md:space-x-3 cursor-pointer group shrink-0 pr-2">
-        <svg class="w-6 h-6 md:w-7 md:h-7 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-transform group-hover:scale-105" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div class="flex items-center h-full min-w-0 flex-1">
+      <!-- Logo Section -->
+      <div class="flex items-center space-x-2 md:space-x-3 cursor-pointer group shrink-0 pr-2 md:pr-4">
+        <svg class="w-5 h-5 md:w-7 md:h-7 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-transform group-hover:scale-105" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="boxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="#3B82F6" /> <stop offset="100%" stop-color="#6366F1" /> </linearGradient>
@@ -38,27 +38,25 @@ const formatTime = (ts: number) => {
               <stop offset="0%" stop-color="#06B6D4" /> <stop offset="100%" stop-color="#3B82F6" />
             </linearGradient>
           </defs>
-          
           <rect x="2" y="2" width="28" height="28" rx="7" stroke="url(#boxGrad)" stroke-width="2" fill="rgba(59, 130, 246, 0.08)"/>
-          
           <rect x="8" y="15" width="3" height="9" rx="1.5" fill="#3B82F6" fill-opacity="0.8"/>
           <rect x="14" y="8" width="4" height="16" rx="2" fill="url(#tGrad)"/>
           <rect x="10" y="8" width="12" height="4" rx="2" fill="url(#tGrad)"/>
           <rect x="21" y="12" width="3" height="12" rx="1.5" fill="#6366F1" fill-opacity="0.8"/>
         </svg>
-
-        <span class="font-extrabold text-lg md:text-xl tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-indigo-500">
+        <span class="font-extrabold text-base md:text-xl tracking-tighter md:tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-indigo-500 hidden xs:block">
           TBOX
         </span>
       </div>
 
-      <nav class="flex space-x-4 md:space-x-6 h-full items-center shrink-0">
+      <!-- Navigation Tabs -->
+      <nav class="grid grid-cols-5 h-full items-center flex-1 min-w-0">
         <button 
           v-for="tab in tabs" 
           :key="tab"
           @click="activeTab = tab"
-          class="h-12 md:h-14 px-1 border-b-2 font-medium transition-colors duration-200"
-          :class="activeTab === tab ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'"
+          class="h-full flex items-center justify-center border-b-2 font-medium transition-all duration-200 text-[11px] md:text-sm"
+          :class="activeTab === tab ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'"
         >
           {{ tab }}
         </button>
