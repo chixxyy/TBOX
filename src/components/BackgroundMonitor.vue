@@ -9,7 +9,6 @@ import {
   isNotificationsEnabled,
   type Mover
 } from '../store'
-import { playNewsChime, playMoversChime } from '../utils/audio'
 import { initDesktopNotifications, sendDesktopNotification } from '../utils/notify'
 import { api } from '../api'
 
