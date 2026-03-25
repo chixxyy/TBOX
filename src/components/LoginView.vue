@@ -10,6 +10,17 @@ const password = ref('')
 const confirmPassword = ref('')
 const nickname = ref('')
 const loading = ref(false)
+const rememberMe = ref(true)
+
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  const savedEmail = localStorage.getItem('tbox_remembered_email')
+  if (savedEmail) {
+    email.value = savedEmail
+    rememberMe.value = true
+  }
+})
 
 const handleAuth = async () => {
   if (!email.value || !password.value) {
@@ -50,6 +61,14 @@ const handleAuth = async () => {
         password: password.value
       })
       if (error) throw error
+      
+      // Handle Remember Me
+      if (rememberMe.value) {
+        localStorage.setItem('tbox_remembered_email', email.value)
+      } else {
+        localStorage.removeItem('tbox_remembered_email')
+      }
+
       showToast('登入成功', '歡迎回到 TradingBox')
       handleLoginSuccess()
     }
@@ -143,6 +162,20 @@ const handleAuth = async () => {
               @keyup.enter="handleAuth"
               class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
             />
+          </div>
+
+          <!-- Remember Me Toggle -->
+          <div v-if="!isRegister" class="flex items-center justify-between px-1 py-1">
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <div class="relative flex items-center justify-center w-4 h-4 rounded border transition-all duration-200"
+                :class="rememberMe ? 'bg-blue-600 border-blue-500' : 'bg-slate-950/50 border-slate-700 group-hover:border-slate-500'">
+                <input type="checkbox" v-model="rememberMe" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                <svg v-if="rememberMe" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <span class="text-[11px] font-bold text-slate-400 group-hover:text-slate-200 transition-colors uppercase tracking-wider">記住帳號</span>
+            </label>
           </div>
 
           <div v-if="isRegister" class="space-y-1.5 animate-slide-down">
