@@ -21,6 +21,42 @@ const confirmDelete = async () => {
   }
 }
 
+// News Sharing Confirmation
+const showShareConfirm = ref(false)
+const newsToShare = ref<any>(null)
+const triggerShare = (news: any) => {
+  newsToShare.value = news
+  showShareConfirm.value = true
+}
+const executeShare = async () => {
+  if (!newsToShare.value) return
+  await addChatMessage({
+    user: userProfile.value?.full_name || currentUser.value,
+    avatar: userProfile.value?.avatar_url || currentAvatar.value,
+    text: '快看這則重要新聞！',
+    newsShare: {
+      headline: newsToShare.value.headline,
+      url: newsToShare.value.url,
+      source: newsToShare.value.source
+    }
+  })
+  showShareConfirm.value = false
+  newsToShare.value = null
+}
+
+// Collapsible News Card Logic
+const expandedMessages = ref<Set<string>>(new Set())
+const toggleExpand = (id: string) => {
+  if (expandedMessages.value.has(id)) {
+    expandedMessages.value.delete(id)
+  } else {
+    expandedMessages.value.add(id)
+  }
+}
+
+// Mobile Sidebar Toggle
+const showNewsSidebar = ref(window.innerWidth >= 768)
+
 // News Translation Logic
 const translatedNews = ref<Record<string, string>>({})
 const translatingIds = ref<Set<string>>(new Set())
@@ -106,19 +142,6 @@ const formatMessage = (text: string) => {
   })
 }
 
-const shareNews = async (news: any) => {
-  await addChatMessage({
-    user: userProfile.value?.full_name || currentUser.value,
-    avatar: userProfile.value?.avatar_url || currentAvatar.value,
-    text: '快看這則重要新聞！',
-    newsShare: {
-      headline: news.headline,
-      url: news.url,
-      source: news.source
-    }
-  })
-}
-
 const hotNews = computed(() => globalNews.value.slice(0, 20))
 </script>
 
@@ -136,8 +159,19 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
           </svg>
           討論區
         </h2>
-        <div class="ml-auto flex items-center gap-3">
-          <span class="hidden xs:block text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded font-mono">{{ chatMessages.length }} 則留言</span>
+        <div class="ml-auto flex items-center gap-2">
+          <span class="hidden xs:block text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded font-mono">{{ chatMessages.length }} 留言</span>
+          
+          <!-- Mobile Toggle Sidebar -->
+          <button 
+            @click="showNewsSidebar = !showNewsSidebar"
+            class="md:hidden flex items-center gap-1 px-2 py-1 rounded bg-blue-600/10 border border-blue-500/30 text-[10px] font-bold text-blue-400 active:scale-95 transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+            </svg>
+            {{ showNewsSidebar ? '關閉新聞' : '開啟新聞' }}
+          </button>
         </div>
       </div>
 
@@ -177,18 +211,48 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
               </button>
             </div>
             
-            <div class="bg-[#0a0f1c] border border-slate-800/80 rounded-b-xl rounded-tr-xl px-3 py-2 text-xs md:text-sm text-slate-300 w-fit max-w-[90%] md:max-w-[75%] shadow hover:border-slate-700 transition-colors">
+            <div class="bg-[#0a0f1c] border border-slate-800/80 rounded-b-xl rounded-tr-xl px-3 py-2 text-xs md:text-sm text-slate-300 w-fit max-w-[92%] md:max-w-[80%] shadow hover:border-slate-700 transition-colors">
               <span class="leading-relaxed whitespace-pre-wrap" v-html="formatMessage(msg.text)"></span>
               
-              <a v-if="msg.newsShare" :href="msg.newsShare.url" target="_blank" rel="noopener noreferrer" class="mt-2 block w-full bg-[#111827] border border-blue-900/40 rounded-lg p-3 hover:border-blue-500/50 transition-colors group/news overflow-hidden box-border">
-                <div class="flex items-center gap-1.5 mb-1.5 opacity-80 group-hover/news:opacity-100">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" /></svg>
-                  <span class="text-[10px] text-blue-400 font-bold uppercase tracking-wider truncate">{{ msg.newsShare.source }}</span>
+              <div v-if="msg.newsShare" class="mt-2 w-full overflow-hidden">
+                <!-- Collapsible News Card -->
+                <div class="bg-[#111827] border border-blue-900/40 rounded-lg overflow-hidden transition-all duration-300">
+                  <div class="flex items-center justify-between p-2 md:p-3 bg-blue-900/5 group/news">
+                    <div class="flex items-center gap-1.5 opacity-80 min-w-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" /></svg>
+                      <span class="text-[9px] text-blue-400 font-bold uppercase tracking-wider truncate">{{ msg.newsShare.source }}</span>
+                    </div>
+                    <button @click="toggleExpand(msg.id)" class="text-[9px] text-slate-500 hover:text-white flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-slate-800">
+                      {{ expandedMessages.has(msg.id) ? '收起' : '展開新聞' }}
+                      <svg :class="{'rotate-180': expandedMessages.has(msg.id)}" class="h-2.5 w-2.5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                  </div>
+                  
+                  <transition name="chat-news-expand">
+                    <div v-if="expandedMessages.has(msg.id)" class="p-3 border-t border-slate-800/50 space-y-3">
+                      <h4 class="text-xs md:text-sm font-bold text-white leading-tight">
+                        {{ translatedNews[msg.id] || msg.newsShare.headline }}
+                      </h4>
+                      <div class="flex items-center gap-3">
+                        <button 
+                          @click.stop="translateNews({ id: msg.id, headline: msg.newsShare.headline })"
+                          class="flex items-center gap-1.5 text-[9px] font-bold py-1 px-2 rounded border transition-all"
+                          :class="translatedNews[msg.id] ? 'text-blue-400 border-blue-900/40 bg-blue-950/20 shadow-sm' : 'border-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-800'"
+                          :disabled="translatingIds.has(msg.id)"
+                        >
+                          <svg v-if="translatingIds.has(msg.id)" class="animate-spin h-3 w-3 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 11.37 9.198 15.297 5 18" /></svg>
+                          {{ translatedNews[msg.id] ? 'ORIGINAL' : '翻譯' }}
+                        </button>
+                        <a :href="msg.newsShare.url" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-[10px] font-bold text-blue-400 hover:text-blue-300 py-1 transition-colors">
+                          閱讀完整原文
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        </a>
+                      </div>
+                    </div>
+                  </transition>
                 </div>
-                <h4 class="text-xs md:text-sm font-bold text-white leading-tight group-hover/news:text-blue-300 transition-colors line-clamp-3">
-                  {{ msg.newsShare.headline }}
-                </h4>
-              </a>
+              </div>
             </div>
           </div>
         </div>
@@ -223,12 +287,15 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
     </div>
 
     <!-- Hot News Sidebar -->
-    <div class="w-full md:w-[320px] lg:w-[380px] bg-[#0a0f1c] flex flex-col h-[35vh] md:h-auto shrink-0 border-t md:border-t-0 border-slate-800">
+    <div v-show="showNewsSidebar" class="w-full md:w-[320px] lg:w-[380px] bg-[#0a0f1c] flex flex-col h-[40vh] md:h-auto shrink-0 border-t md:border-t-0 border-slate-800 transition-all">
       <div class="h-12 border-b border-slate-800 flex items-center px-4 shrink-0 bg-[#070b14]/50">
         <h3 class="font-bold text-slate-300 text-xs md:text-sm flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd" /></svg>
           新聞分享
         </h3>
+        <button @click="showNewsSidebar = false" class="md:hidden ml-auto p-1.5 text-slate-500 hover:text-white bg-slate-800/50 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
       </div>
       
       <div class="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-700">
@@ -260,7 +327,7 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
               {{ translatingIds.has(news.id) ? '翻譯中...' : (translatedNews[news.id] ? 'ORIGINAL' : '翻譯') }}
             </button>
             <button 
-              @click="shareNews(news)" 
+              @click="triggerShare(news)" 
               class="flex items-center gap-1.5 text-[10px] md:text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 px-2 py-1.5 rounded transition-colors font-bold"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
@@ -270,6 +337,29 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
         </div>
       </div>
     </div>
+
+    <!-- Share Confirmation Modal -->
+    <transition name="fade">
+      <div v-if="showShareConfirm" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-[#111827] border border-blue-900/50 rounded-xl p-6 w-full max-w-sm shadow-2xl">
+          <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white text-center mb-2">確定要分享到討論區嗎？</h3>
+          <p class="text-xs text-slate-400 text-center mb-4 line-clamp-2">「{{ newsToShare?.headline }}」</p>
+          <div class="flex gap-3">
+            <button @click="showShareConfirm = false" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
+              取消
+            </button>
+            <button @click="executeShare" class="flex-1 py-2.5 rounded bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold">
+              確定分享
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
 
     <!-- Delete Confirmation Modal Overlay -->
     <transition name="fade">
@@ -311,5 +401,16 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+/* News Expand Animation */
+.chat-news-expand-enter-active, .chat-news-expand-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 200px;
+}
+.chat-news-expand-enter-from, .chat-news-expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-5px);
 }
 </style>
