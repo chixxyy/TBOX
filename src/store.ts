@@ -167,8 +167,8 @@ const checkPortfolioAlerts = () => {
     const change = (market.rawPrice / item.entryPrice - 1) * 100
     const absChange = Math.abs(change)
     
-    // Thresholds: 10%, 5%
-    const thresholds = [10, 5]
+    // Thresholds: 20%, 10%, 5%
+    const thresholds = [20, 10, 5]
     if (!alerts[item.id]) {
       alerts[item.id] = []
     }
@@ -179,11 +179,16 @@ const checkPortfolioAlerts = () => {
     for (const t of thresholds) {
       if (absChange >= t && !currentItemAlerts.includes(t)) {
         const type = change >= 0 ? '上漲' : '下跌'
+        const isMajor = t === 20
+        const titlePrefix = isMajor ? '🚨 [重大異動] ' : ''
+        
         showToast(
-          `資產異動提醒: ${item.symbol}`,
+          `${titlePrefix}資產異動提醒: ${item.symbol}`,
           `持倉 ${item.symbol} 已${type} ${t}%！目前回報: ${change.toFixed(2)}%`
         )
         currentItemAlerts.push(t)
+        // Trigger save to storage
+        alertThresholds.value = { ...alerts }
         break 
       }
     }
@@ -292,13 +297,13 @@ export const toasts = ref<ToastItem[]>([])
 export const notificationHistory = useStorage<NotificationLog[]>('tbox-notification-history', [])
 export const isNotificationsEnabled = useStorage('tbox-notifications-enabled', true)
 
-export const showToast = (title: string, message: string) => {
+export const showToast = (title: string, message: string, silent: boolean = false) => {
   const id = Date.now().toString() + Math.random().toString(36).substring(2, 7)
   
   // Only show the popup and play sound if notifications are enabled
   if (isNotificationsEnabled.value) {
     toasts.value.push({ id, title, message })
-    playNewsChime()
+    if (!silent) playNewsChime()
   }
   
   // Always record in history
@@ -573,7 +578,7 @@ export const chatSignOut = async () => {
   userProfile.value = null
   priceAlerts.value = [] 
   portfolio.value = [] // Clear portfolio on logout
-  showToast('登出成功', '您已安全退出 TradingBox')
+  showToast('登出成功', '您已安全退出 TradingBox', true)
 }
 
 

@@ -53,7 +53,7 @@ const handleAuth = async () => {
         }
       })
       if (error) throw error
-      showToast('註冊成功', '請至信箱查收驗證信或直接登入')
+      showToast('註冊成功', '請至信箱查收驗證信或直接登入', true)
       isRegister.value = false
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -69,7 +69,7 @@ const handleAuth = async () => {
         localStorage.removeItem('tbox_remembered_email')
       }
 
-      showToast('登入成功', '歡迎回到 TradingBox')
+      showToast('登入成功', '歡迎回到 TradingBox', true)
       handleLoginSuccess()
     }
   } catch (err: any) {

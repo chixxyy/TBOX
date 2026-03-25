@@ -8,6 +8,8 @@ import {
   showToast,
   isNotificationsEnabled,
   updatePriceAlertTriggered,
+  marketPrices,
+  portfolio,
   type Mover
 } from '../store'
 import { initDesktopNotifications, sendDesktopNotification } from '../utils/notify'
@@ -294,7 +296,23 @@ function connectAlertMonitor() {
     
     const prices: Record<string, number> = {}
     for (const d of data) {
-      prices[d.s] = parseFloat(d.c)
+      const sym = d.s
+      const p = parseFloat(d.c)
+      prices[sym] = p
+      
+      // Global Price Sync for Alerts & Portfolio
+      if (portfolio.value.some(i => i.symbol === sym) || priceAlerts.value.some(a => a.symbol === sym)) {
+        if (!marketPrices.value[sym]) {
+          marketPrices.value[sym] = {
+            price: p.toString(),
+            change: '0%',
+            up: true,
+            rawPrice: p
+          }
+        } else {
+          marketPrices.value[sym].rawPrice = p
+        }
+      }
     }
 
     priceAlerts.value.forEach(alert => {
@@ -327,13 +345,41 @@ function connectAlertMonitor() {
   }
 }
 
+async function syncPortfolioStockPrices() {
+  const stocks = portfolio.value.filter(p => !p.symbol.endsWith('USDT'))
+  if (stocks.length === 0) return
+
+  for (const s of stocks) {
+    try {
+      const quote = await api.getFinnhubQuote(s.symbol)
+      if (quote && quote.c) {
+        const target = marketPrices.value[s.symbol]
+        if (!target) {
+          marketPrices.value[s.symbol] = {
+            price: quote.c.toString(),
+            change: '0%',
+            up: true,
+            rawPrice: quote.c
+          }
+        } else {
+          target.rawPrice = quote.c
+        }
+      }
+    } catch (e) {
+      console.error(`Failed to sync stock price for ${s.symbol}:`, e)
+    }
+  }
+}
+
 onMounted(() => {
   initDesktopNotifications()
   syncNews()
   syncMovers()
   connectAlertMonitor()
+  syncPortfolioStockPrices() // Initial sync
   newsTimer = setInterval(syncNews, 30000)
   moversTimer = setInterval(syncMovers, 10000)
+  setInterval(syncPortfolioStockPrices, 60000) // Every minute
 })
 
 onUnmounted(() => {
