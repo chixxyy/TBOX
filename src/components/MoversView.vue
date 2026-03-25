@@ -165,9 +165,9 @@ const newAmount = ref<number | null>(null)
 const newPrice = ref<number | null>(null)
 const showAddForm = ref(false)
 
-const handleAdd = () => {
+const handleAdd = async () => {
   if (!newSymbol.value || !newAmount.value || !newPrice.value) return
-  addToPortfolio(newSymbol.value, newAmount.value, newPrice.value)
+  await addToPortfolio(newSymbol.value, newAmount.value, newPrice.value)
   newSymbol.value = ''
   newAmount.value = null
   newPrice.value = null
@@ -187,7 +187,7 @@ const portfolioStats = computed(() => {
   let totalCost = 0
   let totalValue = 0
   
-  portfolio.value.forEach(item => {
+  portfolio.value.forEach((item: any) => {
     const market = marketPrices.value[item.symbol]
     const currentPrice = market?.rawPrice || item.entryPrice
     totalCost += item.amount * item.entryPrice
@@ -213,9 +213,9 @@ const triggerDelete = (id: string, symbol: string) => {
   confirmDeleteSymbol.value = symbol
 }
 
-const confirmDeleteAction = () => {
+const confirmDeleteAction = async () => {
   if (confirmDeleteId.value !== null) {
-    removeFromPortfolio(confirmDeleteId.value)
+    await removeFromPortfolio(confirmDeleteId.value)
     confirmDeleteId.value = null
     confirmDeleteSymbol.value = ''
   }

@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { playNewsChime } from './utils/audio'
+import { supabase } from './supabase'
 
 // Only track these 4 assets as requested
 
@@ -106,20 +107,50 @@ interface PortfolioItem {
   amount: number
   entryPrice: number
 }
-export const portfolio = useStorage<PortfolioItem[]>('tbox-portfolio', [])
+export const portfolio = ref<PortfolioItem[]>([])
 
-export const addToPortfolio = (symbol: string, amount: number, entryPrice: number) => {
-  portfolio.value.push({
-    id: Date.now().toString(),
-    symbol: symbol.toUpperCase(),
-    amount,
-    entryPrice
-  })
+const fetchPortfolio = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('portfolio')
+    .select('*')
+    .eq('user_id', userId)
+  
+  if (!error && data) {
+    portfolio.value = data.map((item: any) => ({
+      id: item.id,
+      symbol: item.symbol,
+      amount: Number(item.amount),
+      entryPrice: Number(item.entry_price)
+    }))
+  }
 }
 
-export const removeFromPortfolio = (id: string) => {
-  portfolio.value = portfolio.value.filter(item => item.id !== id)
-  if (alertThresholds.value) delete alertThresholds.value[id]
+export const addToPortfolio = async (symbol: string, amount: number, entryPrice: number) => {
+  if (!chatSession.value) return
+  const { data, error } = await supabase.from('portfolio').insert({
+    user_id: chatSession.value.user.id,
+    symbol: symbol.toUpperCase(),
+    amount,
+    entry_price: entryPrice
+  }).select().single()
+  
+  if (!error && data) {
+    portfolio.value.push({
+      id: data.id,
+      symbol: data.symbol,
+      amount: Number(data.amount),
+      entryPrice: Number(data.entry_price)
+    })
+  }
+}
+
+export const removeFromPortfolio = async (id: string) => {
+  if (!chatSession.value) return
+  const { error } = await supabase.from('portfolio').delete().eq('id', id)
+  if (!error) {
+    portfolio.value = portfolio.value.filter((item: PortfolioItem) => item.id !== id)
+    if (alertThresholds.value) delete alertThresholds.value[id]
+  }
 }
 
 // --- Portfolio Alerts Monitoring ---
@@ -128,8 +159,8 @@ const alertThresholds = useStorage<Record<string, number[]>>('tbox-portfolio-ale
 const checkPortfolioAlerts = () => {
   const alerts = alertThresholds.value
   if (!alerts) return
-
-  portfolio.value.forEach(item => {
+  
+  portfolio.value.forEach((item: PortfolioItem) => {
     const market = marketPrices.value[item.symbol]
     if (!market || market.rawPrice === 0) return
     
@@ -229,7 +260,7 @@ export const removePriceAlert = async (id: string) => {
   if (!chatSession.value) return
   const { error } = await supabase.from('price_alerts').delete().eq('id', id)
   if (!error) {
-    priceAlerts.value = priceAlerts.value.filter(a => a.id !== id)
+    priceAlerts.value = priceAlerts.value.filter((a: PriceAlert) => a.id !== id)
   }
 }
 
@@ -238,7 +269,7 @@ export const updatePriceAlertTriggered = async (id: string) => {
   await supabase.from('price_alerts').update({ triggered: true }).eq('id', id)
   
   // Update local state immediately
-  const alert = priceAlerts.value.find(a => a.id === id)
+  const alert = priceAlerts.value.find((a: PriceAlert) => a.id === id)
   if (alert) alert.triggered = true
 }
 
@@ -317,7 +348,6 @@ export const handleLoginSuccess = () => {
 }
 
 // --- Supabase Realtime Chat & Auth ---
-import { supabase } from './supabase'
 
 interface ChatMessage {
   id: string
@@ -418,8 +448,10 @@ export const initSupabaseChat = async () => {
     chatSession.value = session
     if (session?.user.id) {
       await fetchUserProfile(session.user.id)
+      await fetchPortfolio(session.user.id)
     } else {
       userProfile.value = null
+      portfolio.value = []
     }
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -427,9 +459,11 @@ export const initSupabaseChat = async () => {
       if (session?.user.id) {
         await fetchUserProfile(session.user.id)
         await fetchPriceAlerts(session.user.id)
+        await fetchPortfolio(session.user.id)
       } else {
         userProfile.value = null
         priceAlerts.value = []
+        portfolio.value = []
       }
     })
 
@@ -443,7 +477,7 @@ export const initSupabaseChat = async () => {
     if (msgsError) throw msgsError
     
     if (msgs) {
-      chatMessages.value = [...msgs].reverse().map(m => ({
+      chatMessages.value = [...msgs].reverse().map((m: any) => ({
         id: m.id,
         user: m.user_name || '匿名使用者',
         userId: m.user_id,
@@ -470,10 +504,10 @@ export const initSupabaseChat = async () => {
   // Realtime Subscriptions
   supabase
     .channel('public:messages')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
       const m = payload.new
       // Avoid duplicate insert if we already have it locally (though we don't do optimistic updates here yet)
-      if (!chatMessages.value.find(msg => msg.id === m.id)) {
+      if (!chatMessages.value.find((msg: ChatMessage) => msg.id === m.id)) {
         chatMessages.value.push({
           id: m.id,
           user: m.user_name,
@@ -486,11 +520,11 @@ export const initSupabaseChat = async () => {
         if (chatMessages.value.length > 500) chatMessages.value.shift()
       }
     })
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, payload => {
-      chatMessages.value = chatMessages.value.filter(msg => msg.id !== payload.old.id)
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload: any) => {
+      chatMessages.value = chatMessages.value.filter((msg: ChatMessage) => msg.id !== payload.old.id)
     })
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, payload => {
-      const idx = chatMessages.value.findIndex(msg => msg.id === payload.new.id)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload: any) => {
+      const idx = chatMessages.value.findIndex((msg: ChatMessage) => msg.id === payload.new.id)
       if (idx !== -1) {
         const m = payload.new
         const existing = chatMessages.value[idx]
@@ -535,7 +569,10 @@ export const removeChatMessage = async (id: string) => {
 
 export const chatSignOut = async () => {
   await supabase.auth.signOut()
-  priceAlerts.value = [] // Clear alerts on logout
+  chatSession.value = null
+  userProfile.value = null
+  priceAlerts.value = [] 
+  portfolio.value = [] // Clear portfolio on logout
   showToast('登出成功', '您已安全退出 TradingBox')
 }
 

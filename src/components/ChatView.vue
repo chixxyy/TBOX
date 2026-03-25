@@ -14,9 +14,9 @@ const chatContainer = ref<HTMLElement | null>(null)
 const visibleCount = ref(15)
 
 const confirmDeleteId = ref<string | null>(null)
-const confirmDelete = () => {
+const confirmDelete = async () => {
   if (confirmDeleteId.value) {
-    removeChatMessage(confirmDeleteId.value)
+    await removeChatMessage(confirmDeleteId.value)
     confirmDeleteId.value = null
   }
 }
@@ -84,10 +84,10 @@ const formatTime = (ts: number) => {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
-const sendMessage = () => {
+const sendMessage = async () => {
   if (!inputText.value.trim()) return
   
-  addChatMessage({
+  await addChatMessage({
     user: userProfile.value?.full_name || currentUser.value,
     avatar: userProfile.value?.avatar_url || currentAvatar.value,
     text: inputText.value.trim()
@@ -106,8 +106,8 @@ const formatMessage = (text: string) => {
   })
 }
 
-const shareNews = (news: any) => {
-  addChatMessage({
+const shareNews = async (news: any) => {
+  await addChatMessage({
     user: userProfile.value?.full_name || currentUser.value,
     avatar: userProfile.value?.avatar_url || currentAvatar.value,
     text: '快看這則重要新聞！',

@@ -10,9 +10,9 @@ const isCrypto = computed(() => activeSymbol.value.toLowerCase().endsWith('usdt'
 const newAlertPrice = ref<number | ''>('')
 const newAlertCondition = ref<'above'|'below'>('above')
 
-const createAlert = () => {
+const createAlert = async () => {
   if (newAlertPrice.value && !isNaN(Number(newAlertPrice.value))) {
-    addPriceAlert(activeSymbol.value, Number(newAlertPrice.value), newAlertCondition.value)
+    await addPriceAlert(activeSymbol.value, Number(newAlertPrice.value), newAlertCondition.value)
     newAlertPrice.value = ''
   }
 }
@@ -24,9 +24,9 @@ const triggerDeleteAlert = (alert: any) => {
   alertToDelete.value = { id: alert.id, symbol: alert.symbol, price: alert.targetPrice }
 }
 
-const confirmDeleteAlertAction = () => {
+const confirmDeleteAlertAction = async () => {
   if (alertToDelete.value) {
-    removePriceAlert(alertToDelete.value.id)
+    await removePriceAlert(alertToDelete.value.id)
     alertToDelete.value = null
   }
 }

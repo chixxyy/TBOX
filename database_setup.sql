@@ -81,3 +81,22 @@ CREATE POLICY "Users can manage their own alerts" ON price_alerts
 ALTER PUBLICATION supabase_realtime ADD TABLE price_alerts;
 ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
 
+-- 10. Create portfolio table
+CREATE TABLE IF NOT EXISTS portfolio (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users NOT NULL,
+  symbol text NOT NULL,
+  amount numeric NOT NULL,
+  entry_price numeric NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 11. Enable Row Level Security (RLS)
+ALTER TABLE portfolio ENABLE ROW LEVEL SECURITY;
+
+-- 12. Create Policies for portfolio
+CREATE POLICY "Users can manage their own portfolio" ON portfolio
+  FOR ALL USING (auth.uid() = user_id);
+
+-- 13. Enable Realtime for portfolio
+ALTER PUBLICATION supabase_realtime ADD TABLE portfolio;
