@@ -74,7 +74,7 @@ const resetCache = () => {
   <div class="h-8 md:h-10 border-b border-slate-800 bg-[#070b14] flex items-center px-2 md:px-4 text-[10px] md:text-xs">
     <div class="flex items-center bg-green-900/40 border border-green-800 text-green-400 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full space-x-1 md:space-x-1.5 mr-2 md:mr-4 shadow-[0_0_8px_rgba(16,185,129,0.3)] z-10 shrink-0">
       <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-      <span class="font-bold tracking-wide">即時</span>
+      <span class="font-bold tracking-wide">LIVE</span>
     </div>
     
     <!-- Ticker Scroll Container -->

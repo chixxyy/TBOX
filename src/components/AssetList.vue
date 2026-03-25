@@ -24,7 +24,10 @@ const initialAssets: Asset[] = [
   // Stock
   { symbol: 'NVDA', name: 'Nvidia', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
   { symbol: 'AMD', name: 'AMD', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'CRCL', name: 'Circle', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'META', name: 'Meta', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'ADBE', name: 'Adobe', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'VTI', name: 'Vanguard Total Stock', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
+  { symbol: 'VOO', name: 'Vanguard S&P 500', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
   { symbol: 'AMZN', name: 'Amazon', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
   { symbol: 'TSLA', name: 'Tesla', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
   { symbol: 'ORCL', name: 'Oracle', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
@@ -37,21 +40,31 @@ const activeFilterIndex = ref(0)
 const filters = ['全部', '加密貨幣', '股票']
 
 const filteredAssets = computed(() => {
-  let result = assets.value
+  // Separate assets by type
+  const cryptos = assets.value.filter(a => a.type === 'crypto')
+  const stocks = [...assets.value.filter(a => a.type === 'stock')].sort((a, b) => a.symbol.localeCompare(b.symbol))
 
-  if (activeFilterIndex.value === 1) {
-    result = result.filter(a => a.type === 'crypto')
-  } else if (activeFilterIndex.value === 2) {
-    result = result.filter(a => a.type === 'stock')
+  let result: Asset[] = []
+
+  // Determine base list based on filter
+  if (activeFilterIndex.value === 0) {
+    result = [...cryptos, ...stocks]
+  } else if (activeFilterIndex.value === 1) {
+    result = cryptos
+  } else {
+    result = stocks
   }
 
-  if (!filter.value) return result
-  
-  const q = filter.value.toLowerCase()
-  return result.filter(a => 
-    a.symbol.toLowerCase().includes(q) || 
-    a.name.toLowerCase().includes(q)
-  )
+  // Apply search query
+  if (filter.value) {
+    const q = filter.value.toLowerCase()
+    return result.filter(a => 
+      a.symbol.toLowerCase().includes(q) || 
+      a.name.toLowerCase().includes(q)
+    )
+  }
+
+  return result
 })
 
 let wsBinance: WebSocket | null = null
@@ -123,8 +136,8 @@ onMounted(async () => {
   wsFinnhub = new WebSocket(`wss://ws.finnhub.io?token=${token}`)
 
   wsFinnhub.onopen = () => {
-    ['NVDA', 'AMD', 'CRCL', 'AMZN', 'TSLA', 'ORCL', 'PLTR'].forEach(sym => {
-      wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': sym}))
+    assets.value.filter(a => a.type === 'stock').forEach(asset => {
+      wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': asset.symbol}))
     })
   }
 
@@ -196,7 +209,7 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
 
     <!-- List Headers -->
     <div class="flex items-center justify-between px-2 md:px-4 py-1 md:py-2 text-[9px] md:text-[10px] font-bold text-slate-500 border-b border-slate-800/50 bg-[#070b14]">
-      <span>資產</span>
+      <span>資產 ({{ filteredAssets.length }})</span>
       <div class="flex space-x-2 md:space-x-4 text-right">
         <span class="w-14 md:w-16">價格</span>
         <span class="w-10 md:w-12">24H</span>
