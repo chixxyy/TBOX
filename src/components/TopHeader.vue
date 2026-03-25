@@ -37,6 +37,7 @@ const formatTime = (ts: number) => {
 const showLogoutConfirm = ref(false)
 const handleLogout = () => {
   showLogoutConfirm.value = true
+  showUserMenu.value = false
 }
 const confirmLogout = () => {
   chatSignOut()
@@ -218,10 +219,10 @@ const confirmLogout = () => {
           <h3 class="text-lg font-bold text-white mb-2">確定要登出嗎？</h3>
           <p class="text-xs text-slate-400 mb-6">登出後將無法使用討論區並清除目前的自定義設定。</p>
           <div class="flex gap-3">
-            <button @click="showLogoutConfirm = false" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors text-sm font-bold">
+            <button @click.stop="showLogoutConfirm = false" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors text-sm font-bold">
               取消
             </button>
-            <button @click="confirmLogout" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold">
+            <button @click.stop="confirmLogout" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold">
               確定登出
             </button>
           </div>
