@@ -74,7 +74,12 @@ export const initialAssets = [
   // Crypto
   { symbol: 'BTCUSDT', name: 'Bitcoin', type: 'crypto'},
   { symbol: 'ETHUSDT', name: 'Ethereum', type: 'crypto'},
+  { symbol: 'BNBUSDT', name: 'Binance Coin', type: 'crypto'},
   { symbol: 'SOLUSDT', name: 'Solana', type: 'crypto'},
+  { symbol: 'ADAUSDT', name: 'Cardano', type: 'crypto'},
+  { symbol: 'XRPUSDT', name: 'Ripple', type: 'crypto'},
+  { symbol: 'DOTUSDT', name: 'Polkadot', type: 'crypto'},
+  { symbol: 'LINKUSDT', name: 'Chainlink', type: 'crypto'},
   { symbol: 'DOGEUSDT', name: 'Dogecoin', type: 'crypto'},
   { symbol: 'USDCUSDT', name: 'USDC/USDT', type: 'crypto'},
   // Stock
@@ -573,12 +578,18 @@ export const removeChatMessage = async (id: string) => {
 }
 
 export const chatSignOut = async () => {
-  await supabase.auth.signOut()
-  chatSession.value = null
-  userProfile.value = null
-  priceAlerts.value = [] 
-  portfolio.value = [] // Clear portfolio on logout
-  showToast('登出成功', '您已安全退出 TradingBox', true)
+  try {
+    await supabase.auth.signOut()
+  } catch (err) {
+    console.error('Supabase signOut error:', err)
+  } finally {
+    chatMessages.value = []
+    chatSession.value = null
+    userProfile.value = null
+    priceAlerts.value = [] 
+    portfolio.value = [] // Clear portfolio on logout
+    showToast('登出成功', '您已安全退出 TradingBox', true)
+  }
 }
 
 

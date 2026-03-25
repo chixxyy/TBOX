@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import Sparkline from './Sparkline.vue'
 import { 
   globalMovers as movers, 
@@ -165,6 +165,40 @@ const newAmount = ref<number | null>(null)
 const newPrice = ref<number | null>(null)
 const showAddForm = ref(false)
 
+// Dropdown logic for Symbol Select
+const showSymbolDropdown = ref(false)
+const symbolSearch = ref('')
+const filteredAssets = computed(() => {
+  const q = symbolSearch.value.toLowerCase().trim()
+  const assets = q 
+    ? initialAssets.filter(a => a.symbol.toLowerCase().includes(q) || a.name.toLowerCase().includes(q))
+    : initialAssets
+    
+  return {
+    crypto: assets.filter(a => a.type === 'crypto'),
+    stock: assets.filter(a => a.type === 'stock')
+  }
+})
+
+const selectSymbol = (sym: string) => {
+  newSymbol.value = sym
+  showSymbolDropdown.value = false
+  symbolSearch.value = ''
+}
+
+const selectedAssetInfo = computed(() => initialAssets.find(a => a.symbol === newSymbol.value))
+
+// Close dropdown on click outside
+const closeOnOutside = (e: MouseEvent) => {
+  const target = e.target as HTMLElement
+  if (showSymbolDropdown.value && !target.closest('.symbol-dropdown-container')) {
+    showSymbolDropdown.value = false
+  }
+}
+
+onMounted(() => window.addEventListener('click', closeOnOutside))
+onUnmounted(() => window.removeEventListener('click', closeOnOutside))
+
 const handleAdd = async () => {
   if (!newSymbol.value || !newAmount.value || !newPrice.value) return
   await addToPortfolio(newSymbol.value, newAmount.value, newPrice.value)
@@ -254,7 +288,7 @@ const confirmDeleteAction = async () => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">模擬資產價值</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">資產價值 (USD)</div>
             <div class="text-white font-bold text-xs md:text-lg leading-none">${{ portfolioStats.value }}</div>
           </div>
         </div>
@@ -324,7 +358,7 @@ const confirmDeleteAction = async () => {
                 <div>
                   <h3 class="text-white font-bold flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg>
-                    模擬持倉管理
+                    持倉管理
                   </h3>
                   <p class="text-xs text-slate-500 mt-1">手動輸入代碼以追蹤目前即時盈虧狀況</p>
                 </div>
@@ -334,22 +368,103 @@ const confirmDeleteAction = async () => {
               </div>
 
               <transition enter-active-class="duration-300 ease-out" enter-from-class="transform opacity-0 -translate-y-4" enter-to-class="transform opacity-100 translate-y-0">
-                <form v-if="showAddForm" @submit.prevent="handleAdd" class="grid grid-cols-1 md:grid-cols-4 gap-4 pb-6 border-b border-white/5 mb-6 items-end">
-                  <div class="space-y-1.5">
-                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">代碼 (Symbol)</span>
-                    <select v-model="newSymbol" class="h-10 w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors uppercase appearance-none cursor-pointer">
-                      <option disabled value="">請選擇標的</option>
-                      <option v-for="asset in initialAssets" :key="asset.symbol" :value="asset.symbol" class="bg-[#0a0f1c]">
-                        {{ asset.symbol }} - {{ asset.name }}
-                      </option>
-                    </select>
+                <form v-if="showAddForm" @submit.prevent="handleAdd" class="grid grid-cols-1 md:grid-cols-4 gap-4 pb-6 border-b border-white/5 mb-6 items-start">
+                  <div class="space-y-1.5 relative symbol-dropdown-container">
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">代碼 (Symbol)</span>
+                    <button 
+                      type="button"
+                      @click="showSymbolDropdown = !showSymbolDropdown"
+                      class="h-10 w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 flex items-center justify-between text-white text-sm outline-none focus:border-blue-500 transition-all hover:bg-slate-900/50"
+                      :class="{ 'border-blue-500 ring-1 ring-blue-500/20': showSymbolDropdown }"
+                    >
+                      <div class="flex items-center gap-2 truncate">
+                        <template v-if="selectedAssetInfo">
+                          <img :src="`https://ui-avatars.com/api/?name=${selectedAssetInfo.symbol.slice(0,2)}&background=${selectedAssetInfo.type === 'crypto' ? '3b82f6' : '10b981'}&color=fff&size=32&rounded=true`" class="w-4 h-4 rounded-full" />
+                          <span class="font-bold">{{ selectedAssetInfo.symbol }}</span>
+                          <span class="text-slate-500 text-[10px] truncate">{{ selectedAssetInfo.name }}</span>
+                        </template>
+                        <span v-else class="text-slate-600">請選擇標的</span>
+                      </div>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 transition-transform duration-300" :class="{ 'rotate-180': showSymbolDropdown }" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </button>
+
+                    <!-- Custom Dropdown Menu -->
+                    <transition 
+                      enter-active-class="duration-200 ease-out" 
+                      enter-from-class="transform opacity-0 scale-95" 
+                      enter-to-class="transform opacity-100 scale-100"
+                      leave-active-class="duration-150 ease-in"
+                      leave-from-class="transform opacity-100 scale-100"
+                      leave-to-class="transform opacity-0 scale-95"
+                    >
+                      <div v-if="showSymbolDropdown" class="absolute top-[calc(100%+4px)] left-0 w-full min-w-[200px] bg-[#0a0f1c] border border-slate-700 shadow-2xl rounded-xl z-[200] overflow-hidden backdrop-blur-xl">
+                        <div class="p-2 border-b border-slate-800 bg-[#070b14]">
+                          <input 
+                            v-model="symbolSearch"
+                            type="text" 
+                            placeholder="搜索..." 
+                            class="w-full bg-[#05080f] border border-slate-700 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 transition-colors"
+                            auto-focus
+                          />
+                        </div>
+                        <div class="max-h-[240px] overflow-y-auto custom-scrollbar p-1">
+                          <!-- Crypto Section -->
+                          <div v-if="filteredAssets.crypto.length > 0">
+                            <div class="px-2 py-1 text-[9px] font-black text-blue-500 uppercase tracking-widest opacity-70">Crypto</div>
+                            <button 
+                              v-for="asset in filteredAssets.crypto" :key="asset.symbol"
+                              type="button"
+                              @click="selectSymbol(asset.symbol)"
+                              class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-blue-600/10 transition-colors group"
+                              :class="{ 'bg-blue-600/20': newSymbol === asset.symbol }"
+                            >
+                              <div class="flex items-center gap-3">
+                                <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=3b82f6&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
+                                <div class="text-left">
+                                  <div class="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{{ asset.symbol }}</div>
+                                  <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
+                                </div>
+                              </div>
+                              <span v-if="newSymbol === asset.symbol" class="text-blue-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                              </span>
+                            </button>
+                          </div>
+                          
+                          <!-- Stock Section -->
+                          <div v-if="filteredAssets.stock.length > 0" class="mt-2">
+                            <div class="px-2 py-1 text-[9px] font-black text-emerald-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Stocks</div>
+                            <button 
+                              v-for="asset in filteredAssets.stock" :key="asset.symbol"
+                              type="button"
+                              @click="selectSymbol(asset.symbol)"
+                              class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-emerald-600/10 transition-colors group"
+                              :class="{ 'bg-emerald-600/20': newSymbol === asset.symbol }"
+                            >
+                              <div class="flex items-center gap-3">
+                                <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=10b981&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
+                                <div class="text-left">
+                                  <div class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{{ asset.symbol }}</div>
+                                  <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
+                                </div>
+                              </div>
+                              <span v-if="newSymbol === asset.symbol" class="text-emerald-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </transition>
                   </div>
                   <div class="space-y-1.5">
-                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">數量 (Amount)</span>
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">數量 (Amount)</span>
                     <input v-model="newAmount" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
                   </div>
                   <div class="space-y-1.5">
-                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">買入均價 (Price)</span>
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">買入均價 (Price)</span>
                     <input v-model="newPrice" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
                   </div>
                   <div class="space-y-1.5">
@@ -395,7 +510,7 @@ const confirmDeleteAction = async () => {
               </div>
               <div v-else class="py-12 flex flex-col items-center text-slate-600">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                <p class="text-xs">尚無模擬倉位，點擊「新增倉位」開始追蹤。</p>
+                <p class="text-xs">尚無倉位，點擊「新增倉位」開始追蹤。</p>
               </div>
             </div>
           </div>
@@ -411,7 +526,7 @@ const confirmDeleteAction = async () => {
             </div>
             <h3 class="text-white text-xl font-black mb-3">登入以使用此功能</h3>
             <p class="text-slate-400 text-sm md:text-base mb-8 leading-relaxed">
-              為保護個人資產隱私，模擬持倉功能僅限會員使用。
+              為保護個人資產隱私，持倉功能僅限會員使用。
             </p>
             <button @click="goToLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/30 active:scale-95">
               立即登入 / 註冊
@@ -509,7 +624,7 @@ const confirmDeleteAction = async () => {
             </svg>
           </div>
           <h3 class="text-lg font-bold text-white mb-2">確定要刪除持倉嗎？</h3>
-          <p class="text-xs text-slate-400 mb-6">您即將移除 <span class="text-white font-bold">{{ confirmDeleteSymbol }}</span> 的模擬持倉紀錄，此動作無法復原。</p>
+          <p class="text-xs text-slate-400 mb-6">您即將移除 <span class="text-white font-bold">{{ confirmDeleteSymbol }}</span> 的持倉紀錄，此動作無法復原。</p>
           <div class="flex gap-3">
             <button @click="confirmDeleteId = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
               取消
