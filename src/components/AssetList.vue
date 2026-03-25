@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { activeSymbol, setActiveSymbol } from '../store'
+import { activeSymbol, setActiveSymbol, marketPrices, initialAssets } from '../store'
 
 interface Asset {
   symbol: string
@@ -13,27 +13,14 @@ interface Asset {
   prevClose?: number
 }
 
-// Initial state with top pairs
-const initialAssets: Asset[] = [
-  // Crypto
-  { symbol: 'BTCUSDT', name: 'Bitcoin', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
-  { symbol: 'ETHUSDT', name: 'Ethereum', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
-  { symbol: 'SOLUSDT', name: 'Solana', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
-  { symbol: 'DOGEUSDT', name: 'Dogecoin', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
-  { symbol: 'USDCUSDT', name: 'USDC/USDT', price: '...', change: '...', up: true, rawPrice: 0, type: 'crypto'},
-  // Stock
-  { symbol: 'NVDA', name: 'Nvidia', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'AMD', name: 'AMD', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'META', name: 'Meta', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'ADBE', name: 'Adobe', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'VTI', name: 'Vanguard Total Stock', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'VOO', name: 'Vanguard S&P 500', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'AMZN', name: 'Amazon', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'TSLA', name: 'Tesla', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'ORCL', name: 'Oracle', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' },
-  { symbol: 'PLTR', name: 'Palantir', price: '...', change: '...', up: true, rawPrice: 0, type: 'stock' }
-]
-const assets = ref<Asset[]>(initialAssets)
+// Initial state with top pairs (Mapped from global store)
+const assets = ref<Asset[]>(initialAssets.map(a => ({
+  ...a,
+  price: '...',
+  change: '...',
+  up: true,
+  rawPrice: 0
+})) as Asset[])
 
 const filter = ref('')
 const activeFilterIndex = ref(0)
@@ -92,6 +79,14 @@ onMounted(async () => {
           asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
           asset.up = quote.dp >= 0
           asset.prevClose = quote.pc // store previous close to calculate live updates
+          // Sync to global
+          marketPrices.value[asset.symbol] = {
+            price: asset.price,
+            change: asset.change,
+            up: asset.up,
+            rawPrice: asset.rawPrice,
+            prevClose: asset.prevClose
+          }
         }
       } catch (err) {
         console.error(`Failed to fetch initial quote for ${asset.symbol}:`, err)
@@ -126,6 +121,13 @@ onMounted(async () => {
           asset.change = `${priceChangePercent > 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%`
           asset.up = priceChangePercent >= 0
           asset.rawPrice = currentPrice
+          // Sync to global
+          marketPrices.value[asset.symbol] = {
+            price: asset.price,
+            change: asset.change,
+            up: asset.up,
+            rawPrice: asset.rawPrice
+          }
         }
       }
     })
@@ -160,6 +162,14 @@ onMounted(async () => {
             const changePercent = ((price - asset.prevClose) / asset.prevClose) * 100
             asset.change = `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%`
             asset.up = changePercent >= 0
+            // Sync to global
+            marketPrices.value[asset.symbol] = {
+              price: asset.price,
+              change: asset.change,
+              up: asset.up,
+              rawPrice: asset.rawPrice,
+              prevClose: asset.prevClose
+            }
           }
         }
       })

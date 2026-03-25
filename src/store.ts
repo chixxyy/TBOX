@@ -68,6 +68,102 @@ export const isNewsLoading = ref(true)
 export const lastMoversUpdate = ref('')
 export const lastNewsUpdate = ref('')
 
+// --- Global Asset List (Source of Truth) ---
+export const initialAssets = [
+  // Crypto
+  { symbol: 'BTCUSDT', name: 'Bitcoin', type: 'crypto'},
+  { symbol: 'ETHUSDT', name: 'Ethereum', type: 'crypto'},
+  { symbol: 'SOLUSDT', name: 'Solana', type: 'crypto'},
+  { symbol: 'DOGEUSDT', name: 'Dogecoin', type: 'crypto'},
+  { symbol: 'USDCUSDT', name: 'USDC/USDT', type: 'crypto'},
+  // Stock
+  { symbol: 'NVDA', name: 'Nvidia', type: 'stock' },
+  { symbol: 'AMD', name: 'AMD', type: 'stock' },
+  { symbol: 'META', name: 'Meta', type: 'stock' },
+  { symbol: 'ADBE', name: 'Adobe', type: 'stock' },
+  { symbol: 'VTI', name: 'Vanguard Total Stock', type: 'stock' },
+  { symbol: 'VOO', name: 'Vanguard S&P 500', type: 'stock' },
+  { symbol: 'AMZN', name: 'Amazon', type: 'stock' },
+  { symbol: 'TSLA', name: 'Tesla', type: 'stock' },
+  { symbol: 'ORCL', name: 'Oracle', type: 'stock' },
+  { symbol: 'PLTR', name: 'Palantir', type: 'stock' }
+] as const
+
+// --- Global Market Prices (Shared across components) ---
+interface MarketData {
+  price: string
+  change: string
+  up: boolean
+  rawPrice: number
+  prevClose?: number
+}
+export const marketPrices = ref<Record<string, MarketData>>({})
+
+// --- Mini Portfolio Tracker ---
+interface PortfolioItem {
+  id: string
+  symbol: string
+  amount: number
+  entryPrice: number
+}
+export const portfolio = useStorage<PortfolioItem[]>('tbox-portfolio', [])
+
+export const addToPortfolio = (symbol: string, amount: number, entryPrice: number) => {
+  portfolio.value.push({
+    id: Date.now().toString(),
+    symbol: symbol.toUpperCase(),
+    amount,
+    entryPrice
+  })
+}
+
+export const removeFromPortfolio = (id: string) => {
+  portfolio.value = portfolio.value.filter(item => item.id !== id)
+  if (alertThresholds.value) delete alertThresholds.value[id]
+}
+
+// --- Portfolio Alerts Monitoring ---
+const alertThresholds = useStorage<Record<string, number[]>>('tbox-portfolio-alerts-triggered', {})
+
+const checkPortfolioAlerts = () => {
+  const alerts = alertThresholds.value
+  if (!alerts) return
+
+  portfolio.value.forEach(item => {
+    const market = marketPrices.value[item.symbol]
+    if (!market || market.rawPrice === 0) return
+    
+    const change = (market.rawPrice / item.entryPrice - 1) * 100
+    const absChange = Math.abs(change)
+    
+    // Thresholds: 10%, 5%
+    const thresholds = [10, 5]
+    if (!alerts[item.id]) {
+      alerts[item.id] = []
+    }
+    
+    const currentItemAlerts = alerts[item.id]
+    if (!currentItemAlerts) return
+
+    for (const t of thresholds) {
+      if (absChange >= t && !currentItemAlerts.includes(t)) {
+        const type = change >= 0 ? '上漲' : '下跌'
+        showToast(
+          `資產異動提醒: ${item.symbol}`,
+          `持倉 ${item.symbol} 已${type} ${t}%！目前回報: ${change.toFixed(2)}%`
+        )
+        currentItemAlerts.push(t)
+        break 
+      }
+    }
+  })
+}
+
+import { watch } from 'vue'
+watch(marketPrices, () => {
+  checkPortfolioAlerts()
+}, { deep: true })
+
 // --- Mobile UX State ---
 export const scrollProgress = ref(0) // 0 to 100
 export const isChangingTab = ref(false)

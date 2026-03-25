@@ -7,7 +7,14 @@ import {
   lastMoversUpdate as lastUpdateTime,
   type Mover,
   setScrollProgress,
-  isChangingTab
+  isChangingTab,
+  portfolio,
+  marketPrices,
+  addToPortfolio,
+  removeFromPortfolio,
+  initialAssets,
+  chatSession,
+  goToLogin
 } from '../store'
 
 let rafId: number | null = null
@@ -55,7 +62,6 @@ async function toggleTranslateMover(item: Mover) {
   }
   translatingIds.value = new Set([...translatingIds.value, item.id])
   try {
-    // Translate both title and news in parallel
     const [tTitle, tNews] = await Promise.all([
       translateText(item.title),
       item.news ? translateText(item.news) : Promise.resolve('')
@@ -115,12 +121,12 @@ function getLabel(key: keyof typeof UI_LABELS.en, isTranslated: boolean): string
   return isTranslated ? UI_LABELS.zh[key] : UI_LABELS.en[key]
 }
 
-// ---------- Filtering & Stats ----------
+// ---------- Filtering & Portfolio ----------
 const filterTabs = [
   { label: '全部異動', tag: 'all' },
   { label: '快速上漲', tag: 'gainers' },
   { label: '極速下跌', tag: 'losers' },
-  { label: '高壓波動', tag: 'high_vol' },
+  { label: '我的持倉', tag: 'portfolio' },
 ]
 const activeFilter = ref('all')
 
@@ -135,66 +141,152 @@ const setTab = async (tag: string) => {
 }
 
 const filteredMovers = computed(() => {
+  if (activeFilter.value === 'portfolio') return []
   if (activeFilter.value === 'all') return movers.value
   if (activeFilter.value === 'gainers') return movers.value.filter(m => m.isUp)
   if (activeFilter.value === 'losers') return movers.value.filter(m => !m.isUp)
-  if (activeFilter.value === 'high_vol') return movers.value.filter(m => m.changePercent > 15)
   return movers.value
 })
 
 const stats = computed(() => {
   const up = movers.value.filter(m => m.isUp).length
-  const down = movers.value.length - up
   const maxMove = movers.value.length > 0 ? Math.max(...movers.value.map(m => m.changePercent)) : 0
   
   return {
     total: movers.value.length,
     up,
-    down,
     maxMove: maxMove.toFixed(1) + '%'
   }
 })
+
+// Portfolio Add Form
+const newSymbol = ref('')
+const newAmount = ref<number | null>(null)
+const newPrice = ref<number | null>(null)
+const showAddForm = ref(false)
+
+const handleAdd = () => {
+  if (!newSymbol.value || !newAmount.value || !newPrice.value) return
+  addToPortfolio(newSymbol.value, newAmount.value, newPrice.value)
+  newSymbol.value = ''
+  newAmount.value = null
+  newPrice.value = null
+  showAddForm.value = false
+}
+
+// Stats & Calculations
+const portfolioStats = computed(() => {
+  if (!chatSession.value || portfolio.value.length === 0) {
+    return {
+      value: '0',
+      pnl: '0',
+      pnlPercent: '0.00%'
+    }
+  }
+  
+  let totalCost = 0
+  let totalValue = 0
+  
+  portfolio.value.forEach(item => {
+    const market = marketPrices.value[item.symbol]
+    const currentPrice = market?.rawPrice || item.entryPrice
+    totalCost += item.amount * item.entryPrice
+    totalValue += item.amount * currentPrice
+  })
+  
+  const totalPnL = totalValue - totalCost
+  const pnlPercent = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0
+  
+  return {
+    value: totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 }),
+    pnl: totalPnL.toLocaleString('en-US', { maximumFractionDigits: 0 }),
+    pnlPercent: pnlPercent.toFixed(2) + '%'
+  }
+})
+
+// Delete Confirmation
+const confirmDeleteId = ref<string | null>(null)
+const confirmDeleteSymbol = ref('')
+
+const triggerDelete = (id: string, symbol: string) => {
+  confirmDeleteId.value = id
+  confirmDeleteSymbol.value = symbol
+}
+
+const confirmDeleteAction = () => {
+  if (confirmDeleteId.value !== null) {
+    removeFromPortfolio(confirmDeleteId.value)
+    confirmDeleteId.value = null
+    confirmDeleteSymbol.value = ''
+  }
+}
 </script>
 
 <template>
   <div class="flex flex-col h-full w-full bg-[#05080f] text-slate-300">
 
-    <!-- Stats Header (Markets Style) -->
+    <!-- Stats Header (Adaptive) -->
     <div class="h-16 md:h-20 border-b border-slate-800 flex items-center px-2 md:px-6 space-x-2 md:space-x-3 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
-      <!-- Total Movers -->
+      <template v-if="activeFilter !== 'portfolio'">
+        <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">監控中異動</div>
+            <div class="text-white font-bold text-xs md:text-lg leading-none">{{ stats.total }}</div>
+          </div>
+        </div>
+        <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center text-green-400 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">上漲信號</div>
+            <div class="text-white font-bold text-xs md:text-lg leading-none">{{ stats.up }}</div>
+          </div>
+        </div>
+      </template>
+      <template v-else>
+        <!-- Portfolio Stats -->
+        <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-indigo-900/30 border border-indigo-800/50 flex items-center justify-center text-indigo-400 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">模擬資產價值</div>
+            <div class="text-white font-bold text-xs md:text-lg leading-none">${{ portfolioStats.value }}</div>
+          </div>
+        </div>
+        <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">總回報率</div>
+            <div class="font-black text-xs md:text-lg leading-none" :class="parseFloat(portfolioStats.pnlPercent) >= 0 ? 'text-green-400' : 'text-red-400'">
+              {{ portfolioStats.pnlPercent }}
+            </div>
+          </div>
+        </div>
+      </template>
+
       <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0"
+          :class="activeFilter === 'portfolio' ? 'bg-indigo-900/30 border border-indigo-800/50 text-indigo-400' : 'bg-red-900/30 border border-red-800/50 text-red-500'">
+          <svg v-if="activeFilter !== 'portfolio'" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </div>
         <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">監控中異動</div>
-          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ stats.total }}</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">
+            {{ activeFilter === 'portfolio' ? '預估盈虧 (USD)' : '最高漲幅' }}
+          </div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none truncate">
+            {{ activeFilter === 'portfolio' ? '$' + portfolioStats.pnl : stats.maxMove }}
+          </div>
         </div>
       </div>
 
-      <!-- Gainers Count -->
-      <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center text-green-400 shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-        </div>
-        <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">上漲信號</div>
-          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ stats.up }}</div>
-        </div>
-      </div>
-
-      <!-- Peak Move -->
-      <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-red-900/30 border border-red-800/50 flex items-center justify-center text-red-500 shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-        </div>
-        <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">峰值異動</div>
-          <div class="text-white font-bold text-xs md:text-lg leading-none truncate">{{ stats.maxMove }}</div>
-        </div>
-      </div>
-
-      <!-- Update Info -->
       <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto">
         <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
@@ -214,174 +306,262 @@ const stats = computed(() => {
           class="flex-1 h-11 md:h-12 px-1 md:px-4 border-b-2 transition-colors relative text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center"
           :class="activeFilter === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
+          <span v-if="tab.tag === 'portfolio'" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse md:mr-2 inline-block"></span>
           {{ tab.label }}
         </button>
       </div>
     </div>
 
     <!-- Content List -->
-    <div @scroll="handleScroll" class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 space-y-4">
-      <div v-if="isLoading" class="flex justify-center items-center h-full">
-        <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-      <div v-else-if="filteredMovers.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-        <span class="text-sm font-medium tracking-wide">此類別目前暫無監控中的異動數據</span>
-      </div>
-      <div v-else class="max-w-5xl mx-auto space-y-4">
-        <div 
-          v-for="item in filteredMovers" 
-          :key="item.id"
-          class="bg-[#111827] border border-slate-800/80 rounded-xl p-3 md:p-5 hover:border-slate-700 transition-colors flex flex-col"
-        >
-          <!-- Top Row: Icon, Title, Badge -->
-          <div class="flex items-start justify-between mb-3 md:mb-6">
-            <div class="flex items-start space-x-2 md:space-x-4 min-w-0">
-              <!-- Rank Circle -->
-              <div 
-                class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center font-black text-[10px] md:text-sm shrink-0 font-mono mt-0.5 relative"
-                :class="{
-                  'bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-500 text-yellow-900 shadow-[0_0_14px_3px_rgba(234,179,8,0.55)] animate-medal-pulse': item.id === 1,
-                  'bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 text-slate-700 shadow-[0_0_10px_2px_rgba(148,163,184,0.45)] animate-medal-pulse': item.id === 2,
-                  'bg-gradient-to-br from-orange-600 via-amber-700 to-orange-800 text-orange-100 shadow-[0_0_10px_2px_rgba(180,83,9,0.4)] animate-medal-pulse': item.id === 3,
-                  'bg-slate-800/80 border border-slate-700 text-slate-400': item.id > 3
-                }"
-              >
-                <span>{{ item.id }}</span>
+    <div @scroll="handleScroll" class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 space-y-4 no-scrollbar">
+      
+      <!-- 1. Portfolio View - Restricted -->
+      <template v-if="activeFilter === 'portfolio'">
+        <template v-if="chatSession">
+          <div class="max-w-4xl mx-auto space-y-6">
+            <div class="bg-[#111827] border border-blue-500/20 rounded-2xl p-4 md:p-6 shadow-xl">
+              <div class="flex items-center justify-between mb-6">
+                <div>
+                  <h3 class="text-white font-bold flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg>
+                    模擬持倉管理
+                  </h3>
+                  <p class="text-xs text-slate-500 mt-1">手動輸入代碼以追蹤目前即時盈虧狀況</p>
+                </div>
+                <button @click="showAddForm = !showAddForm" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-blue-600/20">
+                  {{ showAddForm ? '關閉表單' : '新增倉位' }}
+                </button>
               </div>
-              
-              <!-- Image -->
-              <img :src="item.image" class="w-7 h-7 md:w-10 md:h-10 rounded-md object-cover border border-slate-700 shrink-0 mt-0.5" alt="Market" />
-              
-              <!-- Title -->
-              <div class="min-w-0">
-                <h3 class="text-white font-bold text-[11px] md:text-sm leading-tight mb-1 truncate md:whitespace-normal">{{ getDisplayTitle(item) }}</h3>
-                <div class="flex items-center text-[9px] md:text-xs text-slate-500 space-x-2">
-                  <a v-if="item.slug" :href="`https://polymarket.com/event/${item.slug}`" target="_blank" rel="noopener" class="text-blue-500 hover:text-blue-400 flex items-center shrink-0">
-                    🔗 Poly
-                  </a>
-                  <!-- Translate button -->
-                  <button
-                    @click.prevent="toggleTranslateMover(item)"
-                    class="flex items-center space-x-1 text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded border transition-all"
-                    :class="translatedIds.has(item.id)
-                      ? 'border-indigo-500 text-indigo-400 bg-indigo-900/20'
-                      : 'border-slate-700 text-slate-500 hover:border-blue-500 hover:text-blue-400'"
-                  >
-                    <svg v-if="translatingIds.has(item.id)" class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                    </svg>
-                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
-                    </svg>
-                    <span>{{ translatedIds.has(item.id) ? 'ORIGINAL' : '翻譯' }}</span>
-                  </button>
+
+              <transition enter-active-class="duration-300 ease-out" enter-from-class="transform opacity-0 -translate-y-4" enter-to-class="transform opacity-100 translate-y-0">
+                <form v-if="showAddForm" @submit.prevent="handleAdd" class="grid grid-cols-1 md:grid-cols-4 gap-4 pb-6 border-b border-white/5 mb-6 items-end">
+                  <div class="space-y-1.5">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">代碼 (Symbol)</span>
+                    <select v-model="newSymbol" class="h-10 w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors uppercase appearance-none cursor-pointer">
+                      <option disabled value="">請選擇標的</option>
+                      <option v-for="asset in initialAssets" :key="asset.symbol" :value="asset.symbol" class="bg-[#0a0f1c]">
+                        {{ asset.symbol }} - {{ asset.name }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="space-y-1.5">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">數量 (Amount)</span>
+                    <input v-model="newAmount" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
+                  </div>
+                  <div class="space-y-1.5">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">買入均價 (Price)</span>
+                    <input v-model="newPrice" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
+                  </div>
+                  <div class="space-y-1.5">
+                    <span class="text-[10px] opacity-0 select-none block tracking-wider">Confirm</span>
+                    <button type="submit" class="h-10 w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-lg transition-all shadow-lg shadow-blue-600/20 active:scale-95">確認加入持倉</button>
+                  </div>
+                </form>
+              </transition>
+
+              <!-- Holding Cards -->
+              <div v-if="portfolio.length > 0" class="grid grid-cols-1 gap-4">
+                <div v-for="item in portfolio" :key="item.id" 
+                  class="bg-[#0a0f1c] border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between group hover:border-slate-600 transition-all backdrop-blur-sm">
+                  <div class="flex items-center gap-4 mb-4 md:mb-0">
+                    <div class="w-10 h-10 rounded-full bg-blue-900/20 border border-blue-800/30 flex items-center justify-center font-bold text-blue-400 text-xs">
+                      {{ item.symbol.slice(0, 2) }}
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <h4 class="text-white font-bold uppercase">{{ item.symbol }}</h4>
+                        <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Qty: {{ item.amount }}</span>
+                      </div>
+                      <p class="text-[10px] text-slate-500 mt-1 font-mono">買入成本: ${{ item.entryPrice.toLocaleString() }}</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-8 md:gap-16">
+                    <div class="text-right">
+                      <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">即時現價</p>
+                      <p class="text-white font-mono font-bold">{{ marketPrices[item.symbol]?.price || '$' + item.entryPrice }}</p>
+                    </div>
+                    <div class="text-right min-w-[100px]">
+                      <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">估計盈虧</p>
+                      <p class="font-mono font-bold text-lg" :class="(marketPrices[item.symbol]?.rawPrice || item.entryPrice) >= item.entryPrice ? 'text-green-400' : 'text-red-400'">
+                        {{ (marketPrices[item.symbol]?.rawPrice || item.entryPrice) >= item.entryPrice ? '+' : '' }}${{ (((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toFixed(2) }}
+                      </p>
+                    </div>
+                    <button @click="triggerDelete(item.id, item.symbol)" class="text-slate-600 hover:text-red-400 transition-colors p-2 md:opacity-0 group-hover:opacity-100">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <!-- Main Change Badge -->
-            <div 
-              class="px-1.5 md:px-3 py-1 md:py-1.5 rounded font-mono font-black text-[10px] md:text-sm shrink-0 flex items-center shadow-lg ml-2"
-              :class="item.isUp ? 'bg-green-500/90 text-white shadow-green-500/20' : 'bg-red-500/90 text-white shadow-red-500/20'"
-            >
-              <svg v-if="item.isUp" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4 mr-0.5 md:mr-1 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4 mr-0.5 md:mr-1 transform rotate-180 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-              {{ item.changePercent.toFixed(1) }}%
+              <div v-else class="py-12 flex flex-col items-center text-slate-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                <p class="text-xs">尚無模擬倉位，點擊「新增倉位」開始追蹤。</p>
+              </div>
             </div>
           </div>
+        </template>
 
-          <!-- Middle Block: Stats & Sparkline -->
-          <div class="bg-[#0a0f1c] rounded-lg p-2 md:p-4 border border-slate-800/50 mb-3 md:mb-4 font-mono w-full relative overflow-hidden">
-            
-            <!-- Absolute Sparkline -->
-            <div class="absolute right-0 top-0 bottom-0 w-2/3 opacity-40 z-0 pointer-events-none flex items-center">
-              <Sparkline :data="item.sparklineData" />
-            </div>
-
-            <div class="relative z-10">
-              <div class="text-[9px] md:text-xs font-bold mb-2 md:mb-4 tracking-wider" :class="item.isUp ? 'text-green-500' : 'text-red-500'">
-                {{ getLabel(item.isUp ? 'yes' : 'no', translatedIds.has(item.id)) }}
-              </div>
-              
-              <div class="flex flex-row items-center justify-between">
-                <!-- Stats Grid -->
-                <div class="grid grid-cols-3 gap-3 md:gap-12 shrink-0 flex-1 mr-4">
-                  <!-- Detected -->
-                  <div class="flex flex-col">
-                    <span class="text-slate-600 text-[8px] md:text-[10px] mb-0.5 font-bold uppercase">{{ getLabel('detected', translatedIds.has(item.id)) }}</span>
-                    <span class="text-white text-sm md:text-xl font-black">{{ item.detectedPrice }}¢</span>
-                    <span class="text-slate-600 text-[9px] md:text-[10px] mt-1 hidden sm:block">{{ item.detectedTimeStr }}</span>
-                  </div>
-                  <!-- Peak -->
-                  <div class="flex flex-col border-l border-slate-800/30 pl-2">
-                    <span class="text-slate-600 text-[8px] md:text-[10px] mb-0.5 font-bold uppercase">{{ getLabel('peak', translatedIds.has(item.id)) }}</span>
-                    <span class="text-green-400 text-sm md:text-xl font-black">{{ item.peakPrice }}¢</span>
-                    <span class="text-slate-600 text-[9px] md:text-[10px] mt-1 hidden sm:block">{{ item.peakTimeStr }}</span>
-                  </div>
-                  <!-- Now -->
-                  <div class="flex flex-col border-l border-slate-800/30 pl-2">
-                    <span class="text-slate-600 text-[8px] md:text-[10px] mb-0.5 font-bold uppercase">{{ getLabel('now', translatedIds.has(item.id)) }}</span>
-                    <span class="text-slate-200 text-sm md:text-xl font-black">{{ item.currentPrice }}¢</span>
-                  </div>
-                </div>
-
-                <!-- Change -->
-                <div class="flex flex-col text-right justify-center shrink-0">
-                  <span class="text-slate-500 text-[8px] md:text-[10px] mb-0.5 font-bold uppercase tracking-widest">{{ getLabel('change', translatedIds.has(item.id)) }}</span>
-                  <span class="text-lg md:text-3xl font-black tracking-tight" :class="item.isUp ? 'text-green-400' : 'text-red-400'">
-                    {{ item.isUp ? '+' : '-' }}{{ item.changePercent.toFixed(1) }}%
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Detection Duration string -->
-            <div class="mt-4 flex items-center text-[10px] text-slate-500">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <!-- Login Required Placeholder for Portfolio -->
+        <template v-else>
+          <div class="flex flex-col items-center justify-center py-20 px-4 text-center max-w-lg mx-auto">
+            <div class="w-16 h-16 rounded-full bg-blue-900/20 flex items-center justify-center mb-6 border border-blue-500/30">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              {{ getLabel('durationPrefix', translatedIds.has(item.id)) }} <span class="text-yellow-600 font-bold mx-1">{{ item.detectionDurationStr }}</span> {{ getLabel('durationSuffix', translatedIds.has(item.id)) }}
+            </div>
+            <h3 class="text-white text-xl font-black mb-3">登入以使用此功能</h3>
+            <p class="text-slate-400 text-sm md:text-base mb-8 leading-relaxed">
+              為保護個人資產隱私，模擬持倉功能僅限會員使用。
+            </p>
+            <button @click="goToLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/30 active:scale-95">
+              立即登入 / 註冊
+            </button>
+          </div>
+        </template>
+      </template>
+
+      <!-- 2. Movers View - Public -->
+      <template v-else>
+        <div v-if="isLoading" class="flex justify-center items-center h-64">
+          <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <div v-else-if="filteredMovers.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500 text-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+          此類別暫無監控數據
+        </div>
+        <div v-else class="max-w-5xl mx-auto space-y-4">
+          <div 
+            v-for="item in filteredMovers" 
+            :key="item.id"
+            class="bg-[#111827] border border-slate-800/80 rounded-xl p-3 md:p-5 hover:border-slate-700 transition-colors flex flex-col"
+          >
+            <!-- Top Row: Icon, Title, Badge -->
+            <div class="flex items-start justify-between mb-3 md:mb-6">
+              <div class="flex items-start space-x-2 md:space-x-4 min-w-0">
+                <div 
+                  class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center font-black text-[10px] md:text-sm shrink-0 font-mono mt-0.5 relative"
+                  :class="{
+                    'bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-500 text-yellow-900 shadow-[0_0_14px_3px_rgba(234,179,8,0.55)] animate-medal-pulse': item.id === 1,
+                    'bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 text-slate-700 shadow-[0_0_10px_2px_rgba(148,163,184,0.45)] animate-medal-pulse': item.id === 2,
+                    'bg-gradient-to-br from-orange-600 via-amber-700 to-orange-800 text-orange-100 shadow-[0_0_10px_2px_rgba(180,83,9,0.4)] animate-medal-pulse': item.id === 3,
+                    'bg-slate-800/80 border border-slate-700 text-slate-400': item.id > 3
+                  }"
+                >
+                  <span>{{ item.id }}</span>
+                </div>
+                <!-- Image -->
+                <img :src="item.image" class="w-7 h-7 md:w-10 md:h-10 rounded-md object-cover border border-slate-700 shrink-0 mt-0.5" alt="Market" />
+                <!-- Title -->
+                <div class="min-w-0">
+                  <h3 class="text-white font-bold text-[11px] md:text-sm leading-tight mb-1 truncate md:whitespace-normal">{{ getDisplayTitle(item) }}</h3>
+                  <div class="flex items-center text-[9px] md:text-xs text-slate-500 space-x-2">
+                    <a v-if="item.slug" :href="`https://polymarket.com/event/${item.slug}`" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 flex items-center shrink-0 font-bold">🔗 Poly</a>
+                    <button @click.prevent="toggleTranslateMover(item)" class="flex items-center space-x-1 text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-700 text-slate-500 hover:text-blue-400">
+                      {{ translatedIds.has(item.id) ? 'ORIGINAL' : '翻譯' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- Badge -->
+              <div class="px-2 py-1 rounded font-mono font-black text-[10px] md:text-xs shrink-0 flex items-center shadow-lg" :class="item.isUp ? 'bg-green-500/90 text-white' : 'bg-red-500/90 text-white'">
+                {{ item.isUp ? '↑' : '↓' }} {{ item.changePercent.toFixed(1) }}%
+              </div>
+            </div>
+
+            <!-- Middle Block -->
+            <div class="bg-[#0a0f1c] rounded-lg p-2 md:p-4 border border-slate-800/50 mb-3 md:mb-4 relative overflow-hidden">
+              <div class="absolute right-0 top-0 bottom-0 w-2/3 opacity-30 z-0 pointer-events-none">
+                <Sparkline :data="item.sparklineData" />
+              </div>
+              <div class="relative z-10 grid grid-cols-3 gap-2">
+                <div>
+                  <p class="text-[8px] md:text-[10px] text-slate-600 uppercase font-bold">{{ getLabel('detected', translatedIds.has(item.id)) }}</p>
+                  <p class="text-white font-black text-sm md:text-lg">{{ item.detectedPrice }}¢</p>
+                </div>
+                <div>
+                  <p class="text-[8px] md:text-[10px] text-slate-600 uppercase font-bold">{{ getLabel('peak', translatedIds.has(item.id)) }}</p>
+                  <p class="text-green-400 font-black text-sm md:text-lg">{{ item.peakPrice }}¢</p>
+                </div>
+                <div>
+                  <p class="text-[8px] md:text-[10px] text-slate-600 uppercase font-bold">{{ getLabel('now', translatedIds.has(item.id)) }}</p>
+                  <p class="text-slate-300 font-black text-sm md:text-lg">{{ item.currentPrice }}¢</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- News footer -->
+            <div v-if="item.news" class="flex items-center text-[10px] text-slate-500 mt-2 border-t border-white/5 pt-2 truncate">
+              <span class="mr-2 text-indigo-400 font-bold">NEWS</span>
+              <span class="truncate">{{ getDisplayNews(item) }}</span>
             </div>
           </div>
+        </div>
+      </template>
+    </div>
 
-          <!-- Bottom Row: Volume & News -->
-          <div class="flex flex-col space-y-3 font-mono text-[11px]">
-            <div class="flex items-center text-slate-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              {{ getLabel('volume', translatedIds.has(item.id)) }}: <span class="text-white font-bold ml-1">{{ item.volumeStr }}</span>
-            </div>
-
-            <div v-if="item.news" class="flex items-center justify-between text-slate-500 pt-2 border-t border-slate-800/50">
-              <div class="flex items-center truncate pr-4">
-                <span class="mr-2 text-lg">𝕏</span>
-                <span class="truncate uppercase">{{ getLabel('newsPrefix', translatedIds.has(item.id)) + getDisplayNews(item) }}</span>
-              </div>
-              <div class="flex items-center shrink-0">
-                <span>{{ item.newsTimeStr }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
+    <!-- Delete Confirmation Modal -->
+    <transition name="fade">
+      <div v-if="confirmDeleteId !== null" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-[#111827] border border-red-900/50 rounded-xl p-6 w-full max-w-sm shadow-2xl text-center">
+          <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
           </div>
-
+          <h3 class="text-lg font-bold text-white mb-2">確定要刪除持倉嗎？</h3>
+          <p class="text-xs text-slate-400 mb-6">您即將移除 <span class="text-white font-bold">{{ confirmDeleteSymbol }}</span> 的模擬持倉紀錄，此動作無法復原。</p>
+          <div class="flex gap-3">
+            <button @click="confirmDeleteId = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
+              取消
+            </button>
+            <button @click="confirmDeleteAction" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold">
+              確定刪除
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 
 <style scoped>
-@keyframes medal-pulse {
-  0%, 100% { box-shadow: 0 0 8px 2px var(--medal-color, rgba(234,179,8,0.5)); transform: scale(1); }
-  50%       { box-shadow: 0 0 18px 6px var(--medal-color, rgba(234,179,8,0.8)); transform: scale(1.07); }
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+/* 隱藏 number input 預設的增減箭頭 */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
+@keyframes medal-pulse {
+  0%, 100% { box-shadow: 0 0 8px 1px rgba(255,255,255,0.1); transform: scale(1); }
+  50%       { box-shadow: 0 0 15px 3px rgba(255,255,255,0.2); transform: scale(1.03); }
+}
 .animate-medal-pulse {
-  animation: medal-pulse 2.4s ease-in-out infinite;
+  animation: medal-pulse 3s ease-in-out infinite;
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.hide-arrows {
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: none;
+  margin: 0;
+}
+.hide-arrows::-webkit-outer-spin-button,
+.hide-arrows::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 </style>
