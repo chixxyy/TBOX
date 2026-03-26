@@ -1,11 +1,47 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
-// 定義 Prop，包含原本的 eventData 和新增的 isNew
 const props = defineProps<{
   eventData: any,
-  isNew?: boolean // 新增：用來觸發閃爍動畫
+  isNew?: boolean
 }>()
+
+const translatedQuestion = ref('')
+const isTranslating = ref(false)
+const showTranslated = ref(false)
+
+async function translateText(text: string): Promise<string> {
+  if (!text) return ''
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-TW`)
+    const data = await res.json()
+    return data.responseData?.translatedText || text
+  } catch { return text }
+}
+
+const toggleTranslate = async () => {
+  if (showTranslated.value) {
+    showTranslated.value = false
+    return
+  }
+  
+  if (translatedQuestion.value) {
+    showTranslated.value = true
+    return
+  }
+  
+  isTranslating.value = true
+  try {
+    translatedQuestion.value = await translateText(props.eventData.question)
+    showTranslated.value = true
+  } finally {
+    isTranslating.value = false
+  }
+}
+
+const displayQuestion = computed(() => {
+  return showTranslated.value && translatedQuestion.value ? translatedQuestion.value : props.eventData.question
+})
 
 const outcomes = computed(() => {
   let rawLabels = props.eventData.outcomes
@@ -92,10 +128,31 @@ const goToMarket = () => {
     <div class="flex items-start mb-6">
       <img :src="eventData.image" :alt="eventData.question" class="w-10 h-10 rounded-md object-cover border border-slate-700 shadow-lg mr-3 shrink-0" v-if="eventData.image" />
       <div v-else class="w-10 h-10 rounded-md bg-slate-800 border border-slate-700 shadow-lg mr-3 shrink-0 flex items-center justify-center text-slate-500">?</div>
-      <h3 class="text-slate-200 font-bold text-sm leading-snug line-clamp-2 transition-colors">
-        {{ eventData.question }}
-      </h3>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-slate-200 font-bold text-sm leading-snug line-clamp-2 transition-colors pr-20">
+            {{ displayQuestion }}
+          </h3>
+        </div>
+      </div>
     </div>
+
+    <!-- Absolute Positioned Translate Button -->
+    <button 
+      @click.stop="toggleTranslate" 
+      class="absolute top-3 right-3 shrink-0 flex items-center space-x-1 text-[9px] font-bold px-1.5 py-0.5 rounded border border-slate-800 transition-all hover:border-slate-600 bg-slate-900/50 z-10"
+      :class="showTranslated ? 'text-blue-400 border-blue-900/30 bg-blue-950/20' : 'text-slate-500 hover:text-blue-400'"
+      :disabled="isTranslating"
+    >
+      <svg v-if="isTranslating" class="w-2.5 h-2.5 animate-spin text-blue-500" viewBox="0 0 24 24" fill="none">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+      <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+      </svg>
+      <span>{{ isTranslating ? '...' : (showTranslated ? 'ORIGINAL' : '翻譯') }}</span>
+    </button>
 
     <div class="flex-1 flex flex-col justify-end space-y-4 mb-5">
       <div v-for="outcome in outcomes" :key="outcome.label" class="flex flex-col space-y-1.5">

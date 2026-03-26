@@ -69,7 +69,7 @@ import { api } from '../api'
 let reconnectTimerBinance: any = null
 let reconnectTimerFinnhub: any = null
 let finnhubRetryCount = 0
-const MAX_FINNHUB_RETRIES = 3
+const MAX_FINNHUB_RETRIES = 1
 
 const connectBinance = () => {
   if (wsBinance) {
@@ -117,8 +117,6 @@ const connectFinnhub = () => {
   }
   
   if (finnhubRetryCount >= MAX_FINNHUB_RETRIES) {
-    console.warn(`Finnhub WebSocket failed ${MAX_FINNHUB_RETRIES} times. Switching to polling mode for stocks.`)
-    // Fallback: Start periodic polling if not already started
     startStockPolling()
     return
   }
@@ -126,56 +124,63 @@ const connectFinnhub = () => {
   const token = import.meta.env.VITE_FINNHUB_TOKEN as string
   if (!token) return
 
-  wsFinnhub = new WebSocket(`wss://ws.finnhub.io?token=${token}`)
-  
-  wsFinnhub.onopen = () => {
-    finnhubRetryCount = 0 // Reset on successful connection
-    assets.value.filter(a => a.type === 'stock').forEach(asset => {
-      wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': asset.symbol}))
-    })
-  }
+  try {
+    wsFinnhub = new WebSocket(`wss://ws.finnhub.io?token=${token}`)
+    
+    wsFinnhub.onopen = () => {
+      finnhubRetryCount = 0 
+      assets.value.filter(a => a.type === 'stock').forEach(asset => {
+        wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': asset.symbol}))
+      })
+    }
 
-  wsFinnhub.onmessage = (event) => {
-    try {
-      const response = JSON.parse(event.data)
-      if (response.type === 'trade') {
-        response.data.forEach((trade: any) => {
-          const asset = assets.value.find(a => a.symbol === trade.s && a.type === 'stock')
-          if (asset && asset.prevClose) {
-            asset.rawPrice = trade.p
-            asset.price = formatPrice(trade.p.toString())
-            const changePercent = ((trade.p - asset.prevClose) / asset.prevClose) * 100
-            asset.change = `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%`
-            asset.up = changePercent >= 0
-            marketPrices.value[asset.symbol] = {
-              price: asset.price, change: asset.change,
-              up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
+    wsFinnhub.onmessage = (event) => {
+      try {
+        const response = JSON.parse(event.data)
+        if (response.type === 'trade') {
+          response.data.forEach((trade: any) => {
+            const asset = assets.value.find(a => a.symbol === trade.s && a.type === 'stock')
+            if (asset && asset.prevClose) {
+              asset.rawPrice = trade.p
+              asset.price = formatPrice(trade.p.toString())
+              const changePercent = ((trade.p - asset.prevClose) / asset.prevClose) * 100
+              asset.change = `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%`
+              asset.up = changePercent >= 0
+              marketPrices.value[asset.symbol] = {
+                price: asset.price, change: asset.change,
+                up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
+              }
             }
-          }
-        })
+          })
+        }
+      } catch (e) {
+        console.error('Finnhub WS process error:', e)
       }
-    } catch (e) {
-      console.error('Finnhub WS process error:', e)
     }
-  }
 
-  wsFinnhub.onerror = () => {
+    wsFinnhub.onerror = () => {
+      finnhubRetryCount++
+      if (wsFinnhub) wsFinnhub.close()
+    }
+
+    wsFinnhub.onclose = () => {
+      if (finnhubRetryCount < MAX_FINNHUB_RETRIES) {
+        if (reconnectTimerFinnhub) clearTimeout(reconnectTimerFinnhub)
+        reconnectTimerFinnhub = setTimeout(connectFinnhub, 5000)
+      } else {
+        startStockPolling()
+      }
+    }
+  } catch (e) {
     finnhubRetryCount++
-    if (wsFinnhub) wsFinnhub.close()
-  }
-
-  wsFinnhub.onclose = () => {
-    if (finnhubRetryCount < MAX_FINNHUB_RETRIES) {
-      if (reconnectTimerFinnhub) clearTimeout(reconnectTimerFinnhub)
-      const delay = Math.pow(2, finnhubRetryCount) * 1000 // Exponential backoff
-      reconnectTimerFinnhub = setTimeout(connectFinnhub, delay)
-    }
+    startStockPolling()
   }
 }
 
 let stockPollingTimer: any = null
 const startStockPolling = () => {
   if (stockPollingTimer) return
+  console.log('Stock updates switched to polling mode (30s interval)')
   stockPollingTimer = setInterval(async () => {
     const stockAssets = assets.value.filter(a => a.type === 'stock')
     for (const asset of stockAssets) {
@@ -194,7 +199,7 @@ const startStockPolling = () => {
         }
       } catch (err) { /* Silent fail for polling */ }
     }
-  }, 30000) // Poll every 30s as fallback
+  }, 30000)
 }
 
 onMounted(() => {
