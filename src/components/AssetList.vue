@@ -66,77 +66,67 @@ const formatPrice = (priceStr: string) => {
 
 import { api } from '../api'
 
-onMounted(async () => {
-  // Fetch initial stock prices from Finnhub directly
-  try {
-    const stockAssets = assets.value.filter(a => a.type === 'stock')
-    await Promise.all(stockAssets.map(async (asset) => {
-      try {
-        const quote = await api.getFinnhubQuote(asset.symbol)
-        if (quote && quote.c) {
-          asset.rawPrice = quote.c
-          asset.price = formatPrice(quote.c.toString())
-          asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
-          asset.up = quote.dp >= 0
-          asset.prevClose = quote.pc // store previous close to calculate live updates
-          // Sync to global
-          marketPrices.value[asset.symbol] = {
-            price: asset.price,
-            change: asset.change,
-            up: asset.up,
-            rawPrice: asset.rawPrice,
-            prevClose: asset.prevClose
-          }
-        }
-      } catch (err) {
-        console.error(`Failed to fetch initial quote for ${asset.symbol}:`, err)
-      }
-    }))
-  } catch (e) {
-    console.error('Failed to fetch initial stock quotes:', e)
-  }
+let reconnectTimerBinance: any = null
+let reconnectTimerFinnhub: any = null
 
-  // 1. 加密貨幣 WebSocket (Binance)
-  wsBinance = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr')
+const connectBinance = () => {
+  if (wsBinance) {
+    wsBinance.close()
+    wsBinance = null
+  }
+  
+  // Use targeted streams for all crypto assets to ensure reliable updates
+  const cryptoSymbols = assets.value.filter(a => a.type === 'crypto').map(a => a.symbol.toLowerCase())
+  const streams = cryptoSymbols.map(s => `${s}@ticker`).join('/')
+  const url = `wss://stream.binance.com:9443/stream?streams=${streams}`
+  
+  wsBinance = new WebSocket(url)
   
   wsBinance.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-    
-    // Create a map for quick lookup
-    const updateMap = new Map()
-    data.forEach((ticker: any) => {
-      updateMap.set(ticker.s, ticker) // s = symbol
-    })
-
-    // Update tracked assets
-    assets.value.forEach(asset => {
-      // 加上 type 判斷，確保 Binance 只更新加密貨幣
-      if (asset.type === 'crypto') {
-        const ticker = updateMap.get(asset.symbol)
-        if (ticker) {
-          const currentPrice = parseFloat(ticker.c) // c = last price
-          const priceChangePercent = parseFloat(ticker.P) // P = price change percent
-          
-          asset.price = formatPrice(ticker.c)
-          asset.change = `${priceChangePercent > 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%`
-          asset.up = priceChangePercent >= 0
-          asset.rawPrice = currentPrice
-          // Sync to global
-          marketPrices.value[asset.symbol] = {
-            price: asset.price,
-            change: asset.change,
-            up: asset.up,
-            rawPrice: asset.rawPrice
-          }
+    try {
+      const msg = JSON.parse(event.data)
+      const ticker = msg.data
+      const symbol = ticker.s // uppercase symbol
+      
+      const asset = assets.value.find(a => a.symbol === symbol)
+      if (asset) {
+        const currentPrice = parseFloat(ticker.c)
+        const priceChangePercent = parseFloat(ticker.P)
+        
+        asset.price = formatPrice(ticker.c)
+        asset.change = `${priceChangePercent > 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%`
+        asset.up = priceChangePercent >= 0
+        asset.rawPrice = currentPrice
+        
+        marketPrices.value[asset.symbol] = {
+          price: asset.price,
+          change: asset.change,
+          up: asset.up,
+          rawPrice: asset.rawPrice
         }
       }
-    })
+    } catch (e) {
+      console.error('Binance WS process error:', e)
+    }
   }
 
-  // 2. 美股 WebSocket (Finnhub)
+  wsBinance.onerror = (e) => console.error('Binance WS Error:', e)
+  wsBinance.onclose = () => {
+    console.log('Binance WS closed, reconnecting...')
+    if (reconnectTimerBinance) clearTimeout(reconnectTimerBinance)
+    reconnectTimerBinance = setTimeout(connectBinance, 3000)
+  }
+}
+
+const connectFinnhub = () => {
+  if (wsFinnhub) {
+    wsFinnhub.close()
+    wsFinnhub = null
+  }
+  
   const token = import.meta.env.VITE_FINNHUB_TOKEN as string
   wsFinnhub = new WebSocket(`wss://ws.finnhub.io?token=${token}`)
-
+  
   wsFinnhub.onopen = () => {
     assets.value.filter(a => a.type === 'stock').forEach(asset => {
       wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': asset.symbol}))
@@ -144,25 +134,17 @@ onMounted(async () => {
   }
 
   wsFinnhub.onmessage = (event) => {
-    const response = JSON.parse(event.data)
-    
-    // 確保收到的是交易資料 (trade)
-    if (response.type === 'trade') {
-      response.data.forEach((trade: any) => {
-        const symbol = trade.s
-        const price = trade.p
-        
-        // 找到對應的股票資產並更新
-        const asset = assets.value.find(a => a.symbol === symbol && a.type === 'stock')
-        if (asset) {
-          asset.rawPrice = price
-          asset.price = formatPrice(price.toString()) 
-          
-          if (asset.prevClose) {
-            const changePercent = ((price - asset.prevClose) / asset.prevClose) * 100
+    try {
+      const response = JSON.parse(event.data)
+      if (response.type === 'trade') {
+        response.data.forEach((trade: any) => {
+          const asset = assets.value.find(a => a.symbol === trade.s && a.type === 'stock')
+          if (asset && asset.prevClose) {
+            asset.rawPrice = trade.p
+            asset.price = formatPrice(trade.p.toString())
+            const changePercent = ((trade.p - asset.prevClose) / asset.prevClose) * 100
             asset.change = `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%`
             asset.up = changePercent >= 0
-            // Sync to global
             marketPrices.value[asset.symbol] = {
               price: asset.price,
               change: asset.change,
@@ -171,15 +153,86 @@ onMounted(async () => {
               prevClose: asset.prevClose
             }
           }
-        }
-      })
+        })
+      }
+    } catch (e) {
+      console.error('Finnhub WS process error:', e)
     }
   }
+
+  wsFinnhub.onerror = (e) => console.error('Finnhub WS Error:', e)
+  wsFinnhub.onclose = () => {
+    console.log('Finnhub WS closed, reconnecting...')
+    if (reconnectTimerFinnhub) clearTimeout(reconnectTimerFinnhub)
+    reconnectTimerFinnhub = setTimeout(connectFinnhub, 5000)
+  }
+}
+
+onMounted(() => {
+  // 1. Non-blocking initial fetches
+  const fetchStocks = async () => {
+    try {
+      const stockAssets = assets.value.filter(a => a.type === 'stock')
+      await Promise.all(stockAssets.map(async (asset) => {
+        try {
+          const quote = await api.getFinnhubQuote(asset.symbol)
+          if (quote && quote.c) {
+            asset.rawPrice = quote.c
+            asset.price = formatPrice(quote.c.toString())
+            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+            asset.up = quote.dp >= 0
+            asset.prevClose = quote.pc
+            marketPrices.value[asset.symbol] = {
+              price: asset.price,
+              change: asset.change,
+              up: asset.up,
+              rawPrice: asset.rawPrice,
+              prevClose: asset.prevClose
+            }
+          }
+        } catch (err) { console.error(`Finnhub init error ${asset.symbol}:`, err) }
+      }))
+    } catch (e) { console.error('Stock init failed:', e) }
+  }
+
+  const fetchCryptos = async () => {
+    try {
+      const resp = await fetch('https://api.binance.com/api/v3/ticker/24hr')
+      const data: any[] = await resp.json()
+      const updateMap = new Map<string, any>(data.map(t => [t.symbol, t]))
+      
+      assets.value.forEach(asset => {
+        if (asset.type === 'crypto') {
+          const t = updateMap.get(asset.symbol)
+          if (t) {
+            asset.rawPrice = parseFloat(t.lastPrice)
+            asset.price = formatPrice(t.lastPrice)
+            const ch = parseFloat(t.priceChangePercent)
+            asset.change = `${ch > 0 ? '+' : ''}${ch.toFixed(2)}%`
+            asset.up = ch >= 0
+            marketPrices.value[asset.symbol] = {
+              price: asset.price, change: asset.change,
+              up: asset.up, rawPrice: asset.rawPrice
+            }
+          }
+        }
+      })
+    } catch (e) { console.error('Binance init error:', e) }
+  }
+
+  fetchStocks()
+  fetchCryptos()
+
+  // 2. Initialize Real-time status
+  connectBinance()
+  connectFinnhub()
 })
 
 onUnmounted(() => {
   if (wsBinance) wsBinance.close()
   if (wsFinnhub) wsFinnhub.close()
+  if (reconnectTimerBinance) clearTimeout(reconnectTimerBinance)
+  if (reconnectTimerFinnhub) clearTimeout(reconnectTimerFinnhub)
 })
 
 const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
