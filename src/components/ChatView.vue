@@ -3,7 +3,7 @@ import { ref, nextTick, computed, onMounted, watch } from 'vue'
 import { 
   chatMessages, addChatMessage, removeChatMessage, 
   globalNews, chatUser, chatSession, chatLoading, 
-  isAdmin, goToLogin, userProfile, isChatConnected, initSupabaseChat 
+  isAdmin, goToLogin, userProfile, isChatConnected 
 } from '../store'
 
 const currentUser = chatUser

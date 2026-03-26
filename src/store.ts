@@ -383,7 +383,6 @@ export const isAdmin = computed(() => {
 export const chatMessages = ref<ChatMessage[]>([])
 export const chatLoading = ref(true)
 export const isChatConnected = ref(true) // Default to true, will update on subscribe
-export const currentUser = ref('User_' + Math.floor(Math.random() * 1000))
 
 // --- User Profile State ---
 interface UserProfile {
@@ -580,9 +579,16 @@ export const addChatMessage = async (msg: Omit<ChatMessage, 'id' | 'timestamp' |
 
 export const removeChatMessage = async (id: string) => {
   if (!chatSession.value) return
+  
+  // Optimistic UI update for instant feedback
+  const prevMessages = [...chatMessages.value]
+  chatMessages.value = chatMessages.value.filter(m => m.id !== id)
+  
   const { error } = await supabase.from('messages').delete().eq('id', id)
   if (error) {
     console.error('刪除留言失敗:', error.message)
+    // Rollback local state on error
+    chatMessages.value = prevMessages
     alert('刪除留言失敗，可能沒有權限：' + error.message)
   }
 }
