@@ -382,6 +382,8 @@ export const isAdmin = computed(() => {
 
 export const chatMessages = ref<ChatMessage[]>([])
 export const chatLoading = ref(true)
+export const isChatConnected = ref(true) // Default to true, will update on subscribe
+export const currentUser = ref('User_' + Math.floor(Math.random() * 1000))
 
 // --- User Profile State ---
 interface UserProfile {
@@ -552,8 +554,16 @@ export const initSupabaseChat = async () => {
       }
     })
     .subscribe((status, err) => {
-      if (err) console.error('Realtime subscription error:', err)
-      if (status === 'SUBSCRIBED') console.log('Successfully connected to chat realtime')
+      if (err) {
+        console.error('Realtime subscription error:', err)
+        isChatConnected.value = false
+      }
+      if (status === 'SUBSCRIBED') {
+        console.log('Successfully connected to chat realtime')
+        isChatConnected.value = true
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        isChatConnected.value = false
+      }
     })
 }
 
