@@ -570,9 +570,24 @@ const confirmDeleteAction = async () => {
                 <div class="min-w-0">
                   <h3 class="text-white font-bold text-[11px] md:text-sm leading-tight mb-1 truncate md:whitespace-normal">{{ getDisplayTitle(item) }}</h3>
                   <div class="flex items-center text-[9px] md:text-xs text-slate-500 space-x-2">
-                    <a v-if="item.slug" :href="`https://polymarket.com/event/${item.slug}`" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 flex items-center shrink-0 font-bold">🔗 Poly</a>
-                    <button @click.prevent="toggleTranslateMover(item)" class="flex items-center space-x-1 text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-700 text-slate-500 hover:text-blue-400">
-                      {{ translatedIds.has(item.id) ? 'ORIGINAL' : '翻譯' }}
+                    <a v-if="item.slug" :href="`https://polymarket.com/event/${item.slug}`" target="_blank" rel="noopener" class="px-2 py-0.5 rounded bg-blue-600/10 border border-blue-500/30 text-blue-400 hover:bg-blue-600 hover:text-white transition-all text-[9px] md:text-[10px] font-black flex items-center gap-1.5 active:scale-95 shadow-sm">
+                      <span>下注</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                    </a>
+                    <button 
+                      @click.prevent="toggleTranslateMover(item)" 
+                      class="flex items-center space-x-1 text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-700 transition-all"
+                      :class="translatedIds.has(item.id) ? 'text-blue-400 border-blue-900/40 bg-blue-950/20 shadow-sm' : 'text-slate-500 hover:text-blue-400 hover:border-slate-600'"
+                      :disabled="translatingIds.has(item.id)"
+                    >
+                      <svg v-if="translatingIds.has(item.id)" class="w-3 h-3 animate-spin text-blue-500" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+                      </svg>
+                      <span>{{ translatingIds.has(item.id) ? '翻譯中...' : (translatedIds.has(item.id) ? 'ORIGINAL' : '翻譯') }}</span>
                     </button>
                   </div>
                 </div>

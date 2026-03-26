@@ -178,7 +178,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  // 元件卸載時，記得把兩個 WebSocket 都關閉以節省資源
   if (wsBinance) wsBinance.close()
   if (wsFinnhub) wsFinnhub.close()
 })

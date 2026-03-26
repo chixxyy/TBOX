@@ -63,18 +63,36 @@ const formattedDate = computed(() => {
   const date = new Date(dateStr)
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 })
+
+const marketUrl = computed(() => {
+  // Polymarket URL Logic:
+  // 1. If part of an event, use event slug (most reliable for context)
+  // 2. Otherwise, use specific market slug with /market/ prefix
+  const eventSlug = props.eventData.events?.[0]?.slug
+  const slug = props.eventData.slug || props.eventData.marketSlug
+  
+  if (eventSlug) return `https://polymarket.com/event/${eventSlug}`
+  if (slug) return `https://polymarket.com/market/${slug}`
+  return null
+})
+
+const goToMarket = () => {
+  if (marketUrl.value) {
+    window.open(marketUrl.value, '_blank')
+  }
+}
 </script>
 
 <template>
   <div 
-    class="bg-[#0f1523] border border-[#1e293b] rounded-lg p-4 hover:border-slate-600 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all cursor-pointer flex flex-col group relative overflow-hidden"
+    class="bg-[#0f1523] border border-[#1e293b] rounded-lg p-4 transition-all flex flex-col relative"
     :class="{ 'animate-flash': isNew }"
   >
     
     <div class="flex items-start mb-6">
       <img :src="eventData.image" :alt="eventData.question" class="w-10 h-10 rounded-md object-cover border border-slate-700 shadow-lg mr-3 shrink-0" v-if="eventData.image" />
       <div v-else class="w-10 h-10 rounded-md bg-slate-800 border border-slate-700 shadow-lg mr-3 shrink-0 flex items-center justify-center text-slate-500">?</div>
-      <h3 class="text-slate-200 font-bold text-sm leading-snug line-clamp-2 group-hover:text-blue-400 transition-colors">
+      <h3 class="text-slate-200 font-bold text-sm leading-snug line-clamp-2 transition-colors">
         {{ eventData.question }}
       </h3>
     </div>
@@ -94,11 +112,17 @@ const formattedDate = computed(() => {
     </div>
 
     <div class="grid grid-cols-2 gap-3 mb-4" v-if="outcomes.length === 2">
-      <button class="bg-green-950/30 border border-green-900/50 hover:bg-green-900/50 text-green-500 rounded font-bold text-xs py-2 flex items-center justify-center space-x-1 transition-colors">
+      <button 
+        @click.stop="goToMarket"
+        class="bg-green-950/30 border border-green-900/50 hover:bg-green-900/50 text-green-500 rounded font-bold text-xs py-2 flex items-center justify-center space-x-1 transition-colors"
+      >
         <span>{{ outcomes[0]?.label }}</span>
         <span class="opacity-80 font-mono">{{ outcomes[0]?.probability?.toFixed(0) }}¢</span>
       </button>
-      <button class="bg-red-950/30 border border-red-900/50 hover:bg-red-900/50 text-red-500 rounded font-bold text-xs py-2 flex items-center justify-center space-x-1 transition-colors">
+      <button 
+        @click.stop="goToMarket"
+        class="bg-red-950/30 border border-red-900/50 hover:bg-red-900/50 text-red-500 rounded font-bold text-xs py-2 flex items-center justify-center space-x-1 transition-colors"
+      >
         <span>{{ outcomes[1]?.label }}</span>
         <span class="opacity-80 font-mono">{{ outcomes[1]?.probability?.toFixed(0) }}¢</span>
       </button>
