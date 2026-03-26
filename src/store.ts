@@ -583,11 +583,13 @@ export const chatSignOut = async () => {
   } catch (err) {
     console.error('Supabase signOut error:', err)
   } finally {
+    // Force immediate UI state reset
     chatMessages.value = []
     chatSession.value = null
     userProfile.value = null
     priceAlerts.value = [] 
-    portfolio.value = [] // Clear portfolio on logout
+    portfolio.value = []
+    activeTab.value = '交易'
     showToast('登出成功', '您已安全退出 TradingBox', true)
   }
 }

@@ -68,6 +68,8 @@ import { api } from '../api'
 
 let reconnectTimerBinance: any = null
 let reconnectTimerFinnhub: any = null
+let finnhubRetryCount = 0
+const MAX_FINNHUB_RETRIES = 3
 
 const connectBinance = () => {
   if (wsBinance) {
@@ -75,34 +77,26 @@ const connectBinance = () => {
     wsBinance = null
   }
   
-  // Use targeted streams for all crypto assets to ensure reliable updates
   const cryptoSymbols = assets.value.filter(a => a.type === 'crypto').map(a => a.symbol.toLowerCase())
   const streams = cryptoSymbols.map(s => `${s}@ticker`).join('/')
   const url = `wss://stream.binance.com:9443/stream?streams=${streams}`
   
   wsBinance = new WebSocket(url)
-  
   wsBinance.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data)
       const ticker = msg.data
-      const symbol = ticker.s // uppercase symbol
-      
-      const asset = assets.value.find(a => a.symbol === symbol)
+      const asset = assets.value.find(a => a.symbol === ticker.s)
       if (asset) {
         const currentPrice = parseFloat(ticker.c)
         const priceChangePercent = parseFloat(ticker.P)
-        
         asset.price = formatPrice(ticker.c)
         asset.change = `${priceChangePercent > 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%`
         asset.up = priceChangePercent >= 0
         asset.rawPrice = currentPrice
-        
         marketPrices.value[asset.symbol] = {
-          price: asset.price,
-          change: asset.change,
-          up: asset.up,
-          rawPrice: asset.rawPrice
+          price: asset.price, change: asset.change,
+          up: asset.up, rawPrice: asset.rawPrice
         }
       }
     } catch (e) {
@@ -110,11 +104,9 @@ const connectBinance = () => {
     }
   }
 
-  wsBinance.onerror = (e) => console.error('Binance WS Error:', e)
   wsBinance.onclose = () => {
-    console.log('Binance WS closed, reconnecting...')
     if (reconnectTimerBinance) clearTimeout(reconnectTimerBinance)
-    reconnectTimerBinance = setTimeout(connectBinance, 3000)
+    reconnectTimerBinance = setTimeout(connectBinance, 5000)
   }
 }
 
@@ -124,10 +116,20 @@ const connectFinnhub = () => {
     wsFinnhub = null
   }
   
+  if (finnhubRetryCount >= MAX_FINNHUB_RETRIES) {
+    console.warn(`Finnhub WebSocket failed ${MAX_FINNHUB_RETRIES} times. Switching to polling mode for stocks.`)
+    // Fallback: Start periodic polling if not already started
+    startStockPolling()
+    return
+  }
+
   const token = import.meta.env.VITE_FINNHUB_TOKEN as string
+  if (!token) return
+
   wsFinnhub = new WebSocket(`wss://ws.finnhub.io?token=${token}`)
   
   wsFinnhub.onopen = () => {
+    finnhubRetryCount = 0 // Reset on successful connection
     assets.value.filter(a => a.type === 'stock').forEach(asset => {
       wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': asset.symbol}))
     })
@@ -146,11 +148,8 @@ const connectFinnhub = () => {
             asset.change = `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%`
             asset.up = changePercent >= 0
             marketPrices.value[asset.symbol] = {
-              price: asset.price,
-              change: asset.change,
-              up: asset.up,
-              rawPrice: asset.rawPrice,
-              prevClose: asset.prevClose
+              price: asset.price, change: asset.change,
+              up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
             }
           }
         })
@@ -160,12 +159,42 @@ const connectFinnhub = () => {
     }
   }
 
-  wsFinnhub.onerror = (e) => console.error('Finnhub WS Error:', e)
-  wsFinnhub.onclose = () => {
-    console.log('Finnhub WS closed, reconnecting...')
-    if (reconnectTimerFinnhub) clearTimeout(reconnectTimerFinnhub)
-    reconnectTimerFinnhub = setTimeout(connectFinnhub, 5000)
+  wsFinnhub.onerror = () => {
+    finnhubRetryCount++
+    if (wsFinnhub) wsFinnhub.close()
   }
+
+  wsFinnhub.onclose = () => {
+    if (finnhubRetryCount < MAX_FINNHUB_RETRIES) {
+      if (reconnectTimerFinnhub) clearTimeout(reconnectTimerFinnhub)
+      const delay = Math.pow(2, finnhubRetryCount) * 1000 // Exponential backoff
+      reconnectTimerFinnhub = setTimeout(connectFinnhub, delay)
+    }
+  }
+}
+
+let stockPollingTimer: any = null
+const startStockPolling = () => {
+  if (stockPollingTimer) return
+  stockPollingTimer = setInterval(async () => {
+    const stockAssets = assets.value.filter(a => a.type === 'stock')
+    for (const asset of stockAssets) {
+      try {
+        const quote = await api.getFinnhubQuote(asset.symbol)
+        if (quote && quote.c) {
+          asset.rawPrice = quote.c
+          asset.price = formatPrice(quote.c.toString())
+          asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+          asset.up = quote.dp >= 0
+          asset.prevClose = quote.pc
+          marketPrices.value[asset.symbol] = {
+            price: asset.price, change: asset.change,
+            up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
+          }
+        }
+      } catch (err) { /* Silent fail for polling */ }
+    }
+  }, 30000) // Poll every 30s as fallback
 }
 
 onMounted(() => {

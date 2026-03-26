@@ -40,9 +40,9 @@ const handleLogout = () => {
   showUserMenu.value = false
 }
 const confirmLogout = async () => {
-  await chatSignOut()
   showLogoutConfirm.value = false
   showUserMenu.value = false
+  await chatSignOut()
 }
 </script>
 
