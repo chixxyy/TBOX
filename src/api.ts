@@ -11,6 +11,19 @@ const FINNHUB_TOKEN = import.meta.env.VITE_FINNHUB_TOKEN as string;
 const requestCache = new Map<string, { data: any, timestamp: number }>();
 const activeRequests = new Map<string, Promise<any>>();
 
+// Throttle queue to prevent burst 429 errors (max 5 req/sec)
+let lastFinnhubCall = 0;
+let finnhubQueue = Promise.resolve();
+
+function getFinnhubSlot() {
+  finnhubQueue = finnhubQueue.then(async () => {
+    const diff = Date.now() - lastFinnhubCall;
+    if (diff < 200) await new Promise(resolve => setTimeout(resolve, 200 - diff));
+    lastFinnhubCall = Date.now();
+  });
+  return finnhubQueue;
+}
+
 async function apiFetch(url: string, options: RequestInit = {}) {
   const isFinnhub = url.includes('finnhub.io');
 
@@ -30,11 +43,10 @@ async function apiFetch(url: string, options: RequestInit = {}) {
 
   const cacheKey = finalUrl;
   
-  // 1. Return from cache if Finnhub and within 60 seconds
+  // 1. Return from cache if Finnhub and within 15 seconds (reduced to allow real-time 30s polling)
   if (isFinnhub) {
     const cached = requestCache.get(cacheKey);
-    // 60-second TTL to respect 60 requests/minute free tier limit
-    if (cached && Date.now() - cached.timestamp < 60000) {
+    if (cached && Date.now() - cached.timestamp < 15000) {
       return cached.data;
     }
   }
@@ -46,6 +58,7 @@ async function apiFetch(url: string, options: RequestInit = {}) {
 
   // 3. Execute fetch with 429 safety fallback
   const fetchPromise = (async () => {
+    if (isFinnhub) await getFinnhubSlot();
     const response = await fetch(finalUrl, { ...options, headers });
 
     if (response.status === 429) {
