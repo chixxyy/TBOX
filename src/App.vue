@@ -16,7 +16,7 @@ import BackgroundMonitor from './components/BackgroundMonitor.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import ReloadPrompt from './components/ReloadPrompt.vue'
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { activeTab, setScrollProgress, isChangingTab, initSupabaseChat, showLogoutConfirm, chatSignOut } from './store'
+import { activeTab, setScrollProgress, isChangingTab, initSupabaseChat, showLogoutConfirm, chatSignOut, showPlatformNotice, dismissPlatformNotice } from './store'
 
 // Reset scroll progress instantly on tab change
 watch(activeTab, async () => {
@@ -121,6 +121,40 @@ onUnmounted(() => {
 
     <!-- AI Asset Summary Drawer -->
     <AIDrawer />
+
+    <!-- Platform Notice Modal -->
+    <transition name="fade">
+      <div 
+        v-if="showPlatformNotice" 
+        class="fixed inset-0 z-[10002] flex items-center justify-center px-4 bg-black/70 backdrop-blur-md"
+      >
+        <div class="bg-[#0a0f1c] border border-blue-500/30 rounded-2xl p-6 w-full max-w-md shadow-[0_0_40px_rgba(59,130,246,0.15)] relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-cyan-400"></div>
+          
+          <div class="flex items-center gap-3 mb-4 mt-2">
+            <div class="w-10 h-10 rounded-full bg-blue-900/30 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-white tracking-wide">平台近期狀態公告</h3>
+          </div>
+          
+          <div class="space-y-4 mb-8">
+            <p class="text-sm text-slate-300 leading-relaxed font-bold bg-blue-900/20 p-4 rounded-xl border border-blue-900/40">
+              💡 <span class="text-blue-400">溫馨提醒：</span>如果發現 <strong class="text-white">資產報價沒有即時跳動</strong> 或是 <strong class="text-white">討論區沒有正常連線</strong>，請點擊畫面右上方的 <strong class="text-white bg-slate-800 px-1.5 py-0.5 rounded mr-1 ml-1 text-xs">重置連線按鈕</strong> 或是直接 <strong class="text-white">重新整理網頁</strong> 來解決。
+            </p>
+          </div>
+          
+          <button 
+            @click="dismissPlatformNotice" 
+            class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 text-white font-bold text-sm shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] transition-all active:scale-[0.98]"
+          >
+            我瞭解了，開始交易
+          </button>
+        </div>
+      </div>
+    </transition>
 
     <!-- Global Logout Confirmation Modal -->
     <transition name="fade">
