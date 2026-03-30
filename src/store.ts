@@ -630,7 +630,14 @@ export const dismissPlatformNotice = () => {
 }
 
 export const chatSignOut = async () => {
-  // Optimistic UI state reset for instant user feedback (prevent network latency "broken" feel)
+  try {
+    // 1. Wait for Supabase to clear local storage and invalidate session
+    await supabase.auth.signOut()
+  } catch (err) {
+    console.error('Supabase signOut error:', err)
+  }
+
+  // 2. Clear all local reactive states
   chatMessages.value = []
   chatSession.value = null
   userProfile.value = null
@@ -639,13 +646,8 @@ export const chatSignOut = async () => {
   activeTab.value = '交易'
   showLogoutConfirm.value = false
   hasSeenPlatformNotice.value = false  // Reset platform notice on logout
+  
   showToast('登出成功', '您已安全退出 TradingBox', true)
-
-  try {
-    await supabase.auth.signOut()
-  } catch (err) {
-    console.error('Supabase signOut error:', err)
-  }
 }
 
 
