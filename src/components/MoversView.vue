@@ -14,7 +14,8 @@ import {
   removeFromPortfolio,
   initialAssets,
   chatSession,
-  goToLogin
+  goToLogin,
+  openAIDrawer
 } from '../store'
 
 let rafId: number | null = null
@@ -575,8 +576,18 @@ const confirmDeleteAction = async () => {
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                     </a>
                     <button 
+                      @click.prevent="openAIDrawer(item.title, item.currentPrice, 'crypto')"
+                      class="flex items-center space-x-1 text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-900/40 text-blue-400 bg-blue-950/20 hover:bg-blue-600 hover:text-white transition-all shadow-sm shrink-0"
+                      title="AI 智能速報"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span>AI 速報</span>
+                    </button>
+                    <button 
                       @click.prevent="toggleTranslateMover(item)" 
-                      class="flex items-center space-x-1 text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-700 transition-all"
+                      class="flex items-center space-x-1 text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-700 transition-all shrink-0"
                       :class="translatedIds.has(item.id) ? 'text-blue-400 border-blue-900/40 bg-blue-950/20 shadow-sm' : 'text-slate-500 hover:text-blue-400 hover:border-slate-600'"
                       :disabled="translatingIds.has(item.id)"
                     >

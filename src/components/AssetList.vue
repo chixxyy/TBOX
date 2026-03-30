@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { activeSymbol, setActiveSymbol, marketPrices, initialAssets } from '../store'
+import { activeSymbol, setActiveSymbol, marketPrices, initialAssets, openAIDrawer } from '../store'
 
 interface Asset {
   symbol: string
@@ -306,9 +306,9 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
     <!-- List Headers -->
     <div class="flex items-center justify-between px-2 md:px-4 py-1 md:py-2 text-[9px] md:text-[10px] font-bold text-slate-500 border-b border-slate-800/50 bg-[#070b14]">
       <span>資產 ({{ filteredAssets.length }})</span>
-      <div class="flex space-x-2 md:space-x-4 text-right">
-        <span class="w-14 md:w-16">價格</span>
-        <span class="w-10 md:w-12">24H</span>
+      <div class="flex space-x-4 md:space-x-8 text-right pr-4 md:pr-10">
+        <span class="w-16 md:w-20">價格</span>
+        <span class="w-12 md:w-16">24H</span>
       </div>
     </div>
 
@@ -318,7 +318,7 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
         v-for="asset in filteredAssets" 
         :key="asset.symbol"
         @click="setActiveSymbol(asset.symbol)"
-        class="flex items-center justify-between px-2 md:px-4 py-2 md:py-3 border-b border-slate-800/30 cursor-pointer group transition-colors"
+        class="flex items-center justify-between px-2 md:px-4 py-2 md:py-3 border-b border-slate-800/30 cursor-pointer group transition-colors relative"
         :class="activeSymbol === asset.symbol ? 'bg-blue-900/20 border-l-2 border-l-blue-500' : 'hover:bg-slate-800/40'"
       >
         <div class="flex flex-col">
@@ -327,16 +327,27 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
           <span class="text-[9px] md:text-[10px] text-slate-500">{{ asset.name }}</span>
         </div>
         
-        <div class="flex space-x-2 md:space-x-4 text-right font-mono">
-          <span class="text-[10px] md:text-xs w-14 md:w-16 text-slate-300 group-hover:text-white transition-colors duration-300" 
+        <div class="flex space-x-4 md:space-x-6 text-right font-mono items-center pr-8 md:pr-12">
+          <span class="text-[10px] md:text-xs w-16 md:w-20 text-slate-300 group-hover:text-white transition-colors duration-300" 
             :class="asset.up ? 'group-hover:text-green-400' : 'group-hover:text-red-400'">{{ asset.price }}</span>
           <span 
-            class="text-[9px] md:text-[10px] w-10 md:w-12 py-0.5 rounded font-bold"
+            class="text-[9px] md:text-[10px] w-12 md:w-16 py-0.5 rounded font-bold"
             :class="asset.up ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'"
           >
             {{ asset.change }}
           </span>
         </div>
+
+        <!-- Absolutely positioned AI Button -->
+        <button 
+          @click.stop="openAIDrawer(asset.symbol, asset.rawPrice, asset.type)" 
+          title="AI 智能速報" 
+          class="absolute right-1 md:right-3 w-8 h-8 flex items-center justify-center text-blue-500 hover:text-white hover:bg-blue-600 rounded transition-all shrink-0 z-10"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>

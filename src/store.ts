@@ -22,6 +22,15 @@ export const formattedActiveSymbol = computed(() => {
   return activeSymbol.value.replace('USDT', '/USDT')
 })
 
+// --- AI Drawer State ---
+export const showAIDrawer = ref(false)
+export const activeAIAsset = ref<{ symbol: string, currentPrice: number, marketType: 'crypto' | 'stock' } | null>(null)
+
+export const openAIDrawer = (symbol: string, currentPrice: number, marketType: 'crypto' | 'stock' = 'crypto') => {
+  activeAIAsset.value = { symbol, currentPrice, marketType }
+  showAIDrawer.value = true
+}
+
 // --- Global Data Store for Site-wide Monitoring ---
 
 export interface Mover {
@@ -593,20 +602,23 @@ export const removeChatMessage = async (id: string) => {
   }
 }
 
+export const showLogoutConfirm = ref(false)
+
 export const chatSignOut = async () => {
+  // Optimistic UI state reset for instant user feedback (prevent network latency "broken" feel)
+  chatMessages.value = []
+  chatSession.value = null
+  userProfile.value = null
+  priceAlerts.value = [] 
+  portfolio.value = []
+  activeTab.value = '交易'
+  showLogoutConfirm.value = false
+  showToast('登出成功', '您已安全退出 TradingBox', true)
+
   try {
     await supabase.auth.signOut()
   } catch (err) {
     console.error('Supabase signOut error:', err)
-  } finally {
-    // Force immediate UI state reset
-    chatMessages.value = []
-    chatSession.value = null
-    userProfile.value = null
-    priceAlerts.value = [] 
-    portfolio.value = []
-    activeTab.value = '交易'
-    showToast('登出成功', '您已安全退出 TradingBox', true)
   }
 }
 

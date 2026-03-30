@@ -11,11 +11,12 @@ import MoversView from './components/MoversView.vue'
 import ChatView from './components/ChatView.vue'
 import LoginView from './components/LoginView.vue'
 import ProfileView from './components/ProfileView.vue'
+import AIDrawer from './components/AIDrawer.vue'
 import BackgroundMonitor from './components/BackgroundMonitor.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import ReloadPrompt from './components/ReloadPrompt.vue'
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { activeTab, setScrollProgress, isChangingTab, initSupabaseChat } from './store'
+import { activeTab, setScrollProgress, isChangingTab, initSupabaseChat, showLogoutConfirm, chatSignOut } from './store'
 
 // Reset scroll progress instantly on tab change
 watch(activeTab, async () => {
@@ -73,7 +74,7 @@ onUnmounted(() => {
     
     <main v-if="activeTab === '交易'" @scroll="handleScroll" class="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden pb-12 md:pb-0">
       <!-- Left Sidebar: Asset List -->
-      <aside class="w-full md:w-[260px] h-auto md:h-full border-b md:border-b-0 md:border-r border-slate-800 bg-[#0a0f1c] flex flex-col shrink-0">
+      <aside class="w-full md:w-[320px] h-auto md:h-full border-b md:border-b-0 md:border-r border-slate-800 bg-[#0a0f1c] flex flex-col shrink-0">
         <AssetList />
       </aside>
 
@@ -117,6 +118,37 @@ onUnmounted(() => {
     
     <!-- PWA Update Prompt -->
     <ReloadPrompt />
+
+    <!-- AI Asset Summary Drawer -->
+    <AIDrawer />
+
+    <!-- Global Logout Confirmation Modal -->
+    <transition name="fade">
+      <div 
+        v-if="showLogoutConfirm" 
+        @click="showLogoutConfirm = false"
+        class="fixed inset-0 z-[10001] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm"
+      >
+        <div @click.stop class="bg-[#111827] border border-blue-900/40 rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+          <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">確定要登出嗎？</h3>
+          <p class="text-xs text-slate-400 mb-6">登出後將無法使用討論區並清除目前的自定義設定。</p>
+          <div class="flex gap-3">
+            <button @click="showLogoutConfirm = false" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors text-sm font-bold">
+              取消
+            </button>
+            <button @click="chatSignOut" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold">
+              確定登出
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
   </div>
 </template>
 

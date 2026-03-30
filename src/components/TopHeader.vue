@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, chatSession, chatSignOut, goToLogin, isAdmin, chatUser, userProfile } from '../store'
+import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile } from '../store'
 import { onClickOutside } from '@vueuse/core'
 
 const showUserMenu = ref(false)
@@ -34,15 +34,9 @@ const formatTime = (ts: number) => {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
-const showLogoutConfirm = ref(false)
 const handleLogout = () => {
   showLogoutConfirm.value = true
   showUserMenu.value = false
-}
-const confirmLogout = async () => {
-  showLogoutConfirm.value = false
-  showUserMenu.value = false
-  await chatSignOut()
 }
 </script>
 
@@ -207,34 +201,6 @@ const confirmLogout = async () => {
       </div>
     </div>
 
-    <!-- Logout Confirmation Modal Overlay (Teleport to body for z-index safety) -->
-    <Teleport to="body">
-      <transition name="fade">
-        <div 
-          v-if="showLogoutConfirm" 
-          @click="showLogoutConfirm = false"
-          class="fixed inset-0 z-[10001] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm"
-        >
-          <div @click.stop class="bg-[#111827] border border-blue-900/40 rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
-            <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </div>
-            <h3 class="text-lg font-bold text-white mb-2">確定要登出嗎？</h3>
-            <p class="text-xs text-slate-400 mb-6">登出後將無法使用討論區並清除目前的自定義設定。</p>
-            <div class="flex gap-3">
-              <button @click="showLogoutConfirm = false" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors text-sm font-bold">
-                取消
-              </button>
-              <button @click="confirmLogout" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold">
-                確定登出
-              </button>
-            </div>
-          </div>
-        </div>
-      </transition>
-    </Teleport>
   </header>
 </template>
 
