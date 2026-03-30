@@ -598,7 +598,9 @@ export const removeChatMessage = async (id: string) => {
     console.error('刪除留言失敗:', error.message)
     // Rollback local state on error
     chatMessages.value = prevMessages
-    alert('刪除留言失敗，可能沒有權限：' + error.message)
+    showToast('刪除失敗', '可能沒有權限或網路錯誤: ' + error.message, false)
+  } else {
+    showToast('刪除成功', '留言已從討論區移除', true)
   }
 }
 
