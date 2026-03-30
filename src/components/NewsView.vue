@@ -8,6 +8,9 @@ import {
   isChangingTab
 } from '../store'
 
+const openUrl = (url?: string) => {
+  if (url) window.open(url, '_blank', 'noopener,noreferrer')
+}
 
 let rafId: number | null = null
 const handleScroll = (e: Event) => {
@@ -178,7 +181,10 @@ onUnmounted(() => {
       </div>
 
       <!--最新頭條-->
-      <div class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0 cursor-pointer hover:bg-slate-800/50 transition-all group overflow-hidden">
+      <div 
+        @click="openUrl(filteredNews[0]?.url)"
+        class="flex-1 flex items-center space-x-2 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0 cursor-pointer hover:bg-slate-800/50 transition-all group overflow-hidden"
+      >
         <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-amber-900/30 border border-amber-800/50 flex items-center justify-center text-amber-400 shrink-0">⚡</div>
         <div class="min-w-0 flex-1">
           <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">最新頭條</div>

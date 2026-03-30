@@ -6,8 +6,11 @@
 const FINNHUB_TOKEN = import.meta.env.VITE_FINNHUB_TOKEN as string;
 
 /**
- * Universal fetch wrapper with optional custom headers
+ * Universal fetch wrapper with optional custom headers and caching
  */
+const requestCache = new Map<string, { data: any, timestamp: number }>();
+const activeRequests = new Map<string, Promise<any>>();
+
 async function apiFetch(url: string, options: RequestInit = {}) {
   const isFinnhub = url.includes('finnhub.io');
 
@@ -25,15 +28,56 @@ async function apiFetch(url: string, options: RequestInit = {}) {
 
   // NOTE: Do not set User-Agent header in browser as it is a forbidden header and causes fetch to fail.
 
-  const response = await fetch(finalUrl, { ...options, headers });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error(`API Error [${response.status}]:`, errorData);
-    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+  const cacheKey = finalUrl;
+  
+  // 1. Return from cache if Finnhub and within 60 seconds
+  if (isFinnhub) {
+    const cached = requestCache.get(cacheKey);
+    // 60-second TTL to respect 60 requests/minute free tier limit
+    if (cached && Date.now() - cached.timestamp < 60000) {
+      return cached.data;
+    }
   }
 
-  return response.json();
+  // 2. Queue concurrent exact requests
+  if (activeRequests.has(cacheKey)) {
+    return activeRequests.get(cacheKey);
+  }
+
+  // 3. Execute fetch with 429 safety fallback
+  const fetchPromise = (async () => {
+    const response = await fetch(finalUrl, { ...options, headers });
+
+    if (response.status === 429) {
+      console.warn(`[TBOX] API 流量限制 (429 Too Many Requests): ${url}。正在啟用降級保護...`);
+      const staleCached = requestCache.get(cacheKey);
+      if (staleCached) return staleCached.data;
+      throw new Error('伺服器資源限制，請稍後再試 (Too Many Requests)');
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`API Error [${response.status}]:`, errorData);
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Save successful Finnhub requests to cache
+    if (isFinnhub) {
+      requestCache.set(cacheKey, { data, timestamp: Date.now() });
+    }
+    
+    return data;
+  })();
+
+  activeRequests.set(cacheKey, fetchPromise);
+  
+  try {
+    return await fetchPromise;
+  } finally {
+    activeRequests.delete(cacheKey);
+  }
 }
 
 /**

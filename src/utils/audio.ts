@@ -1,14 +1,49 @@
 // Centralized Audio Engine for TradingBox - Pure Utility
 let audioCtx: AudioContext | null = null
+let isUnlocked = false
 
 function getAudioCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
   }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume()
-  }
   return audioCtx
+}
+
+// Global user interaction listener to permanently unlock AudioContext on iOS/Safari and strict browsers
+if (typeof window !== 'undefined') {
+  const unlockAudio = () => {
+    if (isUnlocked) return
+    const ctx = getAudioCtx()
+    
+    // Play a silent oscillator for 1ms to safely unlock mobile Safari
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    gain.gain.value = 0
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.001)
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        isUnlocked = true
+        removeListeners()
+      }).catch(e => console.warn('[TBOX] Audio unlock blocked:', e))
+    } else {
+      isUnlocked = true
+      removeListeners()
+    }
+  }
+
+  const removeListeners = () => {
+    document.removeEventListener('click', unlockAudio)
+    document.removeEventListener('touchstart', unlockAudio)
+    document.removeEventListener('keydown', unlockAudio)
+  }
+
+  document.addEventListener('click', unlockAudio)
+  document.addEventListener('touchstart', unlockAudio, { passive: true })
+  document.addEventListener('keydown', unlockAudio)
 }
 
 /**
