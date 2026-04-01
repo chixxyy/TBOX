@@ -191,11 +191,11 @@ onUnmounted(() => {
               <ul class="space-y-2 text-xs text-slate-400">
                 <li class="flex items-start gap-2">
                   <span class="text-blue-500 mt-0.5">●</span>
-                  <span>支援槓桿倍數隨市場深度動態調整。</span>
+                  <span>整合 AI 智能分析，即時生成市場趨勢與標的速報。</span>
                 </li>
                 <li class="flex items-start gap-2">
                   <span class="text-blue-500 mt-0.5">●</span>
-                  <span>訂單執行速度可能受網路延遲影響。</span>
+                  <span>支援多市場即時報價與圖表，包含加密貨幣、股票與運動賽事。</span>
                 </li>
               </ul>
             </div>
