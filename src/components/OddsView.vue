@@ -127,7 +127,7 @@ const currentSort = computed(() => sortModes.find(s => s.key === sortMode.value)
 
 const cycleSort = () => {
   const idx = sortModes.findIndex(s => s.key === sortMode.value)
-  sortMode.value = sortModes[(idx + 1) % sortModes.length].key
+  sortMode.value = sortModes[(idx + 1) % sortModes.length]!.key
 }
 
 // Get the max win probability from a game (used for sorting)
