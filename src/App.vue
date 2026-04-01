@@ -8,6 +8,7 @@ import RightPanel from './components/RightPanel.vue'
 import MarketsView from './components/MarketsView.vue'
 import NewsView from './components/NewsView.vue'
 import MoversView from './components/MoversView.vue'
+import OddsView from './components/OddsView.vue'
 import ChatView from './components/ChatView.vue'
 import LoginView from './components/LoginView.vue'
 import ProfileView from './components/ProfileView.vue'
@@ -99,6 +100,10 @@ onUnmounted(() => {
 
     <main v-else-if="activeTab === '異動'" class="flex-1 flex overflow-hidden bg-[#05080f]">
       <MoversView />
+    </main>
+
+    <main v-else-if="activeTab === '運彩'" class="flex-1 flex overflow-hidden bg-[#05080f]">
+      <OddsView />
     </main>
 
     <main v-else-if="activeTab === '討論'" class="flex-1 flex overflow-hidden bg-[#05080f]">

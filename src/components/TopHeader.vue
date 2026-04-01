@@ -13,7 +13,7 @@ const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value
 }
 
-const tabs = ['交易', '新聞', '市場', '異動', '討論']
+const tabs = ['交易', '新聞', '市場', '異動', '運彩', '討論']
 
 const showNotifications = ref(false)
 const notificationDropdown = ref<HTMLElement | null>(null)
@@ -65,7 +65,7 @@ const handleLogout = () => {
       </div>
 
       <!-- Navigation Tabs -->
-      <nav class="grid grid-cols-5 h-full items-center flex-1 min-w-0">
+      <nav class="grid grid-cols-6 h-full items-center flex-1 min-w-0">
         <button 
           v-for="tab in tabs" 
           :key="tab"

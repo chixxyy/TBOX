@@ -4,6 +4,7 @@
  */
 
 const FINNHUB_TOKEN = import.meta.env.VITE_FINNHUB_TOKEN as string;
+const ODDS_API_KEY = import.meta.env.VITE_ODDS_API_KEY as string;
 
 /**
  * Universal fetch wrapper with optional custom headers and caching
@@ -49,6 +50,7 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   const isFinnhub = url.includes('finnhub.io');
   const isNews = isFinnhub && url.includes('/news');
   const isQuote = isFinnhub && url.includes('/quote');
+  const isOddsApi = url.includes('the-odds-api.com');
 
   let finalUrl = url;
   const headers: Record<string, string> = {
@@ -59,14 +61,21 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   if (isFinnhub) {
     const connector = finalUrl.includes('?') ? '&' : '?';
     finalUrl = `${finalUrl}${connector}token=${FINNHUB_TOKEN}`;
+  } else if (isOddsApi) {
+    const connector = finalUrl.includes('?') ? '&' : '?';
+    finalUrl = `${finalUrl}${connector}apiKey=${ODDS_API_KEY}`;
   }
 
   const cacheKey = finalUrl;
 
   // Cache check with appropriate TTL per request type
-  if (isFinnhub) {
+  if (isFinnhub || isOddsApi) {
     const cached = requestCache.get(cacheKey);
-    const ttl = isNews ? NEWS_CACHE_TTL : QUOTE_CACHE_TTL;
+    let ttl = 10000;
+    if (isNews) ttl = NEWS_CACHE_TTL;
+    else if (isQuote) ttl = QUOTE_CACHE_TTL;
+    else if (isOddsApi) ttl = 120000; // 2 minutes strict cache to protect heavy quota hit
+    
     if (cached && Date.now() - cached.timestamp < ttl) {
       return cached.data;
     }
@@ -99,7 +108,7 @@ async function apiFetch(url: string, options: RequestInit = {}) {
 
     const data = await response.json();
 
-    if (isFinnhub) {
+    if (isFinnhub || isOddsApi) {
       requestCache.set(cacheKey, { data, timestamp: Date.now() });
     }
 
@@ -136,5 +145,14 @@ export const api = {
 
   async getFinnhubQuote(symbol: string) {
     return apiFetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}`);
+  },
+
+  // The Odds API
+  async getMLBOdds() {
+    return apiFetch(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?regions=us&markets=h2h&oddsFormat=decimal&bookmakers=draftkings,pinnacle,fanduel`);
+  },
+
+  async getNBAOdds() {
+    return apiFetch(`https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?regions=us&markets=h2h&oddsFormat=decimal&bookmakers=draftkings,pinnacle,fanduel`);
   }
 };
