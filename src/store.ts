@@ -585,24 +585,36 @@ export const initSupabaseChat = async () => {
   })
 }
 
-export const addChatMessage = async (msg: Omit<ChatMessage, 'id' | 'timestamp' | 'userId'>) => {
+export const addChatMessage = async (msg: { user: string; avatar: string; text: string; newsShare?: any }) => {
+  console.log('Store: addChatMessage start', msg)
   if (!chatSession.value) {
+    console.warn('Store: no chat session found')
     showToast('發送失敗', '請先登入後再發言', false)
     return
   }
   
-  const { error } = await supabase.from('messages').insert({
-    user_id: chatSession.value.user.id,
-    user_name: msg.user,
-    avatar: msg.avatar,
-    text: msg.text,
-    news_share: msg.newsShare || null
-  })
+  try {
+    // 確保 newsShare 是純 JS 物件而非 Vue Proxy，防止傳輸卡死
+    const newsData = msg.newsShare ? JSON.parse(JSON.stringify(msg.newsShare)) : null
+    
+    console.log('Store: Calling Supabase insert...')
+    const { error } = await supabase.from('messages').insert({
+      user_id: chatSession.value.user.id,
+      user_name: msg.user,
+      avatar: msg.avatar,
+      text: msg.text,
+      news_share: newsData
+    })
 
-  if (error) {
-    console.error('Supabase insert error:', error.message)
-    showToast('發送失敗', '伺服器連線錯誤: ' + error.message, false)
-    throw error
+    if (error) {
+      console.error('Store: Supabase insert error:', error.message)
+      showToast('發送失敗', '伺服器連線錯誤: ' + error.message, false)
+      throw error
+    }
+    console.log('Store: Supabase insert success')
+  } catch (err: any) {
+    console.error('Store: addChatMessage execution error:', err)
+    throw err
   }
 }
 

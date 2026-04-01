@@ -243,7 +243,8 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
             <div class="bg-[#0a0f1c] border border-slate-800/80 rounded-b-xl rounded-tr-xl px-3 py-2 text-xs md:text-sm text-slate-300 w-fit max-w-[92%] md:max-w-[80%] shadow hover:border-slate-700 transition-colors">
               <span class="leading-relaxed whitespace-pre-wrap" v-html="formatMessage(msg.text)"></span>
               
-              <div v-if="msg.newsShare" class="mt-2 w-full overflow-hidden">
+              <!-- 只有一般新聞分享（有網址者）才會顯示下方的展開卡片 -->
+              <div v-if="msg.newsShare && msg.newsShare.url" class="mt-2 w-full overflow-hidden">
                 <!-- Collapsible News Card -->
                 <div class="bg-[#111827] border border-blue-900/40 rounded-lg overflow-hidden transition-all duration-300">
                   <div class="flex items-center justify-between p-2 md:p-3 bg-blue-900/5 group/news">

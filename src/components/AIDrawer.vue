@@ -47,7 +47,11 @@ const emotionBg = computed(() => {
 })
 
 const shareToChat = async () => {
-    if (!result.value || !activeAIAsset.value) return
+    console.log('Attempting to share AI Insight...', { result: result.value, asset: activeAIAsset.value })
+    if (!result.value || !activeAIAsset.value) {
+        console.warn('Share cancelled: result or activeAIAsset is null')
+        return
+    }
 
     if (!chatSession.value) {
         showToast('需要登入', '請先登入交流區，即可分享最新 AI 觀點！', false)
@@ -56,19 +60,29 @@ const shareToChat = async () => {
         return
     }
 
-    const emotionStr = result.value.score >= 50 ? '看漲 🚀' : '看跌 📉'
-    const shareText = `🤖 【AI 速報】${activeAIAsset.value.symbol} (${emotionStr})\n▸ 情緒指數: ${result.value.score}/100\n▸ 總結: ${result.value.summary}`
-
     try {
+        const emotionStr = (result.value.score || 0) >= 50 ? '看漲 🚀' : '看跌 📉'
+        const shareText = `🤖 【AI 速報】${activeAIAsset.value.symbol} (${emotionStr})\n▸ 情緒指數: ${result.value.score}/100\n▸ 總結: ${result.value.summary}`
+        
+        console.log('Calling addChatMessage with:', shareText)
+        
         await addChatMessage({
-            user: userProfile.value?.full_name || chatUser.value,
+            user: userProfile.value?.full_name || chatUser.value || 'GUEST',
             avatar: userProfile.value?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${chatSession.value.user.id}`,
-            text: shareText
+            text: shareText,
+            newsShare: {
+                symbol: activeAIAsset.value.symbol,
+                score: result.value.score,
+                summary: result.value.summary
+            }
         })
+        
+        console.log('Share success')
         showToast('分享成功', '您的 AI 觀點已發送至討論區', true)
         activeTab.value = '討論'
         closeDrawer()
     } catch (e: any) {
+        console.error('Share failure:', e)
         showToast('分享失敗', e.message || '請稍後再試', false)
     }
 }
