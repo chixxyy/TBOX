@@ -498,7 +498,7 @@ export const initSupabaseChat = async () => {
     
     if (msgs) {
       chatMessages.value = [...msgs].reverse().map((m: any) => ({
-        id: m.id,
+        id: String(m.id),
         user: m.user_name || '匿名使用者',
         userId: m.user_id,
         avatar: m.avatar || `https://ui-avatars.com/api/?name=User&background=random`,
@@ -529,7 +529,7 @@ export const initSupabaseChat = async () => {
       // Avoid duplicate insert if we already have it locally (though we don't do optimistic updates here yet)
       if (!chatMessages.value.find((msg: ChatMessage) => msg.id === m.id)) {
         chatMessages.value.push({
-          id: m.id,
+          id: String(m.id),
           user: m.user_name,
           userId: m.user_id,
           avatar: m.avatar,
@@ -541,7 +541,7 @@ export const initSupabaseChat = async () => {
       }
     })
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload: any) => {
-      chatMessages.value = chatMessages.value.filter((msg: ChatMessage) => msg.id !== payload.old.id)
+      chatMessages.value = chatMessages.value.filter((msg: ChatMessage) => String(msg.id) !== String(payload.old.id))
     })
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload: any) => {
       const idx = chatMessages.value.findIndex((msg: ChatMessage) => msg.id === payload.new.id)
@@ -551,7 +551,7 @@ export const initSupabaseChat = async () => {
         if (!existing) return
         
         chatMessages.value[idx] = {
-          id: m.id || existing.id,
+          id: String(m.id || existing.id),
           user: m.user_name || existing.user,
           userId: m.user_id || existing.userId,
           avatar: m.avatar || existing.avatar,
@@ -589,18 +589,34 @@ export const addChatMessage = async (msg: Omit<ChatMessage, 'id' | 'timestamp' |
 export const removeChatMessage = async (id: string) => {
   if (!chatSession.value) return
   
-  // Optimistic UI update for instant feedback
+  // Optimistic UI update
   const prevMessages = [...chatMessages.value]
-  chatMessages.value = chatMessages.value.filter(m => m.id !== id)
+  chatMessages.value = chatMessages.value.filter(m => String(m.id) !== String(id))
   
-  const { error } = await supabase.from('messages').delete().eq('id', id)
-  if (error) {
-    console.error('刪除留言失敗:', error.message)
+  try {
+    // Attempt to delete. Try both casting to number (most common PK) and string.
+    const numericId = Number(id)
+    const { error, count } = await supabase
+      .from('messages')
+      .delete({ count: 'exact' })
+      .eq('id', isNaN(numericId) ? id : numericId)
+
+    if (error) {
+      throw error
+    }
+
+    if (count === 0) {
+      console.warn('Supabase delete succeeded but 0 rows affected. Check RLS or ID.')
+      // If no rows were deleted (likely RLS), we should still consider it a failure for the user
+      throw new Error('找不到該留言或權限不足 (RLS)')
+    }
+
+    showToast('刪除成功', '留言已從討論區移除')
+  } catch (err: any) {
+    console.error('刪除留言失敗:', err.message || err)
     // Rollback local state on error
     chatMessages.value = prevMessages
-    showToast('刪除失敗', '可能沒有權限或網路錯誤: ' + error.message, false)
-  } else {
-    showToast('刪除成功', '留言已從討論區移除', true)
+    showToast('刪除失敗', `錯誤: ${err.message || '連線或權限問題'}`, false)
   }
 }
 
