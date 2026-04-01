@@ -102,7 +102,7 @@ onUnmounted(() => {
       <MoversView />
     </main>
 
-    <main v-else-if="activeTab === '運彩'" class="flex-1 flex overflow-hidden bg-[#05080f]">
+    <main v-else-if="activeTab === '運動'" class="flex-1 flex overflow-hidden bg-[#05080f]">
       <OddsView />
     </main>
 

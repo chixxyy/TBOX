@@ -13,7 +13,7 @@ const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value
 }
 
-const tabs = ['交易', '新聞', '市場', '異動', '運彩', '討論']
+const tabs = ['交易', '新聞', '市場', '異動', '運動', '討論']
 
 const showNotifications = ref(false)
 const notificationDropdown = ref<HTMLElement | null>(null)

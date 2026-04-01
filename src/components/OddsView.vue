@@ -113,6 +113,7 @@ const nbaLoading = ref(true)
 const mlbError = ref('')
 const nbaError = ref('')
 const activeLeague = ref<'MLB' | 'NBA'>('MLB')
+const lastUpdateStr = ref('')
 
 type SortMode = 'time' | 'prob_desc' | 'alpha'
 const sortMode = ref<SortMode>('time')
@@ -173,13 +174,20 @@ const fetchAll = async () => {
     nbaError.value = (nba.reason as Error).message || '無法取得 NBA 資料'
   }
   nbaLoading.value = false
+  
+  const now = new Date()
+  lastUpdateStr.value = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
 }
 
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   fetchAll()
-  autoRefreshTimer = setInterval(fetchAll, 120000) // auto-refresh every 2 min
+  autoRefreshTimer = setInterval(() => {
+    if (!document.hidden) {
+      fetchAll()
+    }
+  }, 3600000) // 1 hour
 })
 
 onUnmounted(() => {
@@ -198,7 +206,7 @@ onUnmounted(() => {
         </h1>
         <p class="text-slate-500 text-xs font-medium flex items-center gap-1.5 mt-0.5">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
-          即時 H2H Moneyline · DraftKings / Pinnacle / FanDuel 平均
+          每小時自動同步 · 最後更新於 {{ lastUpdateStr }}
         </p>
       </div>
       <div class="flex items-center gap-2">
