@@ -608,21 +608,30 @@ export const showLogoutConfirm = ref(false)
 
 // Platform Notice Logic
 export const showPlatformNotice = ref(false)
-const hasSeenPlatformNotice = useStorage('tbox-seen-platform-notice', false)
+// User preference: Skip the notice forever on this device
+const skipPlatformNotice = useStorage('tbox-skip-platform-notice', false)
+
+// Pre-show on load if not skipped forever
+if (!skipPlatformNotice.value) {
+  showPlatformNotice.value = true
+}
 
 watch(chatSession, (newSession, oldSession) => {
-  if (newSession && newSession.user && (!oldSession || !oldSession.user) && !hasSeenPlatformNotice.value) {
+  if (newSession && newSession.user && (!oldSession || !oldSession.user) && !skipPlatformNotice.value) {
     showPlatformNotice.value = true
   }
 })
 
-export const dismissPlatformNotice = () => {
+export const dismissPlatformNotice = (forever: boolean = false) => {
   showPlatformNotice.value = false
-  hasSeenPlatformNotice.value = true
+  if (forever) {
+    skipPlatformNotice.value = true
+  }
   
+  // Also log into notification history for later reference
   notificationHistory.value.unshift({
     id: 'notice-' + Date.now(),
-    title: '平台近期狀態公告',
+    title: '平台公告紀錄',
     message: '溫馨提醒：如果發現資產報價沒有即時跳動或是討論區沒有正常連線，請點擊畫面右上方的「重置連線」按鈕或是直接重新整理網頁。',
     timestamp: Date.now(),
     isRead: false
@@ -645,7 +654,7 @@ export const chatSignOut = async () => {
   portfolio.value = []
   activeTab.value = '交易'
   showLogoutConfirm.value = false
-  hasSeenPlatformNotice.value = false  // Reset platform notice on logout
+  skipPlatformNotice.value = false  // Reset platform notice preference on logout
   
   showToast('登出成功', '您已安全退出 TradingBox', true)
 }
