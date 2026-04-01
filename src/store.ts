@@ -460,8 +460,16 @@ export const updateUserProfile = async (updates: Partial<UserProfile>) => {
   return { error }
 }
 
+let chatChannel: any = null
+
 // --- Supabase Interaction ---
 export const initSupabaseChat = async () => {
+  // Prevent multiple active subscriptions (Double message fix)
+  if (chatChannel) {
+    supabase.removeChannel(chatChannel)
+    chatChannel = null
+  }
+
   chatLoading.value = true
   try {
     const { data: { session } } = await supabase.auth.getSession()
@@ -522,12 +530,12 @@ export const initSupabaseChat = async () => {
 
 
   // Realtime Subscriptions
-  supabase
+  const channel = supabase
     .channel('public:messages')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
       const m = payload.new
-      // Avoid duplicate insert if we already have it locally (though we don't do optimistic updates here yet)
-      if (!chatMessages.value.find((msg: ChatMessage) => msg.id === m.id)) {
+      // Avoid duplicate insert if we already have it locally
+      if (!chatMessages.value.find((msg: ChatMessage) => String(msg.id) === String(m.id))) {
         chatMessages.value.push({
           id: String(m.id),
           user: m.user_name,
@@ -544,7 +552,7 @@ export const initSupabaseChat = async () => {
       chatMessages.value = chatMessages.value.filter((msg: ChatMessage) => String(msg.id) !== String(payload.old.id))
     })
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload: any) => {
-      const idx = chatMessages.value.findIndex((msg: ChatMessage) => msg.id === payload.new.id)
+      const idx = chatMessages.value.findIndex((msg: ChatMessage) => String(msg.id) === String(payload.new.id))
       if (idx !== -1) {
         const m = payload.new
         const existing = chatMessages.value[idx]
@@ -561,29 +569,41 @@ export const initSupabaseChat = async () => {
         }
       }
     })
-    .subscribe((status, err) => {
-      if (err) {
-        console.error('Realtime subscription error:', err)
-        isChatConnected.value = false
-      }
-      if (status === 'SUBSCRIBED') {
-        console.log('Successfully connected to chat realtime')
-        isChatConnected.value = true
-      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-        isChatConnected.value = false
-      }
-    })
+  
+  chatChannel = channel
+  channel.subscribe((status: string, err?: Error) => {
+    if (err) {
+      console.error('Realtime subscription error:', err)
+      isChatConnected.value = false
+    }
+    if (status === 'SUBSCRIBED') {
+      console.log('Successfully connected to chat realtime')
+      isChatConnected.value = true
+    } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+      isChatConnected.value = false
+    }
+  })
 }
 
 export const addChatMessage = async (msg: Omit<ChatMessage, 'id' | 'timestamp' | 'userId'>) => {
-  if (!chatSession.value) return
-  await supabase.from('messages').insert({
+  if (!chatSession.value) {
+    showToast('發送失敗', '請先登入後再發言', false)
+    return
+  }
+  
+  const { error } = await supabase.from('messages').insert({
     user_id: chatSession.value.user.id,
     user_name: msg.user,
     avatar: msg.avatar,
     text: msg.text,
     news_share: msg.newsShare || null
   })
+
+  if (error) {
+    console.error('Supabase insert error:', error.message)
+    showToast('發送失敗', '伺服器連線錯誤: ' + error.message, false)
+    throw error
+  }
 }
 
 export const removeChatMessage = async (id: string) => {
@@ -644,7 +664,7 @@ export const dismissPlatformNotice = (forever: boolean = false) => {
     skipPlatformNotice.value = true
   }
   
-  // Also log into notification history for later reference
+  // Also log into notification history
   notificationHistory.value.unshift({
     id: 'notice-' + Date.now(),
     title: '平台公告紀錄',

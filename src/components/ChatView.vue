@@ -122,16 +122,26 @@ const formatTime = (ts: number) => {
 }
 
 const sendMessage = async () => {
-  if (!inputText.value.trim()) return
+  const text = inputText.value.trim()
+  if (!text) return
   
-  await addChatMessage({
-    user: userProfile.value?.full_name || currentUser.value,
-    avatar: userProfile.value?.avatar_url || currentAvatar.value,
-    text: inputText.value.trim()
-  })
+  const originalText = inputText.value
+  inputText.value = '' // 立即清空，提升快速輸入感，同時防止同一句話連按雙發
   
-  inputText.value = ''
+  try {
+    // 恢復 await，搭配 store.ts 裡的通知邏輯
+    await addChatMessage({
+      user: userProfile.value?.full_name || currentUser.value,
+      avatar: userProfile.value?.avatar_url || currentAvatar.value,
+      text: text
+    })
+  } catch (err) {
+    // 發生錯誤（如斷線）時，把內容填回去，不讓使用者的心血白打
+    inputText.value = originalText
+  }
 }
+
+
 
 const formatMessage = (text: string) => {
   const div = document.createElement('div')
