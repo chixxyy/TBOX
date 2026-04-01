@@ -36,13 +36,20 @@ function getRelativeTime(timestamp: number) {
 
 function getSeverity(headline: string): string {
   const h = (headline || '').toLowerCase()
+  // --- Critical Keywords ---
   if (h.includes('hack') || h.includes('attack') || h.includes('exploit') || h.includes('scam')) return 'critical'
+  if (h.includes('season-ending') || h.includes('arrested') || h.includes('suspended') || h.includes('blockbuster trade')) return 'critical'
+  
+  // --- High Keywords ---
   if (h.includes('sec ') || h.includes('fed ') || h.includes('cpi') || h.includes('binance')) return 'high'
+  if (h.includes('injury') || h.includes(' out ') || h.includes('lineup') || h.includes('contract extension') || h.includes('signing')) return 'high'
+  
   return 'low'
 }
 
 function getAccentColor(category: string, isCritical: boolean): string {
   if (isCritical) return 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+  if (category === 'sports') return 'bg-indigo-600'
   if (category === 'crypto') return 'bg-blue-500'
   if (category === 'politics' || category === 'general') return 'bg-emerald-500'
   return 'bg-slate-600'
@@ -113,12 +120,53 @@ async function fetchCC(): Promise<any[]> {
   })
 }
 
+async function fetchSports(): Promise<any[]> {
+  try {
+    const feeds = [
+      'https://www.espn.com/espn/rss/news',
+      'https://www.espn.com/espn/rss/nba/news',
+      'https://www.espn.com/espn/rss/mlb/news'
+    ]
+    
+    // Fetch all sports feeds in parallel
+    const allResults = await Promise.allSettled(
+      feeds.map(url => 
+        fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`)
+          .then(res => res.json())
+      )
+    )
+    
+    const sportsNews: any[] = []
+    
+    allResults.forEach(res => {
+      if (res.status === 'fulfilled' && res.value.status === 'ok') {
+        (res.value.items || []).forEach((item: any) => {
+          sportsNews.push({
+            uid: `espn-${item.guid || item.link}`,
+            source: 'ESPN',
+            cat: 'sports',
+            ts: new Date(item.pubDate).getTime(),
+            headline: item.title,
+            summary: item.description?.replace(/<[^>]*>?/gm, '').slice(0, 200) || '',
+            url: item.link || '#',
+            avatarBg: 'ff0000',
+            provider: 'espn'
+          })
+        })
+      }
+    })
+    
+    return sportsNews
+  } catch { return [] }
+}
+
 async function syncNews() {
   try {
-    const [fh, cc] = await Promise.allSettled([fetchFinnhub(), fetchCC()])
+    const [fh, cc, sp] = await Promise.allSettled([fetchFinnhub(), fetchCC(), fetchSports()])
     const all = [
       ...(fh.status === 'fulfilled' ? fh.value : []),
       ...(cc.status === 'fulfilled' ? cc.value : []),
+      ...(sp.status === 'fulfilled' ? sp.value : []),
     ]
     const unique = new Map<string, any>()
     all.forEach(item => unique.set(item.uid, item))
@@ -152,21 +200,32 @@ async function syncNews() {
       }
     }
 
-    const providerColors: Record<string, string> = { finnhub: '1d4ed8', cryptocompare: '7c3aed' }
+    const providerColors: Record<string, string> = { 
+      finnhub: '1d4ed8', 
+      cryptocompare: '7c3aed',
+      espn: 'ff0000'
+    }
     
     globalNews.value = sorted.slice(0, 150).map(item => {
       const severity = getSeverity(item.headline)
       const isCritical = severity === 'critical'
       const bg = item.avatarBg || (providerColors[item.provider as any] || '1d4ed8')
       
-      const categoryLabel = item.cat.toUpperCase()
+      // Normalize categories: everything not sports/crypto goes to general (Finance)
+      let finalCat = item.cat
+      if (finalCat !== 'sports' && finalCat !== 'crypto') {
+        finalCat = 'general'
+      }
+      
+      const categoryLabel = finalCat.toUpperCase()
       
       return {
         ...item,
         id: item.uid,
+        cat: finalCat,
         severity,
-        time: getRelativeTime(item.ts),
-        accentColor: getAccentColor(item.cat, isCritical),
+        time: getRelativeTime(item.ts) ,
+        accentColor: getAccentColor(finalCat, isCritical),
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.source)}&background=${bg}&color=fff&rounded=true&font-size=0.4&bold=true`,
         handle: `@${item.source.replace(/\s+/g, '')}`,
         isOfficial: true,

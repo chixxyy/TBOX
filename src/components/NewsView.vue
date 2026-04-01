@@ -32,13 +32,9 @@ const totalFetched = computed(() => newsItems.value.length)
 // 分類選單配置
 const filterTabs = [
   { label: '全部', tag: '' },
+  { label: '運動', tag: 'sports' },
   { label: '加密', tag: 'crypto' },
   { label: '財經', tag: 'general' },
-  { label: 'Forex', tag: 'forex' },
-  { label: '監管', tag: 'regulation' },
-  { label: '市場', tag: 'markets' },
-  { label: 'DeFi', tag: 'defi' },
-  { label: 'ETF', tag: 'etf' },
 ]
 const severityFilters = ['Critical', 'High', 'Low']
 const activeFilter = ref({ label: '全部', tag: '' })
