@@ -146,6 +146,29 @@ const retryAnalysis = () => {
             </div>
           </div>
 
+          <!-- Login Required State -->
+          <div v-else-if="!chatSession" class="h-full flex flex-col items-center justify-center space-y-6 text-center px-4">
+            <div class="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 relative">
+               <div class="absolute inset-0 bg-blue-400/10 animate-ping rounded-2xl opacity-20"></div>
+               <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <div class="space-y-2">
+              <h3 class="text-white font-black text-lg tracking-tight">AI 功能僅限會員使用</h3>
+              <p class="text-slate-400 text-xs leading-relaxed">
+                登入後即可解鎖由 Google Gemini 驅動的<br>
+                即時市場分析、情緒指數與投資建議。
+              </p>
+            </div>
+            <button 
+              @click="activeTab = '登入'; closeDrawer()" 
+              class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+            >
+              立刻登入啟用 AI
+            </button>
+          </div>
+
           <!-- Error State -->
           <div v-else-if="errorMsg" class="h-full flex flex-col items-center justify-center space-y-4 text-center">
             <div class="w-12 h-12 rounded-full bg-red-900/30 flex items-center justify-center border border-red-800/50">
