@@ -117,9 +117,10 @@ onUnmounted(() => {
       
       <!-- Animated Logo Section -->
       <div class="relative mb-6 md:mb-8 animate-focus-in select-none" style="animation-delay: 0.1s;">
-        <div class="relative group">
-          <svg class="w-24 h-24 md:w-32 md:h-32 drop-shadow-[0_0_25px_rgba(59,130,246,0.5)] transition-all duration-700"
-               :class="{ 'animate-logo-glitch': isReady, 'drop-shadow-[0_0_35px_rgba(16,185,129,0.4)]': isReady }"
+        <div class="relative group p-4"> <!-- Added padding to prevent filter clipping -->
+          <svg class="w-24 h-24 md:w-32 md:h-32 transition-all duration-700"
+               :class="{ 'animate-logo-glitch text-emerald-400': isReady, 'text-blue-500': !isReady }"
+               style="filter: drop-shadow(0 0 15px currentColor);"
                viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="entryBoxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
