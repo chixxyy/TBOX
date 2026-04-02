@@ -4,8 +4,6 @@
 
 ---
 
-## 🌟 核心進化功能
-
 ### 1. Gemini AI 智能速報 (AI Insights)
 
 - **深度情緒分析**：整合 Google Gemini Pro，針對美股、加密貨幣提供即時情緒指數 (Sentiment Score)。
