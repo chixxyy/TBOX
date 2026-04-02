@@ -12,10 +12,12 @@ import {
   marketPrices,
   addToPortfolio,
   removeFromPortfolio,
+  updatePortfolioItem,
   initialAssets,
   chatSession,
   goToLogin,
-  openAIDrawer
+  openAIDrawer,
+  showToast
 } from '../store'
 
 let rafId: number | null = null
@@ -246,6 +248,72 @@ const confirmDeleteSymbol = ref('')
 const triggerDelete = (id: string, symbol: string) => {
   confirmDeleteId.value = id
   confirmDeleteSymbol.value = symbol
+}
+
+// Position Adjustment Logic
+const showAdjustModal = ref(false)
+const adjustItem = ref<any>(null)
+const adjustType = ref<'add' | 'reduce'>('add')
+const adjustAmount = ref<number | null>(null)
+const adjustPrice = ref<number | null>(null)
+const isAdjusting = ref(false)
+
+const openAdjust = (item: any) => {
+  adjustItem.value = item
+  adjustAmount.value = null
+  adjustPrice.value = marketPrices.value[item.symbol]?.rawPrice || item.entryPrice
+  adjustType.value = 'add'
+  showAdjustModal.value = true
+}
+
+const projectedStats = computed(() => {
+  if (!adjustItem.value || !adjustAmount.value || !adjustPrice.value) return null
+  
+  const currentQty = Number(adjustItem.value.amount)
+  const currentAvg = Number(adjustItem.value.entryPrice)
+  const newQty = Number(adjustAmount.value)
+  const newPrice = Number(adjustPrice.value)
+  
+  if (adjustType.value === 'add') {
+    const totalQty = currentQty + newQty
+    const totalCost = (currentQty * currentAvg) + (newQty * newPrice)
+    const newAvg = totalCost / totalQty
+    return {
+      newAvg,
+      totalQty,
+      change: newAvg - currentAvg
+    }
+  } else {
+    const totalQty = Math.max(0, currentQty - newQty)
+    return {
+      newAvg: currentAvg, // Price stays same when reducing
+      totalQty,
+      change: 0
+    }
+  }
+})
+
+const handleAdjust = async () => {
+  if (!adjustItem.value || !adjustAmount.value || !adjustPrice.value) return
+  
+  isAdjusting.value = true
+  const stats = projectedStats.value
+  if (!stats) return
+
+  try {
+    if (stats.totalQty <= 0) {
+      await removeFromPortfolio(adjustItem.value.id)
+      showToast('持倉已移除', `${adjustItem.value.symbol} 已全數減倉`)
+    } else {
+      await updatePortfolioItem(adjustItem.value.id, stats.totalQty, stats.newAvg)
+      showToast('調整成功', `${adjustItem.value.symbol} 持倉已更新`)
+    }
+    showAdjustModal.value = false
+  } catch (e) {
+    showToast('錯誤', '調整失敗，請稍後再試')
+  } finally {
+    isAdjusting.value = false
+  }
 }
 
 const confirmDeleteAction = async () => {
@@ -499,13 +567,33 @@ const confirmDeleteAction = async () => {
                     </div>
                     <div class="text-right min-w-[100px]">
                       <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">估計盈虧</p>
-                      <p class="font-mono font-bold text-lg" :class="(marketPrices[item.symbol]?.rawPrice || item.entryPrice) >= item.entryPrice ? 'text-green-400' : 'text-red-400'">
-                        {{ (marketPrices[item.symbol]?.rawPrice || item.entryPrice) >= item.entryPrice ? '+' : '' }}${{ (((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toFixed(2) }}
+                      <p :class="((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? 'text-green-400' : 'text-red-400'" class="font-mono font-bold text-lg">
+                        {{ ((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? '+' : '' }}
+                        ${{ ((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 
+                             ? (((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toLocaleString('en-US', {maximumFractionDigits: 1})
+                             : Math.abs(((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toLocaleString('en-US', {maximumFractionDigits: 1}) 
+                        }}
                       </p>
                     </div>
-                    <button @click="triggerDelete(item.id, item.symbol)" class="text-slate-600 hover:text-red-400 transition-colors p-2 md:opacity-0 group-hover:opacity-100">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+
+                    <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        @click="openAdjust(item)"
+                        class="p-2 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-all"
+                        title="調整持倉"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        </svg>
+                      </button>
+                      <button 
+                        @click="triggerDelete(item.id, item.symbol)"
+                        class="p-2 text-red-400 hover:text-white hover:bg-red-600/20 rounded-lg transition-all"
+                        title="刪除"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -576,7 +664,7 @@ const confirmDeleteAction = async () => {
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                     </a>
                     <button 
-                      @click.prevent="openAIDrawer(item.title, item.currentPrice, 'crypto')"
+                      @click.prevent="openAIDrawer(item.symbol || item.title, item.currentPrice, 'crypto')"
                       class="flex items-center space-x-1 text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-900/40 text-blue-400 bg-blue-950/20 hover:bg-blue-600 hover:text-white transition-all shadow-sm shrink-0"
                       title="AI 智能速報"
                     >
@@ -639,6 +727,81 @@ const confirmDeleteAction = async () => {
         </div>
       </template>
     </div>
+
+    <!-- Position Adjustment Modal -->
+    <transition name="fade">
+      <div v-if="showAdjustModal" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/70 backdrop-blur-md">
+        <div class="bg-[#111827] border border-slate-700 rounded-2xl p-5 md:p-7 w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center">⚙️</span>
+              調整 {{ adjustItem?.symbol }} 持倉
+            </h3>
+            <button @click="showAdjustModal = false" class="text-slate-500 hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+
+          <!-- Type Switcher -->
+          <div class="flex p-1 bg-[#05080f] rounded-xl mb-6">
+            <button 
+              @click="adjustType = 'add'"
+              class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
+              :class="adjustType === 'add' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'"
+            >
+              加倉 ⊕
+            </button>
+            <button 
+              @click="adjustType = 'reduce'"
+              class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
+              :class="adjustType === 'reduce' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'"
+            >
+              減倉 ⊖
+            </button>
+          </div>
+
+          <div class="space-y-5">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-1.5">
+                <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">數量</span>
+                <input v-model="adjustAmount" type="number" step="any" placeholder="0.00" class="h-11 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-xl px-4 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
+              </div>
+              <div class="space-y-1.5">
+                <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">單價 (USD)</span>
+                <input v-model="adjustPrice" type="number" step="any" placeholder="0.00" class="h-11 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-xl px-4 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
+              </div>
+            </div>
+
+            <!-- Projection Card -->
+            <div v-if="projectedStats" class="bg-blue-600/5 border border-blue-500/20 rounded-xl p-4 space-y-3">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-400">當前持倉 / 成本</span>
+                <span class="text-white font-bold">{{ adjustItem.amount }} / ${{ adjustItem.entryPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-400">調整後總量</span>
+                <span class="text-white font-bold" :class="projectedStats.totalQty > adjustItem.amount ? 'text-blue-400' : 'text-red-400'">
+                  {{ Number(projectedStats.totalQty.toFixed(8)) }}
+                </span>
+              </div>
+              <div v-if="adjustType === 'add'" class="flex justify-between items-center text-xs pt-2 border-t border-white/5">
+                <span class="text-blue-400 font-bold">預計新平均成本 (DCA)</span>
+                <span class="text-blue-400 font-black text-sm">${{ projectedStats.newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}</span>
+              </div>
+            </div>
+
+            <button 
+              @click="handleAdjust"
+              :disabled="!adjustAmount || isAdjusting"
+              class="w-full py-3.5 rounded-xl text-sm font-black tracking-widest transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-xl"
+              :class="adjustType === 'add' ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20' : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/20'"
+            >
+              {{ isAdjusting ? '同步中...' : (adjustType === 'add' ? '確認加倉並重新計算成本' : '確認執行減倉') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
 
     <!-- Delete Confirmation Modal -->
     <transition name="fade">

@@ -208,6 +208,26 @@ export const addToPortfolio = async (symbol: string, amount: number, entryPrice:
   }
 }
 
+export const updatePortfolioItem = async (id: string, amount: number, entryPrice: number) => {
+  if (!chatSession.value) return
+  const { error } = await supabase
+    .from('portfolio')
+    .update({ 
+      amount: Number(amount), 
+      entry_price: Number(entryPrice) 
+    })
+    .eq('id', id)
+  
+  if (!error) {
+    const idx = portfolio.value.findIndex(item => item.id === id)
+    if (idx !== -1) {
+      portfolio.value[idx].amount = Number(amount)
+      portfolio.value[idx].entryPrice = Number(entryPrice)
+    }
+  }
+  return !error
+}
+
 export const removeFromPortfolio = async (id: string) => {
   if (!chatSession.value) return
   const { error } = await supabase.from('portfolio').delete().eq('id', id)
