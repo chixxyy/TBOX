@@ -215,8 +215,10 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
           <button @click="handleRefresh" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-[10px] md:text-xs font-black rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95 whitespace-nowrap ml-2">重新整理</button>
         </div>
 
-        <div v-else-if="chatMessages.length === 0" class="flex items-center justify-center h-full text-slate-500">
-          目前沒有任何留言，來做第一個發言的人吧！
+        <div v-else-if="chatMessages.length === 0" class="flex flex-col items-center justify-center h-full text-slate-500 space-y-2 p-8 text-center">
+          <div class="text-[10px] md:text-xs font-black tracking-[0.2em] uppercase opacity-40">[ Communication_Channel_Established ]</div>
+          <div class="text-xs md:text-sm text-slate-400 font-medium">當前頻道暫無通訊紀錄</div>
+          <div class="text-[9px] md:text-[10px] text-slate-600 tracking-tight">若訊息同步發生延遲，請點擊右上角「重置連線」重新校準。</div>
         </div>
         
         <div v-if="!chatLoading && visibleCount < chatMessages.length" class="text-center text-[10px] text-slate-500 font-mono py-2">

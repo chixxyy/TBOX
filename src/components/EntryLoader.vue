@@ -207,26 +207,37 @@ onUnmounted(() => {
 
       <!-- Preview Window -->
       <transition name="peek">
-        <div v-if="isPeeking" class="absolute bottom-full mb-4 w-[280px] md:w-[350px] bg-[#0c1220]/95 backdrop-blur-md border border-amber-500/40 rounded-xl p-4 shadow-[0_0_50px_rgba(245,158,11,0.15)] pointer-events-none">
-           <div class="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
-              <span class="text-amber-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div v-if="isPeeking" class="absolute bottom-full mb-6 w-[320px] md:w-[480px] bg-[#0c1220]/98 backdrop-blur-xl border border-amber-500/40 rounded-2xl p-5 shadow-[0_0_60px_rgba(245,158,11,0.2)] pointer-events-none">
+           <!-- Header -->
+           <div class="flex items-center gap-3 mb-5 pb-3 border-b border-white/10">
+              <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-              </span>
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">加密通訊內容已解碼</span>
+              </div>
+              <span class="text-xs md:text-sm font-black text-slate-300 uppercase tracking-widest italic">加密通訊內容已解碼</span>
            </div>
-           <div class="space-y-3">
-              <div v-for="upd in updates" :key="upd.type" class="flex gap-3 items-start animate-in fade-in slide-in-from-bottom-2 duration-500">
-                 <span class="text-[9px] font-mono text-amber-500/60 mt-0.5">[{{ upd.type }}]</span>
-                 <div>
-                    <h4 class="text-[11px] font-bold text-white">{{ upd.title }}</h4>
-                    <p class="text-[10px] text-slate-500 leading-tight mt-0.5">{{ upd.desc }}</p>
+
+           <!-- List of Updates -->
+           <div class="space-y-5">
+              <div v-for="upd in updates" :key="upd.type" class="flex gap-4 items-start animate-in fade-in slide-in-from-bottom-2 duration-500">
+                 <!-- Type Tag as a Badge -->
+                 <div class="shrink-0">
+                    <span class="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-[9px] md:text-[10px] text-amber-500 font-bold whitespace-nowrap">
+                      {{ upd.type }}
+                    </span>
+                 </div>
+                 
+                 <!-- Text Content -->
+                 <div class="flex-1 min-w-0">
+                    <h4 class="text-[13px] md:text-[15px] font-black text-white leading-none mb-1.5">{{ upd.title }}</h4>
+                    <p class="text-[11px] md:text-[12px] text-slate-400 leading-relaxed">{{ upd.desc }}</p>
                  </div>
               </div>
            </div>
-           <!-- Scanner Scan Line in Peek Modal -->
-           <div class="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/10 to-transparent h-1 w-full animate-scan-beam opacity-30"></div>
+
+           <!-- Interactive Scanner Effect in Modal -->
+           <div class="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent h-1 w-full animate-scan-beam opacity-40 pointer-events-none"></div>
         </div>
       </transition>
     </div>

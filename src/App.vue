@@ -208,7 +208,7 @@ onUnmounted(() => {
 
             <div v-show="currentNoticeTab === '平台'" class="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <p class="text-sm text-slate-300 leading-relaxed font-bold bg-blue-900/20 p-4 rounded-xl border border-blue-900/40 mb-4">
-                💡 <span class="text-blue-400">連線優化提示：</span><br/>
+                <span class="text-blue-400">連線優化提示：</span><br/>
                 如果發現資產報價沒有即時跳動或是討論區連線中斷，請點擊畫面右上方的「重置連線」按鈕或是直接重新整理網頁。
               </p>
               <div class="p-3 bg-slate-900/40 rounded-xl border border-slate-800">
