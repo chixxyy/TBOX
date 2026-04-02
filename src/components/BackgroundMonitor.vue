@@ -16,6 +16,7 @@ import { initDesktopNotifications, sendDesktopNotification } from '../utils/noti
 import { api } from '../api'
 
 const knownNewsIds = new Set<string>()
+const sessionStartTime = Date.now()
 
 const get24hTime = () => new Date().toLocaleTimeString('zh-TW', { 
   hour12: false, 
@@ -177,7 +178,8 @@ async function syncNews() {
     const newItems: any[] = []
     sorted.forEach(item => {
       if (!knownNewsIds.has(item.uid)) {
-        if (!isFirstLoad) {
+        // Only trigger a notification if not first load AND the item was published after this session started
+        if (!isFirstLoad && item.ts > sessionStartTime) {
           hasNew = true
           newItems.push(item)
         }
