@@ -219,10 +219,10 @@ export const updatePortfolioItem = async (id: string, amount: number, entryPrice
     .eq('id', id)
   
   if (!error) {
-    const idx = portfolio.value.findIndex(item => item.id === id)
-    if (idx !== -1) {
-      portfolio.value[idx].amount = Number(amount)
-      portfolio.value[idx].entryPrice = Number(entryPrice)
+    const item = portfolio.value.find(i => i.id === id)
+    if (item) {
+      item.amount = Number(amount)
+      item.entryPrice = Number(entryPrice)
     }
   }
   return !error
