@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import TopHeader from './components/TopHeader.vue'
+import EntryLoader from './components/EntryLoader.vue'
 import GlobalToast from './components/GlobalToast.vue'
 import TickerBanner from './components/TickerBanner.vue'
 import AssetList from './components/AssetList.vue'
@@ -25,7 +26,8 @@ import {
   showLogoutConfirm, 
   chatSignOut, 
   showPlatformNotice, 
-  dismissPlatformNotice
+  dismissPlatformNotice,
+  isEntryLoading
 } from './store'
 
 const currentNoticeTab = ref<'交易' | '平台' | '更新'>('平台')
@@ -80,6 +82,10 @@ onUnmounted(() => {
 
 <template>
   <div class="h-[100dvh] w-screen bg-[#070b14] text-slate-300 flex flex-col font-sans overflow-hidden">
+    <transition name="fade-overlay">
+      <EntryLoader v-if="isEntryLoading" />
+    </transition>
+
     <GlobalToast />
     <TopHeader />
     <TickerBanner />
@@ -142,7 +148,7 @@ onUnmounted(() => {
     <!-- Global Platform Notice Modal (Multi-tab) -->
     <transition name="fade">
       <div 
-        v-if="showPlatformNotice" 
+        v-if="showPlatformNotice && !isEntryLoading" 
         class="fixed inset-0 z-[10002] flex items-center justify-center px-4 bg-black/80 backdrop-blur-md"
       >
         <div class="bg-[#0a0f1c] border border-blue-500/30 rounded-2xl w-full max-w-md shadow-[0_0_50px_rgba(59,130,246,0.2)] relative overflow-hidden flex flex-col max-h-[90vh]">

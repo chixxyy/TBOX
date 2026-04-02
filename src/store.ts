@@ -8,6 +8,7 @@ import { supabase } from './supabase'
 export const activeSymbol = ref('BTCUSDT')
 export const activeInterval = ref('1d')
 export const activeTab = ref('交易')
+export const isEntryLoading = ref(true)
 
 export const setActiveSymbol = (symbol: string) => {
   activeSymbol.value = symbol

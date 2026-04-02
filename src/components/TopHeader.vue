@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile } from '../store'
+import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, isEntryLoading } from '../store'
 import { onClickOutside } from '@vueuse/core'
 
 const showUserMenu = ref(false)
@@ -44,7 +44,11 @@ const handleLogout = () => {
   <header class="h-12 md:h-14 bg-[#0a0f1c] border-b border-slate-800 flex items-center justify-between px-2 md:px-4 text-xs md:text-sm whitespace-nowrap sticky top-0 z-[100]">
     <div class="flex items-center h-full min-w-0 flex-1">
       <!-- Logo Section -->
-      <div class="flex items-center space-x-2 md:space-x-3 cursor-pointer group shrink-0 pr-2 md:pr-4">
+      <div 
+        @click="isEntryLoading = true"
+        class="flex items-center space-x-2 md:space-x-3 cursor-pointer group shrink-0 pr-2 md:pr-4 hover:brightness-125 transition-all"
+        title="重啟系統載入動效"
+      >
         <svg class="w-5 h-5 md:w-7 md:h-7 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-transform group-hover:scale-105" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="boxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
