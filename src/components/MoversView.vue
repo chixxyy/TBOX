@@ -88,7 +88,7 @@ function getDisplayNews(item: Mover): string {
   if (translatedIds.value.has(item.id) && trans) {
     return trans.news
   }
-  return item.news
+  return item.news || ''
 }
 
 const UI_LABELS = {
