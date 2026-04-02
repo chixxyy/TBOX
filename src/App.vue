@@ -185,31 +185,29 @@ onUnmounted(() => {
                   <span class="text-xs font-black uppercase tracking-wider">風險提示</span>
                 </div>
                 <p class="text-sm text-slate-300 leading-relaxed">
-                  市場波動劇烈，請務必注意倉位風險管理。本平台所有資產報價及分析僅供參考，不構成投資建議。
+                  市場波動劇烈，請務必注意倉位風險管理。本平台所有資產報價及分析僅供參考，不構成任何投資建議。交易前請確認您的資金安全。
                 </p>
               </div>
               <ul class="space-y-2 text-xs text-slate-400">
                 <li class="flex items-start gap-2">
                   <span class="text-blue-500 mt-0.5">●</span>
-                  <span class="text-white font-bold">AI 速報 (會員限定)：</span>
-                  <span>整合 AI，即時生成標的情緒分析與觀點。</span>
+                  <span>整合 AI 智能分析，即時生成市場趨勢與標的速報。</span>
                 </li>
                 <li class="flex items-start gap-2">
                   <span class="text-blue-500 mt-0.5">●</span>
-                  <span class="text-white font-bold">全資產覆蓋：</span>
-                  <span>支援加密貨幣、美股、即時運彩賠率監測。</span>
+                  <span>支援多市場即時報價與圖表，包含加密貨幣、股票與運動賽事。</span>
                 </li>
               </ul>
             </div>
 
             <div v-show="currentNoticeTab === '平台'" class="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <p class="text-sm text-slate-300 leading-relaxed font-bold bg-blue-900/20 p-4 rounded-xl border border-blue-900/40 mb-4">
-                💡 <span class="text-blue-400">會員專屬權限：</span><br/>
-                即日起 AI 市場分析功能僅限登入會員使用。註冊後即可解鎖一鍵分享觀點至討論區。
+                💡 <span class="text-blue-400">連線優化提示：</span><br/>
+                如果發現資產報價沒有即時跳動或是討論區連線中斷，請點擊畫面右上方的「重置連線」按鈕或是直接重新整理網頁。
               </p>
               <div class="p-3 bg-slate-900/40 rounded-xl border border-slate-800">
                 <p class="text-[11px] text-slate-500 italic">
-                  連線異常？請使用導航欄右側的「重置連線」按鈕以重啟即時通訊頻道。
+                  本平台採用邊緣計算優化，推薦使用 Chrome 核心瀏覽器以獲得最佳效能體驗。
                 </p>
               </div>
             </div>
@@ -217,9 +215,9 @@ onUnmounted(() => {
             <div v-show="currentNoticeTab === '更新'" class="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div class="space-y-4">
                 <div v-for="item in [
-                  { title: 'AI 觀點分享功能', desc: '現在可以直接將 AI 分析結果一鍵傳送至討論區參與交流。' },
-                  { title: '即時運彩看板', desc: '新增美金盤與分盤賠率監控，支援賽事倒數提醒。' },
-                  { title: '討論區優化', desc: '修復重複訊息與刪除功能，新增 AI 分析結果顯示。' }
+                  { title: '運動賽事看板', desc: '新增 MLB/NBA 實時賠率監測功能。' },
+                  { title: '全球運動快訊', desc: '串接 ESPN 實時新聞並支援 AI 翻譯。' },
+                  { title: '智慧分選系統', desc: '可依據勝率與時間快速篩選熱門賽事。' }
                 ]" :key="item.title" class="flex gap-3">
                   <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
