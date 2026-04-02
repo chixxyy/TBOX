@@ -156,7 +156,7 @@ onUnmounted(() => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span class="text-slate-400 text-[10px] md:text-xs font-bold font-mono tracking-widest leading-tight">ORDER BOOK UNAVAILABLE</span>
-        <span class="text-slate-500 text-[9px] md:text-[10px] mt-1 md:mt-2 leading-relaxed">Level 2 market depth data is restricted for traditional equities.</span>
+        <span class="text-slate-500 text-[9px] md:text-[10px] mt-1 md:mt-2 leading-relaxed">股票市場資料受到限制。</span>
       </div>
       <div class="flex items-center justify-between mb-1 md:mb-2 px-1 md:px-2">
         <h3 class="text-[10px] md:text-xs font-bold text-slate-300">訂單</h3>
