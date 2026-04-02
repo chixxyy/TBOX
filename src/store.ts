@@ -74,10 +74,57 @@ interface NewsItem {
 
 export const globalMovers = ref<Mover[]>([])
 export const globalNews = ref<NewsItem[]>([])
+
+// Single session management
+export const currentSessionId = ref(crypto.randomUUID())
+export const isKickedOut = ref(false)
+let sessionSyncChannel: any = null
+let lastSyncedUserId: string | null = null
+
+const initSessionSync = (userId: string) => {
+  // If already syncing for this user AND channel is healthy, skip
+  if (lastSyncedUserId === userId && sessionSyncChannel) return
+  
+  if (sessionSyncChannel) {
+    supabase.removeChannel(sessionSyncChannel)
+  }
+
+  lastSyncedUserId = userId
+  sessionSyncChannel = supabase.channel(`session-sync:${userId}`)
+    .on('broadcast', { event: 'NEW_SESSION' }, (payload: any) => {
+      const incomingId = payload.payload?.sessionId
+      if (incomingId && incomingId !== currentSessionId.value) {
+        console.warn('[SECURITY] New session detected on another device. Revoking current access.', {
+          incoming: incomingId,
+          local: currentSessionId.value
+        })
+        isKickedOut.value = true
+        chatSignOut(true)
+      }
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        sessionSyncChannel.send({
+          type: 'broadcast',
+          event: 'NEW_SESSION',
+          payload: { sessionId: currentSessionId.value }
+        })
+      }
+    })
+}
+
 export const isMoversLoading = ref(true)
 export const isNewsLoading = ref(true)
 export const lastMoversUpdate = ref('')
 export const lastNewsUpdate = ref('')
+
+// --- Global Share State ---
+export const showShareConfirm = ref(false)
+export const newsToShare = ref<any>(null)
+export const triggerShare = (news: any) => {
+  newsToShare.value = news
+  showShareConfirm.value = true
+}
 
 // --- Global Asset List (Source of Truth) ---
 export const initialAssets = [
@@ -377,9 +424,15 @@ interface ChatMessage {
   text: string
   timestamp: number
   newsShare?: {
-    headline: string
-    url: string
-    source: string
+    // For regular news
+    headline?: string
+    url?: string
+    source?: string
+    // For AI insights
+    type?: 'ai_insight'
+    symbol?: string
+    score?: number
+    summary?: string
   }
 }
 
@@ -478,6 +531,7 @@ export const initSupabaseChat = async () => {
     if (session?.user.id) {
       await fetchUserProfile(session.user.id)
       await fetchPortfolio(session.user.id)
+      initSessionSync(session.user.id)
     } else {
       userProfile.value = null
       portfolio.value = []
@@ -489,6 +543,7 @@ export const initSupabaseChat = async () => {
         await fetchUserProfile(session.user.id)
         await fetchPriceAlerts(session.user.id)
         await fetchPortfolio(session.user.id)
+        initSessionSync(session.user.id)
       } else {
         userProfile.value = null
         priceAlerts.value = []
@@ -691,12 +746,19 @@ export const resetPlatformNotice = () => {
   }
 }
 
-export const chatSignOut = async () => {
+export const chatSignOut = async (isInternal: boolean = false) => {
   try {
     // 1. Wait for Supabase to clear local storage and invalidate session
     await supabase.auth.signOut()
   } catch (err) {
     console.error('Supabase signOut error:', err)
+  }
+
+  // Clear sync channel if any
+  if (sessionSyncChannel) {
+    supabase.removeChannel(sessionSyncChannel)
+    sessionSyncChannel = null
+    lastSyncedUserId = null
   }
 
   // 2. Clear all local reactive states
@@ -709,7 +771,10 @@ export const chatSignOut = async () => {
   showLogoutConfirm.value = false
   skipPlatformNotice.value = false  // Reset platform notice preference on logout
   
-  showToast('登出成功', '您已安全退出 TradingBox', true)
+  if (!isInternal) {
+    isKickedOut.value = false
+    showToast('登出成功', '您已安全退出 TradingBox', true)
+  }
 }
 
 

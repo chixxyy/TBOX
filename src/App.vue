@@ -27,7 +27,9 @@ import {
   chatSignOut, 
   showPlatformNotice, 
   dismissPlatformNotice,
-  isEntryLoading
+  isEntryLoading,
+  isKickedOut,
+  currentSessionId
 } from './store'
 
 const currentNoticeTab = ref<'交易' | '平台' | '更新'>('平台')
@@ -282,7 +284,7 @@ onUnmounted(() => {
             <button @click="showLogoutConfirm = false" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors text-sm font-bold">
               取消
             </button>
-            <button @click="chatSignOut" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold">
+            <button @click="chatSignOut()" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold">
               確定登出
             </button>
           </div>
@@ -290,6 +292,51 @@ onUnmounted(() => {
       </div>
     </transition>
 
+    <!-- Security Alert Modal (Kicked Out) -->
+    <transition name="notice">
+      <div v-if="isKickedOut" class="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl">
+        <div class="w-full max-w-md bg-[#0a0f1c] border border-red-500/30 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(239,68,68,0.15)] relative">
+          <!-- Background Grid decoration -->
+          <div class="absolute inset-0 opacity-[0.05] pointer-events-none" style="background-image: radial-gradient(#ef4444 0.5px, transparent 0.5px); background-size: 10px 10px;"></div>
+          
+          <!-- Header Area -->
+          <div class="h-1.5 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 animate-pulse"></div>
+          
+          <div class="p-8 text-center relative z-10">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-red-950/30 border border-red-500/20 rounded-full mb-6 relative">
+              <div class="absolute inset-0 bg-red-500/10 rounded-full animate-ping opacity-20"></div>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-500 animate-in zoom-in duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+
+            <h2 class="text-xl md:text-2xl font-black text-white mb-2 tracking-tighter uppercase">
+              [ <span class="text-red-500 animate-pulse">SESSION_SECURITY_ALERT</span> ]
+            </h2>
+            <div class="text-[10px] text-red-500/60 font-mono mb-6 uppercase tracking-[0.2em]">連線授權狀態變更</div>
+            
+            <div class="space-y-4 mb-8">
+              <p class="text-sm text-slate-400 leading-relaxed max-w-[280px] mx-auto">
+                檢測到帳號在另一台裝置登入。系統當前已建立新的通訊通道，此終端的授權已自動撤銷。
+              </p>
+              
+              <div class="bg-red-500/5 border border-red-500/10 rounded-lg p-3 font-mono">
+                <div class="text-[10px] text-red-400/80 mb-1">SECURITY_LOG:</div>
+                <div class="text-[11px] text-slate-500">REF_ID: {{ currentSessionId.slice(0, 8) }} // SYNC_CONFLICT_1002</div>
+              </div>
+            </div>
+
+            <button 
+              @click="isKickedOut = false; isEntryLoading = true" 
+              class="w-full py-4 bg-red-600 hover:bg-red-500 active:scale-[0.98] text-white font-black rounded-xl transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.5)] text-sm tracking-widest uppercase"
+            >
+              重新建立連線
+            </button>
+            <p class="mt-4 text-[10px] text-slate-600 uppercase tracking-widest font-bold">TradingBox Encryption Protocol</p>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 

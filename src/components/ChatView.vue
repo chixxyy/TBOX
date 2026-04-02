@@ -3,7 +3,8 @@ import { ref, nextTick, computed, onMounted, watch } from 'vue'
 import { 
   chatMessages, addChatMessage, removeChatMessage, 
   globalNews, chatUser, chatSession, chatLoading, 
-  isAdmin, goToLogin, userProfile, isChatConnected 
+  isAdmin, goToLogin, userProfile, isChatConnected, 
+  openAIDrawer, triggerShare, newsToShare, showShareConfirm
 } from '../store'
 
 const currentUser = chatUser
@@ -22,13 +23,7 @@ const confirmDelete = async () => {
   }
 }
 
-// News Sharing Confirmation
-const showShareConfirm = ref(false)
-const newsToShare = ref<any>(null)
-const triggerShare = (news: any) => {
-  newsToShare.value = news
-  showShareConfirm.value = true
-}
+// News Sharing Execution
 const executeShare = async () => {
   if (!newsToShare.value) return
   await addChatMessage({
@@ -245,44 +240,80 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
             <div class="bg-[#0a0f1c] border border-slate-800/80 rounded-b-xl rounded-tr-xl px-3 py-2 text-xs md:text-sm text-slate-300 w-fit max-w-[92%] md:max-w-[80%] shadow hover:border-slate-700 transition-colors">
               <span class="leading-relaxed whitespace-pre-wrap" v-html="formatMessage(msg.text)"></span>
               
-              <!-- 只有一般新聞分享（有網址者）才會顯示下方的展開卡片 -->
-              <div v-if="msg.newsShare && msg.newsShare.url" class="mt-2 w-full overflow-hidden">
-                <!-- Collapsible News Card -->
-                <div class="bg-[#111827] border border-blue-900/40 rounded-lg overflow-hidden transition-all duration-300">
+              <!-- Shared Cards (News or AI Insight) -->
+              <div v-if="msg.newsShare" class="mt-2 w-full overflow-hidden relative z-10">
+                
+                <!-- Case 1: Standard News Item -->
+                <div v-if="msg.newsShare.url" class="bg-[#111827] border border-blue-900/40 rounded-lg overflow-hidden transition-all duration-300">
                   <div class="flex items-center justify-between p-2 md:p-3 bg-blue-900/5 group/news">
                     <div class="flex items-center gap-1.5 opacity-80 min-w-0">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" /></svg>
                       <span class="text-[9px] text-blue-400 font-bold uppercase tracking-wider truncate">{{ msg.newsShare.source }}</span>
                     </div>
                     <button @click="toggleExpand(msg.id)" class="text-[9px] text-slate-500 hover:text-white flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-slate-800">
-                      {{ expandedMessages.has(msg.id) ? '收起' : '展開新聞' }}
+                      {{ expandedMessages.has(msg.id) ? '收起資訊' : '顯示內容' }}
                       <svg :class="{'rotate-180': expandedMessages.has(msg.id)}" class="h-2.5 w-2.5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                     </button>
                   </div>
                   
-                  <transition name="chat-news-expand">
-                    <div v-if="expandedMessages.has(msg.id)" class="p-3 border-t border-slate-800/50 space-y-3">
-                      <h4 class="text-xs md:text-sm font-bold text-white leading-tight">
-                        {{ translatedNews[msg.id] || msg.newsShare.headline }}
-                      </h4>
-                      <div class="flex items-center gap-3">
+                  <div class="px-3 py-2 border-t border-slate-800/50 font-sans">
+                    <h4 class="text-xs md:text-sm font-bold text-slate-100 leading-tight">
+                      {{ translatedNews[msg.id] || msg.newsShare.headline }}
+                    </h4>
+                    
+                    <transition name="chat-news-expand">
+                      <div v-if="expandedMessages.has(msg.id)" class="mt-3 pt-2 border-t border-slate-800/30 flex items-center gap-3">
                         <button 
                           @click.stop="translateNews({ id: msg.id, headline: msg.newsShare.headline })"
                           class="flex items-center gap-1.5 text-[9px] font-bold py-1 px-2 rounded border transition-all"
                           :class="translatedNews[msg.id] ? 'text-blue-400 border-blue-900/40 bg-blue-950/20 shadow-sm' : 'border-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-800'"
                           :disabled="translatingIds.has(msg.id)"
                         >
-                          <svg v-if="translatingIds.has(msg.id)" class="animate-spin h-3 w-3 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 11.37 9.198 15.297 5 18" /></svg>
                           {{ translatedNews[msg.id] ? 'ORIGINAL' : '翻譯' }}
                         </button>
                         <a :href="msg.newsShare.url" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-[10px] font-bold text-blue-400 hover:text-blue-300 py-1 transition-colors">
-                          閱讀完整原文
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                          閱讀原文 ↗
                         </a>
                       </div>
+                    </transition>
+                  </div>
+                </div>
+
+                <!-- Case 2: AI Insight Summary Card -->
+                <div v-else-if="msg.newsShare.type === 'ai_insight' || (msg.newsShare.score !== undefined && msg.newsShare.summary)" 
+                     class="bg-slate-900/40 border border-indigo-900/30 rounded-xl overflow-hidden shadow-xl"
+                >
+                  <div class="px-3 py-2 bg-indigo-900/10 border-b border-indigo-900/20 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                       <div class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shadow-[0_0_8px_rgba(129,140,248,0.5)]"></div>
+                       <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">AI 智能分析報告</span>
                     </div>
-                  </transition>
+                    <span class="text-[9px] font-mono text-slate-500">{{ msg.newsShare.symbol || 'MARKET' }}</span>
+                  </div>
+                  
+                  <div class="p-3 flex items-start gap-4">
+                    <!-- Mini Score Box -->
+                    <div class="shrink-0 flex flex-col items-center justify-center p-2 rounded-lg bg-slate-950/50 border border-slate-700/50 min-w-[56px]">
+                       <div class="text-[8px] text-slate-500 font-bold uppercase mb-1">情緒指數</div>
+                       <div class="text-xl font-black tabular-nums" :class="(msg.newsShare.score || 0) >= 50 ? 'text-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.2)]' : 'text-rose-400 shadow-[0_0_12px_rgba(251,113,133,0.2)]'">
+                         {{ msg.newsShare.score || 0 }}
+                       </div>
+                    </div>
+                    
+                    <!-- AI Summary -->
+                    <div class="flex-1">
+                      <p class="text-[11px] md:text-xs text-slate-400 leading-relaxed line-clamp-3 italic">
+                        "{{ msg.newsShare.summary || 'AI 正在生成摘要中...' }}"
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <!-- Card Action: View Details (opens the drawer) -->
+                  <div class="px-3 py-1.5 bg-slate-950/30 flex justify-end">
+                    <button @click.stop="openAIDrawer(msg.newsShare.symbol || 'BTCUSDT', msg.newsShare.score || 50, 'crypto')" class="text-[9px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest">
+                      查看今日 AI 分析 ❯
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

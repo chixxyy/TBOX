@@ -62,7 +62,7 @@ const shareToChat = async () => {
 
     try {
         const emotionStr = (result.value.score || 0) >= 50 ? '看漲 🚀' : '看跌 📉'
-        const shareText = `🤖 【AI 速報】${activeAIAsset.value.symbol} (${emotionStr})\n▸ 情緒指數: ${result.value.score}/100\n▸ 總結: ${result.value.summary}`
+        const shareText = `🤖 【AI 速報】${activeAIAsset.value.symbol} (${emotionStr})\n▸ 核心情緒: ${result.value.score}/100\n▸ AI 診斷: 深度分析報告已解鎖，請參閱下方。`
         
         console.log('Calling addChatMessage with:', shareText)
         
@@ -71,6 +71,7 @@ const shareToChat = async () => {
             avatar: userProfile.value?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${chatSession.value.user.id}`,
             text: shareText,
             newsShare: {
+                type: 'ai_insight',
                 symbol: activeAIAsset.value.symbol,
                 score: result.value.score,
                 summary: result.value.summary
