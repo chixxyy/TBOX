@@ -131,7 +131,7 @@ onUnmounted(() => {
                 <stop offset="100%" stop-color="#3B82F6" />
               </linearGradient>
             </defs>
-            <rect x="2" y="2" width="28" height="28" rx="7" stroke="url(#entryBoxGrad)" stroke-width="2" fill="rgba(59, 130, 246, 0.05)"/>
+            <rect x="2" y="2" width="28" height="28" rx="7" stroke="url(#entryBoxGrad)" stroke-width="2" fill="none"/>
             <rect x="8" y="15" width="3" height="9" rx="1.5" fill="#3B82F6" fill-opacity="0.8"/>
             <rect x="14" y="8" width="4" height="16" rx="2" fill="url(#entryTGrad)"/>
             <rect x="10" y="8" width="12" height="4" rx="2" fill="url(#entryTGrad)"/>

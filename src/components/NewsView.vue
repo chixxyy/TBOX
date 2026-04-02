@@ -258,7 +258,7 @@ onUnmounted(() => {
                 <span class="text-white font-bold text-[13px] group-hover:text-sky-400 transition-colors uppercase tracking-tight">{{ item.source }}</span>
                 <span class="text-slate-600 text-[11px] font-mono">· {{ item.time }}</span>
                 <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase transition-all duration-300" :class="getTagColor(item)">{{ item.cat }}</span>
-                <button @click.stop="toggleTranslate(item)" class="flex items-center space-x-1.5 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-700/50 text-slate-500 hover:border-blue-500 hover:text-blue-400 transition-all bg-black/20">
+                <button @click.stop="toggleTranslate(item)" class="flex items-center shrink-0 whitespace-nowrap space-x-1.5 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-700/50 text-slate-500 hover:border-blue-500 hover:text-blue-400 transition-all bg-black/20">
                   <svg v-if="translatingIds.has(item.id)" class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
