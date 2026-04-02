@@ -16,6 +16,13 @@ const closeDrawer = () => {
 
 watch(showAIDrawer, async (newVal) => {
   if (newVal && activeAIAsset.value) {
+    // 1. 攔截：若非登入會員，直接不調用 API，保持在鎖定狀態
+    if (!chatSession.value) {
+      isLoading.value = false
+      result.value = null
+      return
+    }
+
     isLoading.value = true
     errorMsg.value = ''
     result.value = null
@@ -28,10 +35,9 @@ watch(showAIDrawer, async (newVal) => {
     }
   } else {
     // Reset state on close
-    setTimeout(() => {
-      result.value = null
-      errorMsg.value = ''
-    }, 300)
+    isLoading.value = false
+    errorMsg.value = ''
+    result.value = null
   }
 })
 
@@ -249,9 +255,9 @@ const retryAnalysis = () => {
 
         </div>
 
-        <!-- Footer Action -->
-        <div v-if="result" class="p-4 md:p-5 border-t border-slate-800 bg-[#0a0f1c] shrink-0">
-          <button @click="shareToChat" class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] active:scale-95 flex items-center justify-center gap-2">
+        <!-- Footer Action (Only for Members with results) -->
+        <div v-if="result && chatSession" class="p-4 md:p-5 border-t border-slate-800 bg-[#0a0f1c] shrink-0">
+          <button @click="shareToChat" class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs tracking-widest rounded-xl transition-all shadow-[0_4px_12px_rgba(59,130,246,0.3)] hover:shadow-[0_4px_20px_rgba(99,102,241,0.5)] active:scale-95 flex items-center justify-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>

@@ -279,11 +279,13 @@ function mapEventToMover(ev: any, index: number): Mover {
   return {
     id: index + 1,
     title: ev.title,
+    symbol: ev.slug?.toUpperCase() || ev.title.split(' ')[0].toUpperCase(), // Extract symbol from slug or title
     slug: ev.slug || '',
     image: ev.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(ev.title.substring(0,2))}&background=random`,
     detectedPrice: detected,
     peakPrice: peak,
     currentPrice: currentPrice,
+    marketType: 'crypto', // Default for background monitor events
     changePercent: Math.abs(changePercent),
     isUp: changePercent >= 0,
     detectedTimeStr: `${Math.floor(Math.random() * 20 + 2)}h ago`,

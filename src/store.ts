@@ -48,9 +48,11 @@ export interface Mover {
   peakTimeStr: string
   detectionDurationStr: string
   volumeStr: string
-  news: string
-  newsTimeStr: string
+  news?: string
+  newsTimeStr?: string
   sparklineData: number[]
+  symbol?: string
+  marketType?: 'crypto' | 'stock'
 }
 
 interface NewsItem {
@@ -490,28 +492,35 @@ const fetchUserProfile = async (userId: string) => {
 export const updateUserProfile = async (updates: Partial<UserProfile>) => {
   if (!chatSession.value?.user.id) return { error: 'Not logged in' }
   
+  // 1. Update the profile table first (Priority)
   const { error } = await supabase
     .from('profiles')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', chatSession.value.user.id)
   
-  // Also update all historical messages for this user (Global Sync)
-  if (!error) {
-    const msgUpdates: any = {}
-    if (updates.full_name) msgUpdates.user_name = updates.full_name
-    if (updates.avatar_url) msgUpdates.avatar = updates.avatar_url
-    
-    if (Object.keys(msgUpdates).length > 0) {
-      await supabase.from('messages')
-        .update(msgUpdates)
-        .eq('user_id', chatSession.value.user.id)
-    }
-  }
-  
-  if (!error && userProfile.value) {
+  if (error) return { error }
+
+  // 2. Local state update immediately
+  if (userProfile.value) {
     userProfile.value = { ...userProfile.value, ...updates }
   }
-  return { error }
+
+  // 3. Background: Update historical messages (Non-blocking)
+  const msgUpdates: any = {}
+  if (updates.full_name) msgUpdates.user_name = updates.full_name
+  if (updates.avatar_url) msgUpdates.avatar = updates.avatar_url
+  
+  if (Object.keys(msgUpdates).length > 0) {
+    // We launch this without await to prevent UI blocking
+    supabase.from('messages')
+      .update(msgUpdates)
+      .eq('user_id', chatSession.value.user.id)
+      .then(({ error: syncErr }) => {
+        if (syncErr) console.warn('Historical message sync deferred or failed:', syncErr.message)
+      })
+  }
+  
+  return { error: null }
 }
 
 let chatChannel: any = null
@@ -590,8 +599,26 @@ export const initSupabaseChat = async () => {
     .channel('public:messages')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
       const m = payload.new
-      // Avoid duplicate insert if we already have it locally
-      if (!chatMessages.value.find((msg: ChatMessage) => String(msg.id) === String(m.id))) {
+      // Enhanced Deduplication for Optimistic UI
+      const existingTempIndex = chatMessages.value.findIndex(msg => 
+        msg.id.startsWith('temp-') && 
+        msg.userId === m.user_id && 
+        msg.text === m.text
+      )
+
+      if (existingTempIndex !== -1) {
+        // Replace temp msg with real one
+        chatMessages.value[existingTempIndex] = {
+          id: String(m.id),
+          user: m.user_name,
+          userId: m.user_id,
+          avatar: m.avatar,
+          text: m.text,
+          timestamp: new Date(m.created_at).getTime(),
+          newsShare: m.news_share
+        }
+      } else if (!chatMessages.value.find((msg: ChatMessage) => String(msg.id) === String(m.id))) {
+        // Add as new if no match found
         chatMessages.value.push({
           id: String(m.id),
           user: m.user_name,
@@ -644,32 +671,49 @@ export const initSupabaseChat = async () => {
 export const addChatMessage = async (msg: { user: string; avatar: string; text: string; newsShare?: any }) => {
   console.log('Store: addChatMessage start', msg)
   if (!chatSession.value) {
-    console.warn('Store: no chat session found')
     showToast('發送失敗', '請先登入後再發言', false)
     return
   }
   
+  // 1. Optimistic Update: Create a temporary message
+  const tempId = 'temp-' + Date.now()
+  const tempMsg: ChatMessage = {
+    id: tempId,
+    user: msg.user,
+    userId: chatSession.value.user.id,
+    avatar: msg.avatar,
+    text: msg.text,
+    timestamp: Date.now(),
+    newsShare: msg.newsShare ? JSON.parse(JSON.stringify(msg.newsShare)) : undefined
+  }
+  
+  // Add to local state immediately
+  chatMessages.value.push(tempMsg)
+  if (chatMessages.value.length > 500) chatMessages.value.shift()
+  
   try {
-    // 確保 newsShare 是純 JS 物件而非 Vue Proxy，防止傳輸卡死
     const newsData = msg.newsShare ? JSON.parse(JSON.stringify(msg.newsShare)) : null
     
-    console.log('Store: Calling Supabase insert...')
-    const { error } = await supabase.from('messages').insert({
+    const { data: insertedData, error } = await supabase.from('messages').insert({
       user_id: chatSession.value.user.id,
       user_name: msg.user,
       avatar: msg.avatar,
       text: msg.text,
       news_share: newsData
-    })
+    }).select().single()
 
-    if (error) {
-      console.error('Store: Supabase insert error:', error.message)
-      showToast('發送失敗', '伺服器連線錯誤: ' + error.message, false)
-      throw error
-    }
-    console.log('Store: Supabase insert success')
+    if (error) throw error
+
+    // On success, we don't necessarily NEED to replace it here because 
+    // the Realtime subscription (postgres_changes) will catch the INSERT 
+    // and we'll handle avoid-duplicates there.
+    
+    console.log('Store: Supabase insert success', insertedData?.id)
   } catch (err: any) {
-    console.error('Store: addChatMessage execution error:', err)
+    console.error('Store: addChatMessage error:', err)
+    // Rollback: Remove the temporary message on failure
+    chatMessages.value = chatMessages.value.filter(m => m.id !== tempId)
+    showToast('發送失敗', '請確認網路連線: ' + (err.message || 'Unknown'), false)
     throw err
   }
 }
@@ -747,34 +791,56 @@ export const resetPlatformNotice = () => {
 }
 
 export const chatSignOut = async (isInternal: boolean = false) => {
-  try {
-    // 1. Wait for Supabase to clear local storage and invalidate session
-    await supabase.auth.signOut()
-  } catch (err) {
-    console.error('Supabase signOut error:', err)
+  console.log('[AUTH] Initiating sign-out sequence...', { isInternal })
+  
+  // 1. Immediately cut all realtime connections (Priority)
+  // This prevents the app from receiving data while session is being revoked
+  if (chatChannel) {
+    console.log('[AUTH] Removing chat channel...')
+    supabase.removeChannel(chatChannel)
+    chatChannel = null
   }
-
-  // Clear sync channel if any
+  
   if (sessionSyncChannel) {
+    console.log('[AUTH] Removing session sync channel...')
     supabase.removeChannel(sessionSyncChannel)
     sessionSyncChannel = null
     lastSyncedUserId = null
   }
 
-  // 2. Clear all local reactive states
+  // 2. Swiftly clear local state to prevent UI ghosting
   chatMessages.value = []
   chatSession.value = null
   userProfile.value = null
   priceAlerts.value = [] 
   portfolio.value = []
-  activeTab.value = '交易'
   showLogoutConfirm.value = false
-  skipPlatformNotice.value = false  // Reset platform notice preference on logout
+  skipPlatformNotice.value = false 
   
+  try {
+    // 3. Notify Supabase server to invalidate session
+    await supabase.auth.signOut()
+    console.log('[AUTH] Supabase signOut completed.')
+  } catch (err) {
+    console.error('[AUTH] Supabase signOut error:', err)
+  }
+
+  // 4. Final Cleanup & Redirect
   if (!isInternal) {
     isKickedOut.value = false
+    activeTab.value = '交易'
+    
+    // Show confirmation before redirect
     showToast('登出成功', '您已安全退出 TradingBox', true)
+    
+    // MANDATORY: Force a clean reload after a short delay to let the toast be seen
+    console.log('[AUTH] Performing clean reload in 1s...')
+    setTimeout(() => {
+      window.location.href = '/'
+    }, 1000)
+  } else {
+     // If internal (e.g. kicked out), we stay on page to show the alert modal
+     activeTab.value = '交易'
+     console.warn('[AUTH] Session revoked internally (Single Session Logic)')
   }
 }
-
-
