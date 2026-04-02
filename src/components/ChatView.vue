@@ -4,7 +4,8 @@ import {
   chatMessages, addChatMessage, removeChatMessage, 
   globalNews, chatUser, chatSession, chatLoading, 
   isAdmin, goToLogin, userProfile, isChatConnected, 
-  openAIDrawer, triggerShare, newsToShare, showShareConfirm
+  openAIDrawer, triggerShare, newsToShare, showShareConfirm,
+  showToast
 } from '../store'
 
 const currentUser = chatUser
@@ -58,22 +59,32 @@ const translatedNews = ref<Record<string, string>>({})
 const translatingIds = ref<Set<string>>(new Set())
 
 const translateNews = async (news: any) => {
-  if (translatedNews.value[news.id]) {
-    delete translatedNews.value[news.id]
+  const newsId = String(news.id)
+  if (translatedNews.value[newsId]) {
+    delete translatedNews.value[newsId]
     return
   }
 
-  translatingIds.value.add(news.id)
+  translatingIds.value.add(newsId)
   try {
     const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(news.headline)}&langpair=en|zh-TW`)
+    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`)
     const data = await response.json()
+    
     if (data.responseData?.translatedText) {
-      translatedNews.value[news.id] = data.responseData.translatedText
+      if (data.responseData.translatedText === news.headline) {
+        showToast('翻譯未生效', 'API 目前暫時無法回應（可能已達每日限額）。')
+      } else {
+        translatedNews.value[newsId] = data.responseData.translatedText
+      }
+    } else {
+      showToast('翻譯失敗', '翻譯伺服器回傳了無效的內容。')
     }
   } catch (error) {
-    console.error('Translation failed:', error)
+    console.error('[CHAT_TRANSLATE] Error:', error)
+    showToast('翻譯錯誤', '無法連接到翻譯伺服器，請檢查網路連線。')
   } finally {
-    translatingIds.value.delete(news.id)
+    translatingIds.value.delete(newsId)
   }
 }
 

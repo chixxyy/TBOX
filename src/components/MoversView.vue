@@ -48,9 +48,17 @@ async function translateText(text: string): Promise<string> {
   if (!text) return ''
   try {
     const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-TW`)
+    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`)
     const data = await res.json()
+    if (data.responseStatus !== 200) {
+      console.warn('[TRANSLATE] API returned non-200 status:', data)
+      return text
+    }
     return data.responseData?.translatedText || text
-  } catch { return text }
+  } catch (err) { 
+    console.error('[TRANSLATE] Error fetching translation:', err)
+    return text 
+  }
 }
 
 async function toggleTranslateMover(item: Mover) {
@@ -69,8 +77,17 @@ async function toggleTranslateMover(item: Mover) {
       translateText(item.title),
       item.news ? translateText(item.news) : Promise.resolve('')
     ])
+    
+    if (tTitle === item.title && (!item.news || tNews === item.news)) {
+      showToast('翻譯未生效', 'API 目前暫時無法回應，請稍後再試。')
+      return
+    }
+
     translationCache.set(item.id, { title: tTitle, news: tNews })
     translatedIds.value = new Set([...translatedIds.value, item.id])
+  } catch (err) {
+    console.error('[TRANSLATE] Toggle error:', err)
+    showToast('翻譯錯誤', '無法連接到翻譯伺服器')
   } finally {
     translatingIds.value.delete(item.id)
     translatingIds.value = new Set(translatingIds.value)

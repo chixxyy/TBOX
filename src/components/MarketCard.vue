@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { showToast } from '../store'
 
 const props = defineProps<{
   eventData: any,
@@ -14,9 +15,17 @@ async function translateText(text: string): Promise<string> {
   if (!text) return ''
   try {
     const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-TW`)
+    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`)
     const data = await res.json()
+    if (data.responseStatus !== 200) {
+      console.warn('[MARKET_TRANSLATE] API returned non-200 status:', data)
+      return text
+    }
     return data.responseData?.translatedText || text
-  } catch { return text }
+  } catch (err) { 
+    console.error('[MARKET_TRANSLATE] Error fetching translation:', err)
+    return text 
+  }
 }
 
 const toggleTranslate = async () => {
@@ -32,8 +41,16 @@ const toggleTranslate = async () => {
   
   isTranslating.value = true
   try {
-    translatedQuestion.value = await translateText(props.eventData.question)
+    const result = await translateText(props.eventData.question)
+    if (result === props.eventData.question) {
+      showToast('翻譯未生效', 'API 目前暫時無法回應（可能已達每日限額）。')
+      return
+    }
+    translatedQuestion.value = result
     showTranslated.value = true
+  } catch (error) {
+    console.error('[MARKET_TRANSLATE] Error:', error)
+    showToast('翻譯錯誤', '無法連接到翻譯伺服器')
   } finally {
     isTranslating.value = false
   }

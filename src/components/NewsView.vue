@@ -5,7 +5,8 @@ import {
   isNewsLoading as isLoading, 
   lastNewsUpdate as lastUpdateTime,
   setScrollProgress,
-  isChangingTab
+  isChangingTab,
+  showToast
 } from '../store'
 
 const openUrl = (url?: string) => {
@@ -83,9 +84,17 @@ async function translateText(text: string): Promise<string> {
   if (!text) return ''
   try {
     const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-TW`)
+    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`)
     const data = await res.json()
+    if (data.responseStatus !== 200) {
+      console.warn('[NEWS_TRANSLATE] API returned non-200 status:', data)
+      return text
+    }
     return data.responseData?.translatedText || text
-  } catch { return text }
+  } catch (err) { 
+    console.error('[NEWS_TRANSLATE] Error fetching translation:', err)
+    return text 
+  }
 }
 
 async function toggleTranslate(item: any) {
@@ -103,8 +112,17 @@ async function toggleTranslate(item: any) {
       translateText(item.headline),
       item.summary ? translateText(item.summary.slice(0, 400)) : Promise.resolve('')
     ])
+    
+    if (headline === item.headline && (!item.summary || summary === item.summary)) {
+      showToast('翻譯未生效', 'API 目前暫時無法回應（可能已達每日限額）。')
+      return
+    }
+
     translationCache.set(item.id, { headline, summary })
     translatedIds.value.add(item.id)
+  } catch (err) {
+    console.error('[NEWS_TRANSLATE] Toggle error:', err)
+    showToast('翻譯錯誤', '無法連接到翻譯伺服器')
   } finally {
     translatingIds.value.delete(item.id)
   }
