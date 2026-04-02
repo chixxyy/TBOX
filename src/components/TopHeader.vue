@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, isEntryLoading } from '../store'
+import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, isEntryLoading, resetPlatformNotice } from '../store'
 import { onClickOutside } from '@vueuse/core'
 
 const showUserMenu = ref(false)
@@ -45,7 +45,7 @@ const handleLogout = () => {
     <div class="flex items-center h-full min-w-0 flex-1">
       <!-- Logo Section -->
       <div 
-        @click="isEntryLoading = true"
+        @click="isEntryLoading = true; resetPlatformNotice()"
         class="flex items-center space-x-2 md:space-x-3 cursor-pointer group shrink-0 pr-2 md:pr-4 hover:brightness-125 transition-all"
         title="重啟系統載入動效"
       >

@@ -656,14 +656,8 @@ export const removeChatMessage = async (id: string) => {
 export const showLogoutConfirm = ref(false)
 
 // Platform Notice Logic
-export const showPlatformNotice = ref(false)
-// User preference: Skip the notice forever on this device
 const skipPlatformNotice = useStorage('tbox-skip-platform-notice', false)
-
-// Pre-show on load if not skipped forever
-if (!skipPlatformNotice.value) {
-  showPlatformNotice.value = true
-}
+export const showPlatformNotice = ref(!skipPlatformNotice.value)
 
 watch(chatSession, (newSession, oldSession) => {
   if (newSession && newSession.user && (!oldSession || !oldSession.user) && !skipPlatformNotice.value) {
@@ -671,9 +665,12 @@ watch(chatSession, (newSession, oldSession) => {
   }
 })
 
-export const dismissPlatformNotice = (forever: boolean = false) => {
+export const dismissPlatformNotice = (forever: any = false) => {
+  // Ensure we check for boolean true, as some event payloads might be truthy
+  const shouldSkipForever = forever === true
+  
   showPlatformNotice.value = false
-  if (forever) {
+  if (shouldSkipForever) {
     skipPlatformNotice.value = true
   }
   
@@ -685,6 +682,13 @@ export const dismissPlatformNotice = (forever: boolean = false) => {
     timestamp: Date.now(),
     isRead: false
   })
+}
+
+// Helper to reset the notice state (used when re-clicking logo)
+export const resetPlatformNotice = () => {
+  if (!skipPlatformNotice.value) {
+    showPlatformNotice.value = true
+  }
 }
 
 export const chatSignOut = async () => {

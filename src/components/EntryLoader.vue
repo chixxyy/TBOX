@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { isEntryLoading } from '../store'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { isEntryLoading, chatSession, goToLogin } from '../store'
 
 const progress = ref(0)
 const loadingText = ref('系統初始化中...')
 const terminalLines = ref<string[]>([])
 const isPeeking = ref(false)
 const isReady = ref(false)
+
+// Dynamic button text based on login status
+const entryType = computed(() => {
+  return chatSession.value ? 'ACCESS' : 'LOGIN'
+})
 
 const logs = [
   '正在建立安全加密隧道... 成功',
@@ -23,20 +28,23 @@ const updates = [
   { type: '優化', title: '邊緣計算優化', desc: '推薦使用 Chrome 核心瀏覽器以獲得極致的報價更新效能。' }
 ]
 
-const enterTerminal = () => {
+const enterTerminal = (forceNavigate: boolean = false) => {
+  if (forceNavigate && entryType.value === 'LOGIN') {
+    goToLogin()
+  }
   isEntryLoading.value = false
 }
 
 const handleKeyDown = () => {
-  if (isReady.value) enterTerminal()
+  if (isReady.value) enterTerminal(false)
 }
 
 const handleScreenClick = (e: MouseEvent | TouchEvent) => {
   // Only trigger if ready and NOT clicking the alert badge or its peek window
   if (isReady.value) {
     const target = e.target as HTMLElement
-    if (!target.closest('.cursor-help')) {
-        enterTerminal()
+    if (!target.closest('.cursor-help') && !target.closest('.group.relative.px-8.py-3')) {
+        enterTerminal(false)
     }
   }
 }
@@ -162,15 +170,17 @@ onUnmounted(() => {
                 <!-- Enter Button (Ready State) -->
                 <div v-else key="button" class="flex flex-col items-center animate-in zoom-in-95 fade-in duration-700">
                     <button 
-                        @click="enterTerminal"
+                        @click="enterTerminal(true)"
                         class="group relative px-8 py-3 bg-emerald-600/10 border border-emerald-500/50 rounded-xl overflow-hidden hover:bg-emerald-600/20 transition-all active:scale-95"
                     >
                         <div class="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-500/20 via-transparent to-teal-500/20 animate-logo-glitch"></div>
                         <span class="relative text-[10px] md:text-xs font-black text-emerald-400 tracking-[0.3em] uppercase italic group-hover:text-emerald-200 transition-colors">
-                            存取獲准
+                            {{ entryType === 'ACCESS' ? '存取獲准' : '前往登入' }}
                         </span>
                     </button>
-                    <p class="mt-3 text-[9px] text-emerald-900/60 tracking-[0.2em] animate-pulse uppercase font-bold">請按下鍵盤任意鍵進入</p>
+                    <p class="mt-3 text-[9px] text-emerald-900/60 tracking-[0.2em] animate-pulse uppercase font-bold">
+                        {{ entryType === 'ACCESS' ? '請按下鍵盤任意鍵進入' : '請登入以存取系統核心' }}
+                    </p>
                 </div>
             </transition>
 
