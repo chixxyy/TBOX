@@ -577,7 +577,7 @@ const confirmDeleteAction = async () => {
                     </div>
                   </div>
 
-                  <div class="flex items-center gap-8 md:gap-16">
+                  <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 md:gap-16 mt-3 md:mt-0 pt-3 md:pt-0 border-t border-white/5 md:border-t-0">
                     <div class="text-right">
                       <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">即時現價</p>
                       <p class="text-white font-mono font-bold">{{ marketPrices[item.symbol]?.price || '$' + item.entryPrice }}</p>
@@ -593,7 +593,7 @@ const confirmDeleteAction = async () => {
                       </p>
                     </div>
 
-                    <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div class="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button 
                         @click="openAdjust(item)"
                         class="p-2 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-all"
