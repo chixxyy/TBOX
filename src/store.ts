@@ -92,7 +92,11 @@ const initSessionSync = (userId: string) => {
   }
 
   lastSyncedUserId = userId
-  sessionSyncChannel = supabase.channel(`session-sync:${userId}`)
+  sessionSyncChannel = supabase.channel(`session-sync:${userId}`, {
+    config: {
+      broadcast: { self: false }
+    }
+  })
     .on('broadcast', { event: 'NEW_SESSION' }, (payload: any) => {
       const incomingId = payload.payload?.sessionId
       if (incomingId && incomingId !== currentSessionId.value) {
@@ -838,9 +842,14 @@ export const chatSignOut = async (isInternal: boolean = false) => {
   skipPlatformNotice.value = false 
   
   try {
-    // 3. Notify Supabase server to invalidate session
-    await supabase.auth.signOut()
-    console.log('[AUTH] Supabase signOut completed.')
+    // 3. Notify Supabase server to invalidate session (ONLY if intentional logout)
+    // If internal (e.g. kicked out), we don't call signOut to avoid mutual kick-out
+    if (!isInternal) {
+      await supabase.auth.signOut()
+      console.log('[AUTH] Supabase signOut completed.')
+    } else {
+      console.log('[AUTH] Internal sign-out, skipping Supabase signOut.')
+    }
   } catch (err) {
     console.error('[AUTH] Supabase signOut error:', err)
   }

@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { supabase } from '../supabase'
-import { showToast, handleLoginSuccess } from '../store'
+import { showToast, handleLoginSuccess, isKickedOut } from '../store'
 
 const isRegister = ref(false)
 const email = ref('')
@@ -36,6 +36,9 @@ const getErrorMessage = (err: any) => {
 }
 
 const handleAuth = async () => {
+  // Ensure we clear any previous session security alert before a new attempt
+  isKickedOut.value = false
+  
   if (!email.value || !password.value) {
     showToast('錯誤', '請填寫完整資訊')
     return
