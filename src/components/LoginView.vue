@@ -22,6 +22,19 @@ onMounted(() => {
   }
 })
 
+const getErrorMessage = (err: any) => {
+  const msg = err.message || ''
+  if (msg.includes('Invalid login credentials')) return '帳號或密碼錯誤，請重新輸入'
+  if (msg.includes('User already registered')) return '此電子信箱已被註冊，請直接登入'
+  if (msg.includes('Password should be at least 6 characters')) return '密碼長度至少需要 6 位字元'
+  if (msg.includes('Failed to fetch')) return '連線失敗，請檢查網路連線或嘗試關閉 VPN'
+  if (msg.includes('Too many requests')) return '請求過於頻繁，請稍後再試'
+  if (msg.includes('Unable to validate email address')) return '請輸入有效的電子信箱格式'
+  if (msg.includes('Email not confirmed')) return '電子信箱尚未驗證，請至信箱查收信件'
+  if (msg.includes('Database error')) return '資料庫存取錯誤，請稍後再試'
+  return msg || '驗證失敗，請檢查輸入資訊'
+}
+
 const handleAuth = async () => {
   if (!email.value || !password.value) {
     showToast('錯誤', '請填寫完整資訊')
@@ -73,7 +86,7 @@ const handleAuth = async () => {
       handleLoginSuccess()
     }
   } catch (err: any) {
-    showToast('驗證失敗', err.message || '請檢查輸入資訊')
+    showToast('驗證失敗', getErrorMessage(err))
   } finally {
     loading.value = false
   }
