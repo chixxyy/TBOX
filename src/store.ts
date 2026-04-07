@@ -162,6 +162,7 @@ export const initialAssets = [
   { symbol: 'DOGEUSDT', name: 'Dogecoin', type: 'crypto' },
   { symbol: 'USDCUSDT', name: 'USDC/USDT', type: 'crypto' },
   // Stock
+  { symbol: 'FGI', name: 'Fear & Greed Index', type: 'stock' },
   { symbol: '^VIX', name: 'Volatility Index', type: 'stock' },
   { symbol: 'VTI', name: 'Vanguard Total Stock', type: 'stock' },
   { symbol: 'VOO', name: 'Vanguard S&P 500', type: 'stock' },

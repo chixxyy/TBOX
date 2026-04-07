@@ -198,8 +198,7 @@ const filteredAssets = computed(() => {
     
   return {
     crypto: assets.filter(a => a.type === 'crypto'),
-    // VIX is an index and not directly tradable, so we exclude it from the portfolio selection
-    stock: assets.filter(a => a.type === 'stock').filter(a => a.symbol !== '^VIX')
+    stock: assets.filter(a => a.type === 'stock').filter(a => a.symbol !== '^VIX' && a.symbol !== 'FGI')
   }
 })
 
@@ -224,6 +223,10 @@ onUnmounted(() => window.removeEventListener('click', closeOnOutside))
 
 const handleAdd = async () => {
   if (!newSymbol.value || !newAmount.value || !newPrice.value) return
+  if (newSymbol.value === 'FGI' || newSymbol.value === '^VIX') {
+    showToast('禁止加入', '指標類數據無法納入持倉。')
+    return
+  }
   await addToPortfolio(newSymbol.value, newAmount.value, newPrice.value)
   newSymbol.value = ''
   newAmount.value = null
