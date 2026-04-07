@@ -20,7 +20,7 @@ export const setActiveInterval = (interval: string) => {
 
 // Helper to get formatted pair name, e.g. BTC/USDT
 export const formattedActiveSymbol = computed(() => {
-  return activeSymbol.value.replace('USDT', '/USDT')
+  return activeSymbol.value.replace('USDT', '/USDT').replace('^', '')
 })
 
 // --- AI Drawer State ---
@@ -86,7 +86,7 @@ let lastSyncedUserId: string | null = null
 const initSessionSync = (userId: string) => {
   // If already syncing for this user AND channel is healthy, skip
   if (lastSyncedUserId === userId && sessionSyncChannel) return
-  
+
   if (sessionSyncChannel) {
     supabase.removeChannel(sessionSyncChannel)
   }
@@ -135,17 +135,18 @@ export const triggerShare = (news: any) => {
 // --- Global Asset List (Source of Truth) ---
 export const initialAssets = [
   // Crypto
-  { symbol: 'BTCUSDT', name: 'Bitcoin', type: 'crypto'},
-  { symbol: 'ETHUSDT', name: 'Ethereum', type: 'crypto'},
-  { symbol: 'BNBUSDT', name: 'Binance Coin', type: 'crypto'},
-  { symbol: 'SOLUSDT', name: 'Solana', type: 'crypto'},
-  { symbol: 'ADAUSDT', name: 'Cardano', type: 'crypto'},
-  { symbol: 'XRPUSDT', name: 'Ripple', type: 'crypto'},
-  { symbol: 'DOTUSDT', name: 'Polkadot', type: 'crypto'},
-  { symbol: 'LINKUSDT', name: 'Chainlink', type: 'crypto'},
-  { symbol: 'DOGEUSDT', name: 'Dogecoin', type: 'crypto'},
-  { symbol: 'USDCUSDT', name: 'USDC/USDT', type: 'crypto'},
+  { symbol: 'BTCUSDT', name: 'Bitcoin', type: 'crypto' },
+  { symbol: 'ETHUSDT', name: 'Ethereum', type: 'crypto' },
+  { symbol: 'BNBUSDT', name: 'Binance Coin', type: 'crypto' },
+  { symbol: 'SOLUSDT', name: 'Solana', type: 'crypto' },
+  { symbol: 'ADAUSDT', name: 'Cardano', type: 'crypto' },
+  { symbol: 'XRPUSDT', name: 'Ripple', type: 'crypto' },
+  { symbol: 'DOTUSDT', name: 'Polkadot', type: 'crypto' },
+  { symbol: 'LINKUSDT', name: 'Chainlink', type: 'crypto' },
+  { symbol: 'DOGEUSDT', name: 'Dogecoin', type: 'crypto' },
+  { symbol: 'USDCUSDT', name: 'USDC/USDT', type: 'crypto' },
   // Stock
+  { symbol: '^VIX', name: 'Volatility Index', type: 'stock' },
   { symbol: 'NVDA', name: 'Nvidia', type: 'stock' },
   { symbol: 'AMD', name: 'AMD', type: 'stock' },
   { symbol: 'META', name: 'Meta', type: 'stock' },
@@ -182,7 +183,7 @@ const fetchPortfolio = async (userId: string) => {
     .from('portfolio')
     .select('*')
     .eq('user_id', userId)
-  
+
   if (!error && data) {
     portfolio.value = data.map((item: any) => ({
       id: item.id,
@@ -201,7 +202,7 @@ export const addToPortfolio = async (symbol: string, amount: number, entryPrice:
     amount,
     entry_price: entryPrice
   }).select().single()
-  
+
   if (!error && data) {
     portfolio.value.push({
       id: data.id,
@@ -216,12 +217,12 @@ export const updatePortfolioItem = async (id: string, amount: number, entryPrice
   if (!chatSession.value) return
   const { error } = await supabase
     .from('portfolio')
-    .update({ 
-      amount: Number(amount), 
-      entry_price: Number(entryPrice) 
+    .update({
+      amount: Number(amount),
+      entry_price: Number(entryPrice)
     })
     .eq('id', id)
-  
+
   if (!error) {
     const item = portfolio.value.find(i => i.id === id)
     if (item) {
@@ -247,20 +248,20 @@ const alertThresholds = useStorage<Record<string, number[]>>('tbox-portfolio-ale
 const checkPortfolioAlerts = () => {
   const alerts = alertThresholds.value
   if (!alerts) return
-  
+
   portfolio.value.forEach((item: PortfolioItem) => {
     const market = marketPrices.value[item.symbol]
     if (!market || market.rawPrice === 0) return
-    
+
     const change = (market.rawPrice / item.entryPrice - 1) * 100
     const absChange = Math.abs(change)
-    
+
     // Thresholds: 20%, 10%, 5%
     const thresholds = [20, 10, 5]
     if (!alerts[item.id]) {
       alerts[item.id] = []
     }
-    
+
     const currentItemAlerts = alerts[item.id]
     if (!currentItemAlerts) return
 
@@ -269,7 +270,7 @@ const checkPortfolioAlerts = () => {
         const type = change >= 0 ? '上漲' : '下跌'
         const isMajor = t === 20
         const titlePrefix = isMajor ? '🚨 [重大異動] ' : ''
-        
+
         showToast(
           `${titlePrefix}資產異動提醒: ${item.symbol}`,
           `持倉 ${item.symbol} 已${type} ${t}%！目前回報: ${change.toFixed(2)}%`
@@ -277,7 +278,7 @@ const checkPortfolioAlerts = () => {
         currentItemAlerts.push(t)
         // Trigger save to storage
         alertThresholds.value = { ...alerts }
-        break 
+        break
       }
     }
   })
@@ -315,7 +316,7 @@ export const addPriceAlert = async (symbol: string, targetPrice: number, conditi
     condition,
     triggered: false
   }).select().single()
-  
+
   if (!error && data) {
     priceAlerts.value.push({
       id: data.id,
@@ -332,12 +333,12 @@ const fetchPriceAlerts = async (userId: string) => {
     .from('price_alerts')
     .select('*')
     .eq('user_id', userId)
-  
+
   if (error) {
     console.error('Error fetching price alerts:', error)
     return
   }
-  
+
   if (alerts) {
     priceAlerts.value = alerts.map(a => ({
       id: a.id,
@@ -360,7 +361,7 @@ export const removePriceAlert = async (id: string) => {
 export const updatePriceAlertTriggered = async (id: string) => {
   if (!chatSession.value) return
   await supabase.from('price_alerts').update({ triggered: true }).eq('id', id)
-  
+
   // Update local state immediately
   const alert = priceAlerts.value.find((a: PriceAlert) => a.id === id)
   if (alert) alert.triggered = true
@@ -387,13 +388,13 @@ export const isNotificationsEnabled = useStorage('tbox-notifications-enabled', t
 
 export const showToast = (title: string, message: string, silent: boolean = false) => {
   const id = Date.now().toString() + Math.random().toString(36).substring(2, 7)
-  
+
   // Only show the popup and play sound if notifications are enabled
   if (isNotificationsEnabled.value) {
     toasts.value.push({ id, title, message })
     if (!silent) playNewsChime()
   }
-  
+
   // Always record in history
   notificationHistory.value.unshift({
     id,
@@ -402,7 +403,7 @@ export const showToast = (title: string, message: string, silent: boolean = fals
     timestamp: Date.now(),
     isRead: false
   })
-  
+
   if (notificationHistory.value.length > 50) {
     notificationHistory.value.pop()
   }
@@ -489,12 +490,12 @@ const fetchUserProfile = async (userId: string) => {
     .select('*')
     .eq('id', userId)
     .single()
-  
+
   if (error && error.code !== 'PGRST116') {
     console.error('Error fetching profile:', error)
     return
   }
-  
+
   if (data) {
     userProfile.value = data
   } else {
@@ -515,13 +516,13 @@ const fetchUserProfile = async (userId: string) => {
 
 export const updateUserProfile = async (updates: Partial<UserProfile>) => {
   if (!chatSession.value?.user.id) return { error: 'Not logged in' }
-  
+
   // 1. Update the profile table first (Priority)
   const { error } = await supabase
     .from('profiles')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', chatSession.value.user.id)
-  
+
   if (error) return { error }
 
   // 2. Local state update immediately
@@ -533,7 +534,7 @@ export const updateUserProfile = async (updates: Partial<UserProfile>) => {
   const msgUpdates: any = {}
   if (updates.full_name) msgUpdates.user_name = updates.full_name
   if (updates.avatar_url) msgUpdates.avatar = updates.avatar_url
-  
+
   if (Object.keys(msgUpdates).length > 0) {
     // We launch this without await to prevent UI blocking
     supabase.from('messages')
@@ -543,7 +544,7 @@ export const updateUserProfile = async (updates: Partial<UserProfile>) => {
         if (syncErr) console.warn('Historical message sync deferred or failed:', syncErr.message)
       })
   }
-  
+
   return { error: null }
 }
 
@@ -590,9 +591,9 @@ export const initSupabaseChat = async () => {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(100)
-      
+
     if (msgsError) throw msgsError
-    
+
     if (msgs) {
       chatMessages.value = [...msgs].reverse().map((m: any) => ({
         id: String(m.id),
@@ -624,9 +625,9 @@ export const initSupabaseChat = async () => {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
       const m = payload.new
       // Enhanced Deduplication for Optimistic UI
-      const existingTempIndex = chatMessages.value.findIndex(msg => 
-        msg.id.startsWith('temp-') && 
-        msg.userId === m.user_id && 
+      const existingTempIndex = chatMessages.value.findIndex(msg =>
+        msg.id.startsWith('temp-') &&
+        msg.userId === m.user_id &&
         msg.text === m.text
       )
 
@@ -664,7 +665,7 @@ export const initSupabaseChat = async () => {
         const m = payload.new
         const existing = chatMessages.value[idx]
         if (!existing) return
-        
+
         chatMessages.value[idx] = {
           id: String(m.id || existing.id),
           user: m.user_name || existing.user,
@@ -676,7 +677,7 @@ export const initSupabaseChat = async () => {
         }
       }
     })
-  
+
   chatChannel = channel
   channel.subscribe((status: string, err?: Error) => {
     if (err) {
@@ -698,7 +699,7 @@ export const addChatMessage = async (msg: { user: string; avatar: string; text: 
     showToast('發送失敗', '請先登入後再發言', false)
     return
   }
-  
+
   // 1. Optimistic Update: Create a temporary message
   const tempId = 'temp-' + Date.now()
   const tempMsg: ChatMessage = {
@@ -710,14 +711,14 @@ export const addChatMessage = async (msg: { user: string; avatar: string; text: 
     timestamp: Date.now(),
     newsShare: msg.newsShare ? JSON.parse(JSON.stringify(msg.newsShare)) : undefined
   }
-  
+
   // Add to local state immediately
   chatMessages.value.push(tempMsg)
   if (chatMessages.value.length > 500) chatMessages.value.shift()
-  
+
   try {
     const newsData = msg.newsShare ? JSON.parse(JSON.stringify(msg.newsShare)) : null
-    
+
     const { data: insertedData, error } = await supabase.from('messages').insert({
       user_id: chatSession.value.user.id,
       user_name: msg.user,
@@ -731,7 +732,7 @@ export const addChatMessage = async (msg: { user: string; avatar: string; text: 
     // On success, we don't necessarily NEED to replace it here because 
     // the Realtime subscription (postgres_changes) will catch the INSERT 
     // and we'll handle avoid-duplicates there.
-    
+
     console.log('Store: Supabase insert success', insertedData?.id)
   } catch (err: any) {
     console.error('Store: addChatMessage error:', err)
@@ -744,11 +745,11 @@ export const addChatMessage = async (msg: { user: string; avatar: string; text: 
 
 export const removeChatMessage = async (id: string) => {
   if (!chatSession.value) return
-  
+
   // Optimistic UI update
   const prevMessages = [...chatMessages.value]
   chatMessages.value = chatMessages.value.filter(m => String(m.id) !== String(id))
-  
+
   try {
     // Attempt to delete. Try both casting to number (most common PK) and string.
     const numericId = Number(id)
@@ -791,12 +792,12 @@ watch(chatSession, (newSession, oldSession) => {
 export const dismissPlatformNotice = (forever: any = false) => {
   // Ensure we check for boolean true, as some event payloads might be truthy
   const shouldSkipForever = forever === true
-  
+
   showPlatformNotice.value = false
   if (shouldSkipForever) {
     skipPlatformNotice.value = true
   }
-  
+
   // Also log into notification history
   notificationHistory.value.unshift({
     id: 'notice-' + Date.now(),
@@ -816,7 +817,7 @@ export const resetPlatformNotice = () => {
 
 export const chatSignOut = async (isInternal: boolean = false) => {
   console.log('[AUTH] Initiating sign-out sequence...', { isInternal })
-  
+
   // 1. Immediately cut all realtime connections (Priority)
   // This prevents the app from receiving data while session is being revoked
   if (chatChannel) {
@@ -824,7 +825,7 @@ export const chatSignOut = async (isInternal: boolean = false) => {
     supabase.removeChannel(chatChannel)
     chatChannel = null
   }
-  
+
   if (sessionSyncChannel) {
     console.log('[AUTH] Removing session sync channel...')
     supabase.removeChannel(sessionSyncChannel)
@@ -836,11 +837,11 @@ export const chatSignOut = async (isInternal: boolean = false) => {
   chatMessages.value = []
   chatSession.value = null
   userProfile.value = null
-  priceAlerts.value = [] 
+  priceAlerts.value = []
   portfolio.value = []
   showLogoutConfirm.value = false
-  skipPlatformNotice.value = false 
-  
+  skipPlatformNotice.value = false
+
   try {
     // 3. Notify Supabase server to invalidate session (ONLY if intentional logout)
     // If internal (e.g. kicked out), we don't call signOut to avoid mutual kick-out
@@ -858,18 +859,18 @@ export const chatSignOut = async (isInternal: boolean = false) => {
   if (!isInternal) {
     isKickedOut.value = false
     activeTab.value = '交易'
-    
+
     // Show confirmation before redirect
     showToast('登出成功', '您已安全退出 TradingBox', true)
-    
+
     // MANDATORY: Force a clean reload after a short delay to let the toast be seen
     console.log('[AUTH] Performing clean reload in 1s...')
     setTimeout(() => {
       window.location.href = '/'
     }, 1000)
   } else {
-     // If internal (e.g. kicked out), we stay on page to show the alert modal
-     activeTab.value = '交易'
-     console.warn('[AUTH] Session revoked internally (Single Session Logic)')
+    // If internal (e.g. kicked out), we stay on page to show the alert modal
+    activeTab.value = '交易'
+    console.warn('[AUTH] Session revoked internally (Single Session Logic)')
   }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useFetch } from '@vueuse/core'
 import { activeSymbol, setActiveSymbol, marketPrices, initialAssets, openAIDrawer } from '../store'
 
 interface Asset {
@@ -16,8 +17,8 @@ interface Asset {
 // Initial state with top pairs (Mapped from global store)
 const assets = ref<Asset[]>(initialAssets.map(a => ({
   ...a,
-  price: '...',
-  change: '...',
+  price: '---',
+  change: '0.00%',
   up: true,
   rawPrice: 0
 })) as Asset[])
@@ -29,7 +30,7 @@ const filters = ['全部', '加密貨幣', '股票']
 const filteredAssets = computed(() => {
   // Separate assets by type
   const cryptos = assets.value.filter(a => a.type === 'crypto')
-  const stocks = [...assets.value.filter(a => a.type === 'stock')].sort((a, b) => a.symbol.localeCompare(b.symbol))
+  const stocks = assets.value.filter(a => a.type === 'stock')
 
   let result: Asset[] = []
 
@@ -178,6 +179,43 @@ const connectFinnhub = () => {
 }
 
 let stockPollingTimer: any = null
+
+const fetchVixData = async () => {
+  try {
+    // We use range=5d because range=1d often returns chartPreviousClose equal to current price for VIX
+    const url = `/yfinance/v8/finance/chart/^VIX?interval=1d&range=5d`
+    const { data } = await useFetch(url).json()
+    const result = data.value?.chart?.result?.[0]
+    if (result && result.indicators?.quote?.[0]?.close) {
+      const meta = result.meta
+      // Filter out nulls/undefined to get valid historical closing prices
+      const prices = result.indicators.quote[0].close.filter((p: any) => p !== null && p !== undefined)
+      
+      if (prices.length >= 1) {
+        // Current price is either from meta or the last valid close in the array
+        const currentPrice = meta.regularMarketPrice || prices[prices.length - 1]
+        
+        // Settlement price (Yesterday's Close):
+        // If we have at least 2 prices, the one before the last is the previous session's close.
+        const prevClose = prices.length >= 2 ? prices[prices.length - 2] : (meta.chartPreviousClose || meta.previousClose || currentPrice)
+        
+        const change = prevClose && prevClose !== 0 ? ((currentPrice - prevClose) / prevClose) * 100 : 0
+        const safeChange = isNaN(change) || !isFinite(change) ? 0 : change
+        
+        return {
+          price: currentPrice,
+          change: `${safeChange > 0 ? '+' : ''}${safeChange.toFixed(2)}%`,
+          up: safeChange >= 0,
+          prevClose: prevClose
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch VIX from Yahoo:', e)
+  }
+  return null
+}
+
 const startStockPolling = () => {
   if (stockPollingTimer) return
   console.log('Stock updates switched to polling mode (30s interval)')
@@ -185,6 +223,22 @@ const startStockPolling = () => {
     const stockAssets = assets.value.filter(a => a.type === 'stock')
     for (const asset of stockAssets) {
       try {
+        if (asset.symbol === '^VIX') {
+          const vix = await fetchVixData()
+          if (vix) {
+            asset.rawPrice = vix.price
+            asset.price = formatPrice(vix.price.toString())
+            asset.change = vix.change
+            asset.up = vix.up
+            asset.prevClose = vix.prevClose
+            marketPrices.value[asset.symbol] = {
+              price: asset.price, change: asset.change,
+              up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
+            }
+          }
+          continue
+        }
+
         const quote = await api.getFinnhubQuote(asset.symbol)
         if (quote && quote.c) {
           asset.rawPrice = quote.c
@@ -209,6 +263,25 @@ onMounted(() => {
       const stockAssets = assets.value.filter(a => a.type === 'stock')
       await Promise.all(stockAssets.map(async (asset) => {
         try {
+          if (asset.symbol === '^VIX') {
+            const vix = await fetchVixData()
+            if (vix) {
+              asset.rawPrice = vix.price
+              asset.price = formatPrice(vix.price.toString())
+              asset.change = vix.change
+              asset.up = vix.up
+              asset.prevClose = vix.prevClose
+              marketPrices.value[asset.symbol] = {
+                price: asset.price,
+                change: asset.change,
+                up: asset.up,
+                rawPrice: asset.rawPrice,
+                prevClose: asset.prevClose
+              }
+            }
+            return
+          }
+
           const quote = await api.getFinnhubQuote(asset.symbol)
           if (quote && quote.c) {
             asset.rawPrice = quote.c
@@ -269,7 +342,7 @@ onUnmounted(() => {
   if (reconnectTimerFinnhub) clearTimeout(reconnectTimerFinnhub)
 })
 
-const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT')
+const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').replace('^', '')
 </script>
 
 <template>

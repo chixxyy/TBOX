@@ -94,6 +94,8 @@ async function toggleTranslateMover(item: Mover) {
   }
 }
 
+const formatSymbol = (symbol: string) => symbol.replace('USDT', '').replace('^', '')
+
 function getDisplayTitle(item: Mover): string {
   const trans = translationCache.get(item.id)
   if (translatedIds.value.has(item.id) && trans) {
@@ -509,7 +511,7 @@ const confirmDeleteAction = async () => {
                               <div class="flex items-center gap-3">
                                 <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=3b82f6&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
                                 <div class="text-left">
-                                  <div class="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{{ asset.symbol }}</div>
+                                  <div class="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{{ formatSymbol(asset.symbol) }}</div>
                                   <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
                                 </div>
                               </div>
@@ -532,7 +534,7 @@ const confirmDeleteAction = async () => {
                               <div class="flex items-center gap-3">
                                 <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=10b981&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
                                 <div class="text-left">
-                                  <div class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{{ asset.symbol }}</div>
+                                  <div class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{{ formatSymbol(asset.symbol) }}</div>
                                   <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
                                 </div>
                               </div>
@@ -570,7 +572,7 @@ const confirmDeleteAction = async () => {
                     </div>
                     <div>
                       <div class="flex items-center gap-2">
-                        <h4 class="text-white font-bold uppercase">{{ item.symbol }}</h4>
+                        <h4 class="text-white font-bold uppercase">{{ formatSymbol(item.symbol) }}</h4>
                         <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Qty: {{ item.amount }}</span>
                       </div>
                       <p class="text-[10px] text-slate-500 mt-1 font-mono">買入成本: ${{ item.entryPrice.toLocaleString() }}</p>
