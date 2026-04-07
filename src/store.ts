@@ -9,6 +9,8 @@ export const activeSymbol = ref('BTCUSDT')
 export const activeInterval = ref('1d')
 export const activeTab = ref('交易')
 export const isEntryLoading = ref(true)
+export const isForgotPassword = ref(false)
+export const activeSettingsTab = ref<'basic' | 'security'>('basic')
 
 export const setActiveSymbol = (symbol: string) => {
   activeSymbol.value = symbol
@@ -80,6 +82,7 @@ export const globalNews = ref<NewsItem[]>([])
 // Single session management
 export const currentSessionId = ref(crypto.randomUUID())
 export const isKickedOut = ref(false)
+const appStartTime = Date.now()
 let sessionSyncChannel: any = null
 let lastSyncedUserId: string | null = null
 
@@ -99,6 +102,9 @@ const initSessionSync = (userId: string) => {
   })
     .on('broadcast', { event: 'NEW_SESSION' }, (payload: any) => {
       const incomingId = payload.payload?.sessionId
+      // Don't kick out if we just started (possible race condition)
+      if (Date.now() - appStartTime < 2000) return
+
       if (incomingId && incomingId !== currentSessionId.value) {
         console.warn('[SECURITY] New session detected on another device. Revoking current access.', {
           incoming: incomingId,

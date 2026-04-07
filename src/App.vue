@@ -29,7 +29,9 @@ import {
   dismissPlatformNotice,
   isEntryLoading,
   isKickedOut,
-  currentSessionId
+  currentSessionId,
+  activeSettingsTab,
+  showToast
 } from './store'
 
 const currentNoticeTab = ref<'交易' | '平台' | '更新'>('平台')
@@ -75,6 +77,20 @@ onMounted(() => {
   window.addEventListener('resize', updateWindowWidth)
   // Run exactly once on app load
   initSupabaseChat()
+
+  // Detect Supabase Password Reset hash
+  if (window.location.hash.includes('type=recovery')) {
+    // If there's an error in the hash (e.g. expired link), don't redirect
+    if (window.location.hash.includes('error=')) {
+      showToast('驗證失敗', '郵件連結已過期或無效，請重新申請')
+      return
+    }
+    
+    isKickedOut.value = false // Crucial: Clear any stale conflict alerts
+    activeTab.value = '個人檔案'
+    activeSettingsTab.value = 'security'
+    showToast('認證成功', '請在此處更新您的新密碼')
+  }
 })
 
 onUnmounted(() => {
@@ -327,7 +343,7 @@ onUnmounted(() => {
             </div>
 
             <button 
-              @click="isKickedOut = false; isEntryLoading = true" 
+              @click="isKickedOut = false; isEntryLoading = true; initSupabaseChat()" 
               class="w-full py-4 bg-red-600 hover:bg-red-500 active:scale-[0.98] text-white font-black rounded-xl transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.5)] text-sm tracking-widest uppercase"
             >
               重新建立連線

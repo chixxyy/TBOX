@@ -2,11 +2,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { supabase } from '../supabase'
-import { showToast, handleLoginSuccess, isKickedOut } from '../store'
+import { 
+  showToast, 
+  handleLoginSuccess, 
+  isKickedOut,
+  isForgotPassword
+} from '../store'
 
 const isRegister = ref(false)
-const isForgotPassword = ref(false)
-const isResettingPassword = ref(false)
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -21,12 +24,6 @@ onMounted(() => {
   if (savedEmail) {
     email.value = savedEmail
     rememberMe.value = true
-  }
-
-  // Handle Supabase Password Reset redirect
-  if (window.location.hash.includes('type=recovery')) {
-    isResettingPassword.value = true
-    showToast('認證成功', '請設置您的新密碼')
   }
 })
 
@@ -98,29 +95,6 @@ const handleAuth = async () => {
     }
   } catch (err: any) {
     showToast('驗證失敗', getErrorMessage(err))
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleUpdatePassword = async () => {
-  if (!password.value || password.value !== confirmPassword.value) {
-    showToast('錯誤', '請確認兩次密碼輸入一致')
-    return
-  }
-
-  loading.value = true
-  try {
-    const { error } = await supabase.auth.updateUser({
-      password: password.value
-    })
-    if (error) throw error
-    showToast('修改成功', '您的新密碼已生效，請重新登入')
-    isResettingPassword.value = false
-    password.value = ''
-    confirmPassword.value = ''
-  } catch (err: any) {
-    showToast('修改失敗', getErrorMessage(err))
   } finally {
     loading.value = false
   }
@@ -258,7 +232,7 @@ const handleResetEmail = async () => {
             TBOX
           </h1>
           <p class="text-slate-400 text-xs font-medium tracking-wide">
-            {{ isResettingPassword ? '設置您的安全新密碼' : (isForgotPassword ? '我們會發送重設連結至您的信箱' : (isRegister ? '開啟您的全球交易視野' : '歡迎回到專業交易社群')) }}
+            {{ isForgotPassword ? '我們會發送重設連結至您的信箱' : (isRegister ? '開啟您的全球交易視野' : '歡迎回到專業交易社群') }}
           </p>
         </div>
 
@@ -268,38 +242,8 @@ const handleResetEmail = async () => {
           <div class="absolute -top-10 -right-10 w-24 h-24 bg-blue-500/10 blur-3xl group-hover:bg-blue-500/20 transition-colors"></div>
           
           <div class="space-y-4">
-            <!-- 1. Reset Password Flow (From Email Link) -->
-            <template v-if="isResettingPassword">
-              <div class="space-y-1.5 animate-slide-down">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">新密碼</label>
-                <input 
-                  v-model="password"
-                  type="password" 
-                  placeholder="請輸入新密碼"
-                  class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
-                />
-              </div>
-              <div class="space-y-1.5 animate-slide-down">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">確認新密碼</label>
-                <input 
-                  v-model="confirmPassword"
-                  type="password" 
-                  placeholder="請再次輸入新密碼"
-                  class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
-                />
-              </div>
-              <button 
-                @click="handleUpdatePassword"
-                :disabled="loading"
-                class="w-full mt-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold py-3.5 rounded-xl shadow-xl shadow-emerald-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                <svg v-if="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                更新密碼並登入
-              </button>
-            </template>
-
-            <!-- 2. Forgot Password Flow (Request Email) -->
-            <template v-else-if="isForgotPassword">
+            <!-- 1. Forgot Password Flow (Request Email) -->
+            <template v-if="isForgotPassword">
               <div class="space-y-1.5 animate-slide-down">
                 <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">電子信箱</label>
                 <input 
@@ -392,7 +336,7 @@ const handleResetEmail = async () => {
           </div>
 
           <div class="mt-6 pt-6 border-t border-slate-800/50 text-center">
-            <p v-if="!isForgotPassword && !isResettingPassword" class="text-slate-500 text-xs">
+            <p v-if="!isForgotPassword" class="text-slate-500 text-xs">
               {{ isRegister ? '已經有帳號了？' : '還沒有帳號嗎？' }}
               <button 
                 @click="isRegister = !isRegister"
@@ -408,15 +352,6 @@ const handleResetEmail = async () => {
                 class="text-blue-400 font-bold hover:text-blue-300 transition-colors ml-1"
               >
                 返回登入
-              </button>
-            </p>
-            <p v-else-if="isResettingPassword" class="text-slate-500 text-xs">
-              放棄修改？
-              <button 
-                @click="isResettingPassword = false"
-                class="text-blue-400 font-bold hover:text-blue-300 transition-colors ml-1"
-              >
-                返回主頁
               </button>
             </p>
           </div>
