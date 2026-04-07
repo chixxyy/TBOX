@@ -25,7 +25,7 @@ const resumeTimer = (id: string) => {
   const timerId = setTimeout(() => {
     removeToast(id)
     timers.delete(id)
-  }, 3000)
+  }, 1500)
   timers.set(id, timerId)
 }
 
