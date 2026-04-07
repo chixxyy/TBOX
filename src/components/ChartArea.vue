@@ -1,8 +1,29 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, shallowRef, watch, computed } from 'vue'
 import { createChart, ColorType, LineSeries, HistogramSeries } from 'lightweight-charts'
-import { activeSymbol, activeInterval, setActiveInterval, formattedActiveSymbol } from '../store'
+import { activeSymbol, activeInterval, setActiveInterval, formattedActiveSymbol, marketPrices } from '../store'
 import { useFetch } from '@vueuse/core'
+
+const sentimentInfo = computed(() => {
+  const sym = activeSymbol.value
+  const price = marketPrices.value[sym]?.rawPrice || 0
+  
+  if (sym === 'FGI') {
+    if (price <= 24) return { label: '極度恐懼', color: 'text-red-500 border-red-500/30 bg-red-500/10' }
+    if (price <= 44) return { label: '恐懼', color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
+    if (price <= 54) return { label: '中立', color: 'text-slate-400 border-slate-500/30 bg-slate-400/10' }
+    if (price <= 74) return { label: '貪婪', color: 'text-green-400 border-green-500/30 bg-green-400/10' }
+    return { label: '極度貪婪', color: 'text-emerald-400 border-emerald-500/30 bg-emerald-400/10' }
+  }
+  
+  if (sym === '^VIX') {
+    if (price >= 30) return { label: '極度恐慌', color: 'text-red-500 border-red-500/30 bg-red-500/10' }
+    if (price >= 20) return { label: '市場擔憂', color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
+    return { label: '情緒穩定', color: 'text-green-400 border-green-500/30 bg-green-400/10' }
+  }
+  
+  return null
+})
 
 const chartContainer = ref<HTMLElement | null>(null)
 const fullscreenContainer = ref<HTMLElement | null>(null)
@@ -286,6 +307,16 @@ onUnmounted(() => {
       <div class="flex items-center space-x-2 md:space-x-3">
         <h2 class="text-white font-bold text-base md:text-lg flex items-center tracking-wide font-mono">
           <span class="mr-2" :style="{ color: intervalColors[activeInterval], textShadow: `0 0 8px ${intervalColors[activeInterval]}80` }">{{ formattedActiveSymbol }}</span>
+          
+          <!-- Sentiment Badge -->
+          <span 
+            v-if="sentimentInfo"
+            class="text-[9px] md:text-[10px] px-2 py-0.5 rounded-full border font-bold mr-2 transition-all animate-fade-in"
+            :class="sentimentInfo.color"
+          >
+            {{ sentimentInfo.label }}
+          </span>
+
           <!-- Data Source Badge -->
           <span 
             class="text-[8px] md:text-[9px] px-1.5 py-0.5 rounded border tracking-wider opacity-80"
@@ -354,6 +385,14 @@ onUnmounted(() => {
         <div class="h-12 border-b border-slate-800 flex items-center justify-between px-4 shrink-0">
           <div class="flex items-center space-x-4">
             <h2 class="text-white font-bold text-lg" :style="{ color: intervalColors[activeInterval] }">{{ formattedActiveSymbol }}</h2>
+            <!-- Sentiment Badge (Fullscreen) -->
+            <span 
+              v-if="sentimentInfo"
+              class="text-[10px] px-2 py-0.5 rounded-full border font-bold animate-fade-in"
+              :class="sentimentInfo.color"
+            >
+              {{ sentimentInfo.label }}
+            </span>
             <div class="text-[10px] text-green-400 font-mono tracking-wider font-bold">LIVE <span class="text-slate-500 ml-1">{{ activeSymbol.endsWith('USDT') ? 'Binance Stream' : 'Yahoo Finance' }}</span></div>
           </div>
           <div class="flex items-center space-x-2">
@@ -380,7 +419,15 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 移除圖表左下或右下的 TradingView 圖標與連結 */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
 :deep(a[href*="tradingview.com"]) {
   display: none !important;
 }
