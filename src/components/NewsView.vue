@@ -272,9 +272,9 @@ onUnmounted(() => {
           </div>
 
           <div class="flex-1 min-w-0">
-              <div class="flex items-center space-x-2">
-                <span class="text-white font-bold text-[13px] group-hover:text-sky-400 transition-colors uppercase tracking-tight">{{ item.source }}</span>
-                <span class="text-slate-600 text-[11px] font-mono">· {{ item.time }}</span>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-white font-bold text-[13px] group-hover:text-sky-400 transition-colors uppercase tracking-tight whitespace-nowrap">{{ item.source }}</span>
+                <span class="text-slate-600 text-[11px] font-mono whitespace-nowrap">· {{ item.time }}</span>
                 <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase transition-all duration-300" :class="getTagColor(item)">{{ item.cat }}</span>
                 <button @click.stop="toggleTranslate(item)" class="flex items-center shrink-0 whitespace-nowrap space-x-1.5 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-700/50 text-slate-500 hover:border-blue-500 hover:text-blue-400 transition-all bg-black/20">
                   <svg v-if="translatingIds.has(item.id)" class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -284,7 +284,7 @@ onUnmounted(() => {
                   <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
                   </svg>
-                  <span>{{ translatedIds.has(item.id) ? 'ORIGINAL' : '翻譯' }}</span>
+                  <span>{{ translatedIds.has(item.id) ? '原文' : '翻譯' }}</span>
                 </button>
               </div>
 
