@@ -10,6 +10,7 @@ export const activeInterval = ref('1d')
 export const activeTab = ref('交易')
 export const isEntryLoading = ref(true)
 export const isForgotPassword = ref(false)
+export const isSecurityUpdating = ref(false)
 export const activeSettingsTab = ref<'basic' | 'security'>('basic')
 
 export const setActiveSymbol = (symbol: string) => {
@@ -82,11 +83,14 @@ export const globalNews = ref<NewsItem[]>([])
 // Single session management
 export const currentSessionId = ref(crypto.randomUUID())
 export const isKickedOut = ref(false)
-const appStartTime = Date.now()
+let lastAuthStartTime = Date.now() // 動態追蹤最後一次認證開始時間
 let sessionSyncChannel: any = null
 let lastSyncedUserId: string | null = null
 
 const initSessionSync = (userId: string) => {
+  // 每當初始化同步（通常發生在登入），重置寬限期
+  lastAuthStartTime = Date.now()
+
   // If already syncing for this user AND channel is healthy, skip
   if (lastSyncedUserId === userId && sessionSyncChannel) return
 
@@ -101,9 +105,15 @@ const initSessionSync = (userId: string) => {
     }
   })
     .on('broadcast', { event: 'NEW_SESSION' }, (payload: any) => {
+      // 核心修復：如果正在進行安全性變更，我們暫停「單一裝置登入」的衝突檢查
+      if (isSecurityUpdating.value) {
+        console.log('[SECURITY] Security update in progress, ignoring sync conflict.')
+        return
+      }
+
       const incomingId = payload.payload?.sessionId
-      // Don't kick out if we just started (possible race condition)
-      if (Date.now() - appStartTime < 2000) return
+      // 修復：改為使用最近一次認證時間 (lastAuthStartTime) 且放寬至 5 秒
+      if (Date.now() - lastAuthStartTime < 5000) return
 
       if (incomingId && incomingId !== currentSessionId.value) {
         console.warn('[SECURITY] New session detected on another device. Revoking current access.', {
@@ -577,12 +587,13 @@ export const initSupabaseChat = async () => {
       portfolio.value = []
     }
 
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    supabase.auth.onAuthStateChange((_event, session) => {
       chatSession.value = session
       if (session?.user.id) {
-        await fetchUserProfile(session.user.id)
-        await fetchPriceAlerts(session.user.id)
-        await fetchPortfolio(session.user.id)
+        // Run sync in background without blocking the auth promise resolution
+        fetchUserProfile(session.user.id)
+        fetchPriceAlerts(session.user.id)
+        fetchPortfolio(session.user.id)
         initSessionSync(session.user.id)
       } else {
         userProfile.value = null

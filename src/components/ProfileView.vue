@@ -6,7 +6,8 @@ import {
   showToast, 
   chatSession, 
   handleLoginSuccess,
-  activeSettingsTab
+  activeSettingsTab,
+  isSecurityUpdating
 } from '../store'
 
 const nickname = ref('')
@@ -123,12 +124,15 @@ const confirmUpdatePassword = async () => {
     if (passwordLoading.value) {
       passwordLoading.value = false
       showPasswordConfirm.value = false
-      showToast('通訊延遲', '伺服器響應慢於預期，請刷新確認或稍後再試')
+      showToast('通訊延遲', '伺服器響應慢於預期，請刷新確認新密碼')
     }
     updateTimeout.value = null
   }, 15000)
 
   try {
+    // 啟動安全更新旗標，防止 session-sync 誤殺
+    isSecurityUpdating.value = true
+    
     console.log('[AUTH] 發送密碼更新請求...')
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value
@@ -165,6 +169,7 @@ const confirmUpdatePassword = async () => {
     showPasswordConfirm.value = false
   } finally {
     passwordLoading.value = false
+    isSecurityUpdating.value = false // 恢復安全監控
   }
 }
 </script>
