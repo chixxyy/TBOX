@@ -21,6 +21,13 @@ const sentimentInfo = computed(() => {
     if (price >= 20) return { label: '市場擔憂', color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
     return { label: '情緒穩定', color: 'text-green-400 border-green-500/30 bg-green-400/10' }
   }
+
+  if (sym === 'BDI') {
+    if (price >= 3000) return { label: '通膨預警', color: 'text-red-500 border-red-500/30 bg-red-500/10' }
+    if (price >= 2000) return { label: '景氣繁榮', color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
+    if (price >= 1000) return { label: '經濟穩健', color: 'text-green-400 border-green-500/30 bg-green-400/10' }
+    return { label: '需求疲軟', color: 'text-slate-400 border-slate-500/30 bg-slate-400/10' }
+  }
   
   return null
 })
@@ -102,7 +109,10 @@ function createChartInContainer(container: HTMLElement) {
 
 const loadHistoricalData = async (targetChart = chart.value) => {
   if (!targetChart) return
-  const symbol = activeSymbol.value
+  let symbol = activeSymbol.value
+  // Redirect BDI to BDRY for charting
+  if (symbol === 'BDI') symbol = 'BDRY'
+  
   const isCrypto = symbol.endsWith('USDT')
   const interval = activeInterval.value
   
@@ -153,17 +163,26 @@ const loadHistoricalData = async (targetChart = chart.value) => {
     const { data } = await useFetch(url).json()
 
     const result = data.value?.chart?.result?.[0]
+    const isBdi = activeSymbol.value === 'BDI'
     if (result && result.timestamp && result.indicators?.quote?.[0]) {
       const tArray = result.timestamp
       const q = result.indicators.quote[0]
       for (let i = 0; i < tArray.length; i++) {
         if (q.close[i] === null || q.open[i] === null) continue
+        
+        let close = q.close[i]
+        let open = q.open[i]
+        if (isBdi) {
+          close *= 255
+          open *= 255
+        }
+
         // Yahoo Finance returns time in seconds
-        priceData.push({ time: tArray[i], value: q.close[i] })
+        priceData.push({ time: tArray[i], value: close })
         volData.push({
           time: tArray[i],
           value: q.volume[i] || 0,
-          color: q.close[i] >= q.open[i] ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.4)',
+          color: close >= open ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.4)',
         })
       }
     }

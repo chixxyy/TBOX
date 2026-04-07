@@ -198,7 +198,8 @@ const filteredAssets = computed(() => {
     
   return {
     crypto: assets.filter(a => a.type === 'crypto'),
-    stock: assets.filter(a => a.type === 'stock').filter(a => a.symbol !== '^VIX' && a.symbol !== 'FGI')
+    stock: assets.filter(a => a.type === 'stock' && !a.isIndex),
+    index: assets.filter(a => a.isIndex)
   }
 })
 
@@ -224,7 +225,7 @@ onUnmounted(() => window.removeEventListener('click', closeOnOutside))
 const handleAdd = async () => {
   if (!newSymbol.value || !newAmount.value || !newPrice.value) return
   if (newSymbol.value === 'FGI' || newSymbol.value === '^VIX') {
-    showToast('禁止加入', '指標類數據無法納入持倉。')
+    showToast('禁止加入', '此指標僅供參考，無法納入個人持倉。')
     return
   }
   await addToPortfolio(newSymbol.value, newAmount.value, newPrice.value)
@@ -423,13 +424,13 @@ const confirmDeleteAction = async () => {
     </div>
 
     <!-- Filter Toolbar -->
-    <div class="min-h-11 md:h-12 border-b border-slate-800 flex items-center px-1.5 md:px-6 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
-      <div class="flex w-full items-center">
+    <div class="min-h-11 md:h-12 border-b border-slate-800 flex items-center px-1.5 md:px-6 shrink-0 bg-[#0a0f1c] w-full">
+      <div class="flex w-full items-center overflow-x-auto no-scrollbar flex-nowrap">
         <button 
           v-for="tab in filterTabs" 
           :key="tab.tag"
           @click="setTab(tab.tag)"
-          class="flex-1 h-11 md:h-12 px-1 md:px-4 border-b-2 transition-colors relative text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center"
+          class="flex-1 min-w-[max-content] h-11 md:h-12 px-3 md:px-4 border-b-2 transition-colors relative text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center shrink-0"
           :class="activeFilter === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
           <span v-if="tab.tag === 'portfolio'" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse md:mr-2 inline-block"></span>
@@ -525,6 +526,30 @@ const confirmDeleteAction = async () => {
                             </button>
                           </div>
                           
+                          <!-- Index Section -->
+                          <div v-if="filteredAssets.index.length > 0" class="mt-2">
+                            <div class="px-2 py-1 text-[9px] font-black text-purple-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Indices</div>
+                            <button 
+                              v-for="asset in filteredAssets.index" :key="asset.symbol"
+                              type="button"
+                              @click="selectSymbol(asset.symbol)"
+                              :disabled="asset.symbol === 'FGI' || asset.symbol === '^VIX' || asset.symbol === 'BDI'"
+                              class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-purple-600/10 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed"
+                              :class="{ 'bg-purple-600/20': newSymbol === asset.symbol }"
+                            >
+                              <div class="flex items-center gap-3">
+                                <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=a855f7&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
+                                <div class="text-left">
+                                  <div class="text-xs font-bold text-white group-hover:text-purple-400 transition-colors">{{ formatSymbol(asset.symbol) }}</div>
+                                  <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
+                                </div>
+                              </div>
+                              <span v-if="newSymbol === asset.symbol" class="text-purple-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                              </span>
+                            </button>
+                          </div>
+
                           <!-- Stock Section -->
                           <div v-if="filteredAssets.stock.length > 0" class="mt-2">
                             <div class="px-2 py-1 text-[9px] font-black text-emerald-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Stocks</div>
@@ -577,6 +602,7 @@ const confirmDeleteAction = async () => {
                     <div>
                       <div class="flex items-center gap-2">
                         <h4 class="text-white font-bold uppercase">{{ formatSymbol(item.symbol) }}</h4>
+                        <span v-if="initialAssets.find(a => a.symbol === item.symbol)?.isIndex" class="text-[9px] bg-purple-900/40 border border-purple-500/30 px-1.5 py-0.5 rounded text-purple-300 font-bold">指數</span>
                         <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Qty: {{ item.amount }}</span>
                       </div>
                       <p class="text-[10px] text-slate-500 mt-1 font-mono">買入成本: ${{ item.entryPrice.toLocaleString() }}</p>

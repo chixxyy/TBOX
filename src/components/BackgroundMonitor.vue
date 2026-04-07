@@ -436,9 +436,36 @@ async function fetchFearGreedIndex() {
   }
 }
 
+async function fetchBdiData() {
+  try {
+    // We use BDRY (Breakwave Dry Bulk Shipping ETF) as a proxy for the BDI calculation
+    const quote = await api.getFinnhubQuote('BDRY')
+    if (quote && quote.c) {
+      // Historical approximation for BDI scaling: BDRY price * 250
+      const bdiValue = Math.round(quote.c * 255)
+      const target = marketPrices.value['BDI']
+      
+      const updateData = {
+        price: bdiValue.toLocaleString(),
+        change: `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`,
+        up: quote.dp >= 0,
+        rawPrice: bdiValue
+      }
+      
+      if (!target) {
+        marketPrices.value['BDI'] = updateData
+      } else {
+        Object.assign(target, updateData)
+      }
+    }
+  } catch (e) {
+    console.warn('[BDI_SYNC] Failed to fetch BDI Data:', e)
+  }
+}
+
 async function syncPortfolioStockPrices() {
-  // Exclude non-tradable indicators like FGI or VIX from portfolio sync
-  const stocks = portfolio.value.filter(p => !p.symbol.endsWith('USDT') && p.symbol !== 'FGI' && p.symbol !== '^VIX')
+  // Exclude non-tradable indicators like FGI, VIX, or BDI from portfolio sync
+  const stocks = portfolio.value.filter(p => !p.symbol.endsWith('USDT') && p.symbol !== 'FGI' && p.symbol !== '^VIX' && p.symbol !== 'BDI')
   if (stocks.length === 0) return
 
   for (const s of stocks) {
@@ -470,10 +497,12 @@ onMounted(() => {
   connectAlertMonitor()
   syncPortfolioStockPrices() // Initial sync
   fetchFearGreedIndex() // Initial FGI sync
+  fetchBdiData() // Initial BDI sync
   newsTimer = setInterval(syncNews, 30000)
   moversTimer = setInterval(syncMovers, 10000)
   setInterval(syncPortfolioStockPrices, 60000) // Every minute
   setInterval(fetchFearGreedIndex, 300000) // Every 5 minutes
+  setInterval(fetchBdiData, 300000) // Every 5 minutes
 })
 
 onUnmounted(() => {

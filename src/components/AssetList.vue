@@ -12,6 +12,7 @@ interface Asset {
   rawPrice: number
   type: 'crypto' | 'stock'
   prevClose?: number
+  isIndex?: boolean
 }
 
 // Initial state with top pairs (Mapped from global store)
@@ -25,7 +26,7 @@ const assets = ref<Asset[]>(initialAssets.map(a => ({
 
 const filter = ref('')
 const activeFilterIndex = ref(0)
-const filters = ['全部', '加密貨幣', '股票']
+const filters = ['全部', '加密貨幣', '股票', '指數']
 
 const filteredAssets = computed(() => {
   // Separate assets by type
@@ -39,8 +40,12 @@ const filteredAssets = computed(() => {
     result = [...cryptos, ...stocks]
   } else if (activeFilterIndex.value === 1) {
     result = cryptos
+  } else if (activeFilterIndex.value === 2) {
+    // Show only regular stocks (exclude those marked as index)
+    result = stocks.filter(s => !s.isIndex)
   } else {
-    result = stocks
+    // Show only index assets
+    result = stocks.filter(s => s.isIndex)
   }
 
   // Apply search query
@@ -239,13 +244,26 @@ const startStockPolling = () => {
           continue
         }
 
-        const quote = await api.getFinnhubQuote(asset.symbol)
+        let targetSymbol = asset.symbol
+        let isBdi = asset.symbol === 'BDI'
+        if (isBdi) targetSymbol = 'BDRY'
+
+        const quote = await api.getFinnhubQuote(targetSymbol)
         if (quote && quote.c) {
-          asset.rawPrice = quote.c
-          asset.price = formatPrice(quote.c.toString())
-          asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
-          asset.up = quote.dp >= 0
-          asset.prevClose = quote.pc
+          if (isBdi) {
+            const scaledPrice = Math.round(quote.c * 255)
+            asset.rawPrice = scaledPrice
+            asset.price = scaledPrice.toLocaleString()
+            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+            asset.up = quote.dp >= 0
+            asset.prevClose = Math.round(quote.pc * 255)
+          } else {
+            asset.rawPrice = quote.c
+            asset.price = formatPrice(quote.c.toString())
+            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+            asset.up = quote.dp >= 0
+            asset.prevClose = quote.pc
+          }
           marketPrices.value[asset.symbol] = {
             price: asset.price, change: asset.change,
             up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
@@ -282,13 +300,26 @@ onMounted(() => {
             return
           }
 
-          const quote = await api.getFinnhubQuote(asset.symbol)
+          let targetSymbol = asset.symbol
+          let isBdi = asset.symbol === 'BDI'
+          if (isBdi) targetSymbol = 'BDRY'
+
+          const quote = await api.getFinnhubQuote(targetSymbol)
           if (quote && quote.c) {
-            asset.rawPrice = quote.c
-            asset.price = formatPrice(quote.c.toString())
-            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
-            asset.up = quote.dp >= 0
-            asset.prevClose = quote.pc
+            if (isBdi) {
+              const scaledPrice = Math.round(quote.c * 255)
+              asset.rawPrice = scaledPrice
+              asset.price = scaledPrice.toLocaleString()
+              asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+              asset.up = quote.dp >= 0
+              asset.prevClose = Math.round(quote.pc * 255)
+            } else {
+              asset.rawPrice = quote.c
+              asset.price = formatPrice(quote.c.toString())
+              asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+              asset.up = quote.dp >= 0
+              asset.prevClose = quote.pc
+            }
             marketPrices.value[asset.symbol] = {
               price: asset.price,
               change: asset.change,
@@ -362,13 +393,13 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').
         />
       </div>
 
-      <!-- Filters -->
-      <div class="grid grid-cols-3 gap-2 mt-3 w-full">
+      <!-- Filters (Horizontal Scroll on Mobile) -->
+      <div class="flex overflow-x-auto no-scrollbar gap-1.5 mt-3 w-full flex-nowrap pb-1">
         <button 
           v-for="(f, i) in filters" 
           :key="f"
           @click="activeFilterIndex = i"
-          class="py-1.5 rounded-md text-[10px] md:text-xs font-bold font-mono transition-all uppercase tracking-wider text-center"
+          class="flex-1 min-w-[64px] py-1.5 rounded-md text-[10px] md:text-xs font-bold font-mono transition-all uppercase tracking-wider text-center shrink-0"
           :class="activeFilterIndex === i ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.1)]' : 'bg-[#111827] text-slate-500 border border-slate-800 hover:text-slate-300 hover:bg-slate-800'"
         >
           {{ f }}
@@ -425,3 +456,27 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').
     </div>
   </div>
 </template>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-visible::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-visible::-webkit-scrollbar-track {
+  background: #05080f;
+}
+.scrollbar-visible::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+.scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+</style>
