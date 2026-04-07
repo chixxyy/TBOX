@@ -28,10 +28,22 @@ const sentimentInfo = computed(() => {
     if (price >= 1000) return { label: '經濟穩健', color: 'text-green-400 border-green-500/30 bg-green-400/10' }
     return { label: '需求疲軟', color: 'text-slate-400 border-slate-500/30 bg-slate-400/10' }
   }
+
+  // RSI-based sentiment for major ETFs (VOO, VTI)
+  if (sym === 'VOO' || sym === 'VTI') {
+    const rsi = currentRsi.value
+    if (rsi === null) return null
+    if (rsi >= 70) return { label: `超買過熱 (${rsi.toFixed(0)})`, color: 'text-red-500 border-red-500/30 bg-red-500/10' }
+    if (rsi <= 30) return { label: `超跌底線 (${rsi.toFixed(0)})`, color: 'text-green-400 border-green-500/30 bg-green-400/10' }
+    if (rsi >= 60) return { label: `動能轉強 (${rsi.toFixed(0)})`, color: 'text-emerald-400 border-emerald-500/30 bg-emerald-400/10' }
+    if (rsi <= 40) return { label: `動能偏弱 (${rsi.toFixed(0)})`, color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
+    return { label: `平穩運行 (${rsi.toFixed(0)})`, color: 'text-slate-400 border-slate-500/30 bg-slate-400/10' }
+  }
   
   return null
 })
 
+const currentRsi = ref<number | null>(null)
 const chartContainer = ref<HTMLElement | null>(null)
 const fullscreenContainer = ref<HTMLElement | null>(null)
 const chart = shallowRef<any>(null)
@@ -211,6 +223,28 @@ const loadHistoricalData = async (targetChart = chart.value) => {
   }
 
   targetChart.timeScale().fitContent()
+
+  // Calculate RSI for VOO/VTI
+  if ((activeSymbol.value === 'VOO' || activeSymbol.value === 'VTI') && priceData.length > 14) {
+    let gains = 0
+    let losses = 0
+    const period = 14
+    
+    // Simple RSI initial calculation
+    for (let i = priceData.length - period; i < priceData.length; i++) {
+      const diff = priceData[i].value - priceData[i - 1].value
+      if (diff > 0) gains += diff
+      else losses -= diff
+    }
+    
+    if (losses === 0) currentRsi.value = 100
+    else {
+      const rs = (gains / period) / (losses / period)
+      currentRsi.value = 100 - (100 / (1 + rs))
+    }
+  } else {
+    currentRsi.value = null
+  }
 }
 
 const connectWebSocket = () => {
