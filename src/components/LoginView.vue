@@ -5,6 +5,8 @@ import { supabase } from '../supabase'
 import { showToast, handleLoginSuccess, isKickedOut } from '../store'
 
 const isRegister = ref(false)
+const isForgotPassword = ref(false)
+const isResettingPassword = ref(false)
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -19,6 +21,12 @@ onMounted(() => {
   if (savedEmail) {
     email.value = savedEmail
     rememberMe.value = true
+  }
+
+  // Handle Supabase Password Reset redirect
+  if (window.location.hash.includes('type=recovery')) {
+    isResettingPassword.value = true
+    showToast('認證成功', '請設置您的新密碼')
   }
 })
 
@@ -90,6 +98,50 @@ const handleAuth = async () => {
     }
   } catch (err: any) {
     showToast('驗證失敗', getErrorMessage(err))
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleUpdatePassword = async () => {
+  if (!password.value || password.value !== confirmPassword.value) {
+    showToast('錯誤', '請確認兩次密碼輸入一致')
+    return
+  }
+
+  loading.value = true
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: password.value
+    })
+    if (error) throw error
+    showToast('修改成功', '您的新密碼已生效，請重新登入')
+    isResettingPassword.value = false
+    password.value = ''
+    confirmPassword.value = ''
+  } catch (err: any) {
+    showToast('修改失敗', getErrorMessage(err))
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleResetEmail = async () => {
+  if (!email.value) {
+    showToast('錯誤', '請填寫電子信箱')
+    return
+  }
+
+  loading.value = true
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
+      redirectTo: window.location.origin,
+    })
+    if (error) throw error
+    showToast('發送成功', '重設連結已寄出，請檢查您的信箱')
+    isForgotPassword.value = false
+  } catch (err: any) {
+    showToast('發送失敗', getErrorMessage(err))
   } finally {
     loading.value = false
   }
@@ -206,7 +258,7 @@ const handleAuth = async () => {
             TBOX
           </h1>
           <p class="text-slate-400 text-xs font-medium tracking-wide">
-            {{ isRegister ? '開啟您的全球交易視野' : '歡迎回到專業交易社群' }}
+            {{ isResettingPassword ? '設置您的安全新密碼' : (isForgotPassword ? '我們會發送重設連結至您的信箱' : (isRegister ? '開啟您的全球交易視野' : '歡迎回到專業交易社群')) }}
           </p>
         </div>
 
@@ -216,82 +268,155 @@ const handleAuth = async () => {
           <div class="absolute -top-10 -right-10 w-24 h-24 bg-blue-500/10 blur-3xl group-hover:bg-blue-500/20 transition-colors"></div>
           
           <div class="space-y-4">
-            <div v-if="isRegister" class="space-y-1.5 animate-slide-down">
-              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">暱稱</label>
-              <input 
-                v-model="nickname"
-                type="text" 
-                placeholder="如何稱呼您？"
-                @keyup.enter="handleAuth"
-                class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
-              />
-            </div>
+            <!-- 1. Reset Password Flow (From Email Link) -->
+            <template v-if="isResettingPassword">
+              <div class="space-y-1.5 animate-slide-down">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">新密碼</label>
+                <input 
+                  v-model="password"
+                  type="password" 
+                  placeholder="請輸入新密碼"
+                  class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+                />
+              </div>
+              <div class="space-y-1.5 animate-slide-down">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">確認新密碼</label>
+                <input 
+                  v-model="confirmPassword"
+                  type="password" 
+                  placeholder="請再次輸入新密碼"
+                  class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+                />
+              </div>
+              <button 
+                @click="handleUpdatePassword"
+                :disabled="loading"
+                class="w-full mt-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold py-3.5 rounded-xl shadow-xl shadow-emerald-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg v-if="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                更新密碼並登入
+              </button>
+            </template>
 
-            <div class="space-y-1.5">
-              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">電子信箱</label>
-              <input 
-                v-model="email"
-                type="email" 
-                placeholder="you@example.com"
-                @keyup.enter="handleAuth"
-                class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
-              />
-            </div>
+            <!-- 2. Forgot Password Flow (Request Email) -->
+            <template v-else-if="isForgotPassword">
+              <div class="space-y-1.5 animate-slide-down">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">電子信箱</label>
+                <input 
+                  v-model="email"
+                  type="email" 
+                  placeholder="you@example.com"
+                  class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+                />
+              </div>
+              <button 
+                @click="handleResetEmail"
+                :disabled="loading"
+                class="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3.5 rounded-xl shadow-xl shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg v-if="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                獲取重設連結
+              </button>
+            </template>
 
-            <div class="space-y-1.5">
-              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">密碼</label>
-              <input 
-                v-model="password"
-                type="password" 
-                placeholder="••••••••"
-                @keyup.enter="handleAuth"
-                class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
-              />
-            </div>
+            <!-- 3. Standard Login/Register Flow -->
+            <template v-else>
+              <div v-if="isRegister" class="space-y-1.5 animate-slide-down">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">暱稱</label>
+                <input 
+                  v-model="nickname"
+                  type="text" 
+                  placeholder="如何稱呼您？"
+                  @keyup.enter="handleAuth"
+                  class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+                />
+              </div>
 
-            <!-- Remember Me Toggle -->
-            <div v-if="!isRegister" class="flex items-center justify-between px-1 py-1">
-              <label class="flex items-center gap-2 cursor-pointer group">
-                <div class="relative flex items-center justify-center w-4 h-4 rounded border transition-all duration-200"
-                  :class="rememberMe ? 'bg-blue-600 border-blue-500' : 'bg-slate-950/50 border-slate-700 group-hover:border-slate-500'">
-                  <input type="checkbox" v-model="rememberMe" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                  <svg v-if="rememberMe" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                  </svg>
-                </div>
-                <span class="text-[11px] font-bold text-slate-400 group-hover:text-slate-200 transition-colors uppercase tracking-wider">記住帳號</span>
-              </label>
-            </div>
+              <div class="space-y-1.5">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">電子信箱</label>
+                <input 
+                  v-model="email"
+                  type="email" 
+                  placeholder="you@example.com"
+                  @keyup.enter="handleAuth"
+                  class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+                />
+              </div>
 
-            <div v-if="isRegister" class="space-y-1.5 animate-slide-down">
-              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">確認密碼</label>
-              <input 
-                v-model="confirmPassword"
-                type="password" 
-                placeholder="••••••••"
-                @keyup.enter="handleAuth"
-                class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
-              />
-            </div>
+              <div class="space-y-1.5">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">密碼</label>
+                <input 
+                  v-model="password"
+                  type="password" 
+                  placeholder="••••••••"
+                  @keyup.enter="handleAuth"
+                  class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+                />
+              </div>
 
-            <button 
-              @click="handleAuth"
-              :disabled="loading"
-              class="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3.5 rounded-xl shadow-xl shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <svg v-if="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-              {{ isRegister ? '立即開通帳號' : '登錄系統' }}
-            </button>
+              <!-- Remember Me & Forgot Password -->
+              <div v-if="!isRegister" class="flex items-center justify-between px-1 py-1">
+                <label class="flex items-center gap-2 cursor-pointer group">
+                  <div class="relative flex items-center justify-center w-4 h-4 rounded border transition-all duration-200"
+                    :class="rememberMe ? 'bg-blue-600 border-blue-500' : 'bg-slate-950/50 border-slate-700 group-hover:border-slate-500'">
+                    <input type="checkbox" v-model="rememberMe" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                    <svg v-if="rememberMe" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <span class="text-[11px] font-bold text-slate-400 group-hover:text-slate-200 transition-colors uppercase tracking-wider">記住帳號</span>
+                </label>
+                <button @click="isForgotPassword = true" class="text-[11px] font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-wider">忘記密碼？</button>
+              </div>
+
+              <div v-if="isRegister" class="space-y-1.5 animate-slide-down">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">確認密碼</label>
+                <input 
+                  v-model="confirmPassword"
+                  type="password" 
+                  placeholder="••••••••"
+                  @keyup.enter="handleAuth"
+                  class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all placeholder:text-slate-700 text-[16px]"
+                />
+              </div>
+
+              <button 
+                @click="handleAuth"
+                :disabled="loading"
+                class="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3.5 rounded-xl shadow-xl shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg v-if="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                {{ isRegister ? '立即開通帳號' : '登錄系統' }}
+              </button>
+            </template>
           </div>
 
           <div class="mt-6 pt-6 border-t border-slate-800/50 text-center">
-            <p class="text-slate-500 text-xs">
+            <p v-if="!isForgotPassword && !isResettingPassword" class="text-slate-500 text-xs">
               {{ isRegister ? '已經有帳號了？' : '還沒有帳號嗎？' }}
               <button 
                 @click="isRegister = !isRegister"
                 class="text-blue-400 font-bold hover:text-blue-300 transition-colors ml-1"
               >
                 {{ isRegister ? '立即登入' : '免費註冊帳號' }}
+              </button>
+            </p>
+            <p v-else-if="isForgotPassword" class="text-slate-500 text-xs">
+              想起密碼了？
+              <button 
+                @click="isForgotPassword = false"
+                class="text-blue-400 font-bold hover:text-blue-300 transition-colors ml-1"
+              >
+                返回登入
+              </button>
+            </p>
+            <p v-else-if="isResettingPassword" class="text-slate-500 text-xs">
+              放棄修改？
+              <button 
+                @click="isResettingPassword = false"
+                class="text-blue-400 font-bold hover:text-blue-300 transition-colors ml-1"
+              >
+                返回主頁
               </button>
             </p>
           </div>

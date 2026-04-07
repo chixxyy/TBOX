@@ -198,7 +198,8 @@ const filteredAssets = computed(() => {
     
   return {
     crypto: assets.filter(a => a.type === 'crypto'),
-    stock: assets.filter(a => a.type === 'stock')
+    // VIX is an index and not directly tradable, so we exclude it from the portfolio selection
+    stock: assets.filter(a => a.type === 'stock').filter(a => a.symbol !== '^VIX')
   }
 })
 
