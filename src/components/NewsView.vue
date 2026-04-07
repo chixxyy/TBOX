@@ -272,8 +272,8 @@ onUnmounted(() => {
           </div>
 
           <div class="flex-1 min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-white font-bold text-[13px] group-hover:text-sky-400 transition-colors uppercase tracking-tight whitespace-nowrap">{{ item.source }}</span>
+              <div class="flex flex-nowrap items-center space-x-2">
+                <span class="text-white font-bold text-[13px] group-hover:text-sky-400 transition-colors uppercase tracking-tight truncate min-w-0">{{ item.source }}</span>
                 <span class="text-slate-600 text-[11px] font-mono whitespace-nowrap">· {{ item.time }}</span>
                 <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase transition-all duration-300" :class="getTagColor(item)">{{ item.cat }}</span>
                 <button @click.stop="toggleTranslate(item)" class="flex items-center shrink-0 whitespace-nowrap space-x-1.5 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-700/50 text-slate-500 hover:border-blue-500 hover:text-blue-400 transition-all bg-black/20">
