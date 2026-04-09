@@ -148,16 +148,20 @@ const filteredTrackedPlayers = computed(() => {
 const groupedPlayers = computed(() => {
   const groups: Record<string, any[]> = {}
   filteredTrackedPlayers.value.forEach(player => {
-    if (!groups[player.team]) {
-      groups[player.team] = []
+    const team = player.team || 'Unknown'
+    if (!groups[team]) {
+      groups[team] = []
     }
-    groups[player.team].push(player)
+    const list = groups[team]
+    if (list) list.push(player)
   })
   // Sort teams alphabetically
-  return Object.keys(groups).sort().reduce((acc, team) => {
-    acc[team] = groups[team]
-    return acc
-  }, {} as Record<string, any[]>)
+  const sortedTeams = Object.keys(groups).sort()
+  const acc: Record<string, any[]> = {}
+  sortedTeams.forEach(team => {
+    acc[team] = groups[team] || []
+  })
+  return acc
 })
 
 const lastRefreshTime = ref(0)
