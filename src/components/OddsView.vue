@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { api } from '../api'
+import { showToast } from '../store'
 
 interface Outcome { name: string; price: number }
 interface Market { key: string; outcomes: Outcome[] }
@@ -133,10 +134,22 @@ const currentYear = new Date().getFullYear()
 const playerTypeFilter = ref<'all' | 'hitting' | 'pitching'>('all')
 
 const trackedPlayers = ref<PlayerStats[]>([
+  // --- Two-way Hero ---
   { id: '660271', name: 'Shohei Ohtani', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting', 'pitching'] },
+  
+  // --- Star Pitchers ---
   { id: '808967', name: 'Yoshinobu Yamamoto', team: 'LAD', teamId: '119', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
+  { id: '694973', name: 'Paul Skenes', team: 'PIT', teamId: '134', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
+  { id: '669373', name: 'Tarik Skubal', team: 'DET', teamId: '116', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
+  { id: '676979', name: 'Garrett Crochet', team: 'BOS', teamId: '111', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
+  { id: '657277', name: 'Logan Webb', team: 'SF', teamId: '137', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
+  
+  // --- Elite Hitters ---
   { id: '605141', name: 'Mookie Betts', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '518692', name: 'Freddie Freeman', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] }
+  { id: '518692', name: 'Freddie Freeman', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
+  { id: '592450', name: 'Aaron Judge', team: 'NYY', teamId: '147', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
+  { id: '665742', name: 'Juan Soto', team: 'NYM', teamId: '121', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
+  { id: '677951', name: 'Bobby Witt Jr.', team: 'KC', teamId: '118', loading: false, activeStatType: 'hitting', roles: ['hitting'] }
 ])
 
 const filteredTrackedPlayers = computed(() => {
@@ -144,7 +157,18 @@ const filteredTrackedPlayers = computed(() => {
   return trackedPlayers.value.filter(p => p.roles.includes(playerTypeFilter.value as 'hitting' | 'pitching'))
 })
 
-const fetchPlayerStats = async () => {
+const lastRefreshTime = ref(0)
+const fetchPlayerStats = async (isManual = false) => {
+  if (isManual) {
+    const now = Date.now()
+    const cooldown = 10 * 60 * 1000 // 10 mins
+    if (now - lastRefreshTime.value < cooldown) {
+      showToast('已是最新資料', '為避免系統負載過重，請稍後再試。')
+      return
+    }
+    lastRefreshTime.value = now
+  }
+
   for (const p of trackedPlayers.value) {
     p.loading = true
     p.error = ''
@@ -417,7 +441,7 @@ onUnmounted(() => {
                   <button @click="player.activeStatType = 'pitching'" :class="player.activeStatType === 'pitching' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">投球</button>
                 </div>
               </div>
-              <button @click="fetchPlayerStats" class="p-1.5 text-slate-500 hover:text-white rounded transition-colors self-start sm:self-auto" title="重新整理">
+              <button @click="fetchPlayerStats(true)" class="p-1.5 text-slate-500 hover:text-white rounded transition-colors self-start sm:self-auto" title="重新整理">
                 <svg v-if="player.loading" class="animate-spin w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
               </button>
