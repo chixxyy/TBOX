@@ -117,16 +117,20 @@ const handleLogout = () => {
               <h3 class="font-bold text-white tracking-widest text-sm">通知中心</h3>
               <button 
                 @click.stop="isNotificationsEnabled = !isNotificationsEnabled" 
-                class="p-1 rounded-full hover:bg-slate-700 transition-all group/mute" 
+                class="flex items-center gap-2 px-2 py-1 rounded-lg transition-all group/mute border" 
+                :class="isNotificationsEnabled ? 'bg-blue-600/10 border-blue-500/30 text-blue-400 hover:bg-blue-600/20' : 'bg-slate-700/30 border-slate-600 text-slate-500 hover:bg-slate-700/50 animate-pulse-subtle'"
                 :title="isNotificationsEnabled ? '點擊靜音通知與音效' : '點擊開啟通知與音效'"
               >
-                <svg v-if="isNotificationsEnabled" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400 group-hover/mute:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 group-hover/mute:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                </svg>
+                <div class="relative">
+                  <svg v-if="isNotificationsEnabled" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                  </svg>
+                </div>
+                <span class="text-[10px] font-black uppercase tracking-wider">{{ isNotificationsEnabled ? '通知已啟用' : '通知已關閉' }}</span>
               </button>
             </div>
             <button v-if="notificationHistory.length > 0" @click="clearNotifications" class="text-xs text-slate-400 hover:text-blue-400 transition-colors border border-slate-700 px-2 py-0.5 rounded bg-slate-900/50">清除全部</button>
@@ -235,5 +239,12 @@ const handleLogout = () => {
 }
 .neon-border-blue-sm {
   box-shadow: 0 0 5px rgba(56, 189, 248, 0.2) inset, 0 0 5px rgba(56, 189, 248, 0.2);
+}
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); border-color: rgba(71, 85, 105, 0.8); }
+}
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 </style>
