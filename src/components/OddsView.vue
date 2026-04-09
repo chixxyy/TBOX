@@ -144,6 +144,22 @@ const filteredTrackedPlayers = computed(() => {
   return trackedPlayers.value.filter(p => p.roles.includes(playerTypeFilter.value as 'hitting' | 'pitching'))
 })
 
+// Group players by team
+const groupedPlayers = computed(() => {
+  const groups: Record<string, any[]> = {}
+  filteredTrackedPlayers.value.forEach(player => {
+    if (!groups[player.team]) {
+      groups[player.team] = []
+    }
+    groups[player.team].push(player)
+  })
+  // Sort teams alphabetically
+  return Object.keys(groups).sort().reduce((acc, team) => {
+    acc[team] = groups[team]
+    return acc
+  }, {} as Record<string, any[]>)
+})
+
 const lastRefreshTime = ref(0)
 const fetchPlayerStats = async (isManual = false) => {
   if (isManual) {
@@ -390,7 +406,7 @@ onUnmounted(() => {
         <div class="mt-4 mb-3 flex items-center gap-2">
           <div class="flex items-center gap-2 shrink-0">
             <span class="text-lg">🌟</span>
-            <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">重點球員追蹤</h2>
+            <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">MLB 關注球員</h2>
           </div>
           
           <div class="flex-1 h-px bg-slate-800 ml-1 mr-2"></div>
@@ -409,73 +425,84 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-for="player in filteredTrackedPlayers" :key="player.id" class="flex flex-col bg-[#0a0f1c] border border-blue-900/30 rounded-xl overflow-hidden shadow-lg relative">
-            <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-50 pointer-events-none"></div>
-            
-            <div class="flex items-center p-4 border-b border-slate-800/80">
-              <img :src="`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${player.id}/headshot/67/current`" class="w-14 h-14 rounded-full bg-slate-800 border-2 border-slate-700 object-cover mr-4" />
-              <div class="flex-1 flex flex-col sm:flex-row sm:items-center justify-between mr-2">
-                <div>
-                  <h3 class="text-white font-bold">{{ player.name }}</h3>
-                  <span class="text-xs text-blue-400 font-black tracking-widest">{{ player.team }}</span>
-                </div>
-                <!-- Toggle Button -->
-                <div v-if="player.hitting && player.pitching" class="bg-black/40 p-0.5 rounded-lg flex items-center border border-slate-800 mt-2 sm:mt-0 w-max">
-                  <button @click="player.activeStatType = 'hitting'" :class="player.activeStatType === 'hitting' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">打擊</button>
-                  <button @click="player.activeStatType = 'pitching'" :class="player.activeStatType === 'pitching' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">投球</button>
-                </div>
-              </div>
-              <button @click="fetchPlayerStats(true)" class="p-1.5 text-slate-500 hover:text-white rounded transition-colors self-start sm:self-auto" title="重新整理">
-                <svg v-if="player.loading" class="animate-spin w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-              </button>
+        <div class="space-y-8">
+          <div v-for="(players, team) in groupedPlayers" :key="team" class="space-y-4">
+            <!-- Team Header -->
+            <div class="flex items-center gap-3">
+              <div class="bg-blue-600 px-3 py-1 rounded-md text-[10px] font-black text-white shadow-lg shadow-blue-500/20">{{ team }}</div>
+              <div class="flex-1 h-px bg-slate-800/50"></div>
+              <div class="text-[10px] text-slate-500 font-mono">{{ players.length }} 員</div>
             </div>
 
-            <div class="p-4 flex-1">
-              <div v-if="player.loading && !player.hitting && !player.pitching" class="flex justify-center items-center py-6">
-                <span class="text-slate-500 text-xs">載入中...</span>
-              </div>
-              
-              <div v-else-if="player.error" class="flex justify-center items-center py-6 text-red-400 text-xs text-center border border-red-500/20 bg-red-500/5 rounded">
-                {{ player.error }}
-              </div>
-
-              <div v-else class="space-y-4">
-                <!-- Hitting Stats -->
-                <div v-if="player.hitting && player.activeStatType === 'hitting'">
-                  <h4 class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1 flex justify-between">
-                    <span>打擊成績 (Hitting)</span>
-                    <span class="text-blue-400/80">{{ player.hitting.year }} 賽季</span>
-                  </h4>
-                  <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">AVG</p><p class="text-sm font-black text-white">{{ player.hitting.avg || '.000' }}</p></div>
-                    <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">HR</p><p class="text-sm font-black text-rose-400">{{ player.hitting.homeRuns || '0' }}</p></div>
-                    <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">RBI</p><p class="text-sm font-black text-emerald-400">{{ player.hitting.rbi || '0' }}</p></div>
-                    <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G (場次)</p><p class="text-xs font-black text-slate-300">{{ player.hitting.gamesPlayed || '0' }}</p></div>
-                    <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">AB (打數)</p><p class="text-xs font-black text-slate-300">{{ player.hitting.atBats || '0' }}</p></div>
-                    <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">OPS</p><p class="text-xs font-black text-sky-400">{{ player.hitting.ops || '.000' }}</p></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-for="player in players" :key="player.id" class="flex flex-col bg-[#0a0f1c] border border-blue-900/10 rounded-xl overflow-hidden shadow-lg relative hover:border-blue-500/30 transition-all group">
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-50 pointer-events-none"></div>
+                
+                <div class="flex items-center p-4 border-b border-slate-800/80">
+                  <img :src="`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${player.id}/headshot/67/current`" class="w-14 h-14 rounded-full bg-slate-800 border-2 border-slate-700 object-cover mr-4 group-hover:border-blue-500/50 transition-colors" />
+                  <div class="flex-1 flex flex-col sm:flex-row sm:items-center justify-between mr-2">
+                    <div>
+                      <h3 class="text-white font-bold">{{ player.name }}</h3>
+                      <span class="text-xs text-blue-400 font-black tracking-widest">{{ player.team }}</span>
+                    </div>
+                    <!-- Toggle Button -->
+                    <div v-if="player.hitting && player.pitching" class="bg-black/40 p-0.5 rounded-lg flex items-center border border-slate-800 mt-2 sm:mt-0 w-max">
+                      <button @click="player.activeStatType = 'hitting'" :class="player.activeStatType === 'hitting' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">打擊</button>
+                      <button @click="player.activeStatType = 'pitching'" :class="player.activeStatType === 'pitching' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">投球</button>
+                    </div>
                   </div>
+                  <button @click="fetchPlayerStats(true)" class="p-1.5 text-slate-500 hover:text-white rounded transition-colors self-start sm:self-auto" title="重新整理">
+                    <svg v-if="player.loading" class="animate-spin w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                  </button>
                 </div>
 
-                <!-- Pitching Stats -->
-                <div v-if="player.pitching && player.activeStatType === 'pitching'">
-                  <h4 class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1 flex justify-between">
-                    <span>投球成績 (Pitching)</span>
-                    <span class="text-indigo-400/80">{{ player.pitching.year }} 賽季</span>
-                  </h4>
-                  <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">ERA</p><p class="text-sm font-black text-rose-400">{{ player.pitching.era || '0.00' }}</p></div>
-                    <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">W-L</p><p class="text-sm font-black text-white">{{ player.pitching.wins || '0' }}-{{ player.pitching.losses || '0' }}</p></div>
-                    <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">SO</p><p class="text-sm font-black text-emerald-400">{{ player.pitching.strikeOuts || '0' }}</p></div>
-                    <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G (場次)</p><p class="text-xs font-black text-slate-300">{{ player.pitching.gamesPlayed || '0' }}</p></div>
-                    <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">IP (局數)</p><p class="text-xs font-black text-slate-300">{{ player.pitching.inningsPitched || '0.0' }}</p></div>
-                    <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">WHIP</p><p class="text-xs font-black text-sky-400">{{ player.pitching.whip || '0.00' }}</p></div>
+                <div class="p-4 flex-1">
+                  <div v-if="player.loading && !player.hitting && !player.pitching" class="flex justify-center items-center py-6">
+                    <span class="text-slate-500 text-xs text-center border border-slate-800/50 bg-slate-900/50 rounded w-full py-4 animate-pulse">載入數據中...</span>
                   </div>
-                </div>
+                  
+                  <div v-else-if="player.error" class="flex justify-center items-center py-6 text-red-400 text-xs text-center border border-red-500/20 bg-red-500/5 rounded">
+                    {{ player.error }}
+                  </div>
 
-                <div v-if="!player.hitting && !player.pitching" class="text-center text-slate-500 text-xs py-4">
-                  尚未有本賽季數據
+                  <div v-else class="space-y-4">
+                    <!-- Hitting Stats -->
+                    <div v-if="player.hitting && player.activeStatType === 'hitting'">
+                      <h4 class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1 flex justify-between">
+                        <span>打擊成績 (Hitting)</span>
+                        <span class="text-blue-400/80">{{ player.hitting.year }} 賽季</span>
+                      </h4>
+                      <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">AVG</p><p class="text-sm font-black text-white">{{ player.hitting.avg || '.000' }}</p></div>
+                        <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">HR</p><p class="text-sm font-black text-rose-400">{{ player.hitting.homeRuns || '0' }}</p></div>
+                        <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">RBI</p><p class="text-sm font-black text-emerald-400">{{ player.hitting.rbi || '0' }}</p></div>
+                        <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G (場次)</p><p class="text-xs font-black text-slate-300">{{ player.hitting.gamesPlayed || '0' }}</p></div>
+                        <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">AB (打數)</p><p class="text-xs font-black text-slate-300">{{ player.hitting.atBats || '0' }}</p></div>
+                        <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">OPS</p><p class="text-xs font-black text-sky-400">{{ player.hitting.ops || '.000' }}</p></div>
+                      </div>
+                    </div>
+
+                    <!-- Pitching Stats -->
+                    <div v-if="player.pitching && player.activeStatType === 'pitching'">
+                      <h4 class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1 flex justify-between">
+                        <span>投球成績 (Pitching)</span>
+                        <span class="text-indigo-400/80">{{ player.pitching.year }} 賽季</span>
+                      </h4>
+                      <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">ERA</p><p class="text-sm font-black text-rose-400">{{ player.pitching.era || '0.00' }}</p></div>
+                        <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">W-L</p><p class="text-sm font-black text-white">{{ player.pitching.wins || '0' }}-{{ player.pitching.losses || '0' }}</p></div>
+                        <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">SO</p><p class="text-sm font-black text-emerald-400">{{ player.pitching.strikeOuts || '0' }}</p></div>
+                        <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G (場次)</p><p class="text-xs font-black text-slate-300">{{ player.pitching.gamesPlayed || '0' }}</p></div>
+                        <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">IP (局數)</p><p class="text-xs font-black text-slate-300">{{ player.pitching.inningsPitched || '0.0' }}</p></div>
+                        <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">WHIP</p><p class="text-xs font-black text-sky-400">{{ player.pitching.whip || '0.00' }}</p></div>
+                      </div>
+                    </div>
+
+                    <div v-if="!player.hitting && !player.pitching" class="text-center text-slate-500 text-xs py-4 border border-slate-800/40 rounded-lg bg-slate-900/20">
+                      尚未有本賽季數據
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
