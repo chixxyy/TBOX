@@ -32,6 +32,12 @@
 - **雲端同步**：持倉數據與價格提醒全數雲端化，跨裝置即時存取。
 - **重大異動警報**：當標的波動達 ±20% 時，發出顯著警告。
 
+### 6. MLB 官方異動與星級監測 (Official & Star Monitoring)
+
+- **實時異動追蹤**：整合 MLB 官方 Transactions API，自動捕捉 IL 傷兵、球員交易及隊伍升降等核心數據。
+- **星級球員特權**：系統自動比對用戶追蹤清單，確保明星球員的消息以 `CRITICAL` 權限優先推送與置頂。
+- **流暢體驗優化**：大幅縮減初始載入時長至 3 秒內，並優化手機端捲動進度反饋，確保極致操作體感。
+
 ---
 
 ### 環境變數配置
@@ -41,7 +47,8 @@
 ```bash
 VITE_SUPABASE_URL=你的_SUPABASE_網址
 VITE_SUPABASE_ANON_KEY=你的_SUPABASE_金鑰
-VITE_GEMINI_API_KEY=你的_GEMINI_API_KEY
+VITE_GEMINI_API_KEY=你的_GEMINI_API_金鑰
+VITE_ODDS_API_KEY=你的_ODDS_API_金鑰
 ```
 
 ### 安裝與啟動
