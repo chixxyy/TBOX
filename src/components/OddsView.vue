@@ -112,8 +112,87 @@ const mlbLoading = ref(true)
 const nbaLoading = ref(true)
 const mlbError = ref('')
 const nbaError = ref('')
-const activeLeague = ref<'MLB' | 'NBA'>('MLB')
+const activeLeague = ref<'MLB' | 'NBA' | '球員'>('MLB')
 const lastUpdateStr = ref('')
+
+// ── Player Tracking Data ──
+interface PlayerStats {
+  id: string
+  name: string
+  team: string
+  teamId: string
+  hitting?: any
+  pitching?: any
+  loading: boolean
+  error?: string
+  activeStatType?: 'hitting' | 'pitching'
+  roles: ('hitting' | 'pitching')[]
+}
+
+const currentYear = new Date().getFullYear()
+const playerTypeFilter = ref<'all' | 'hitting' | 'pitching'>('all')
+
+const trackedPlayers = ref<PlayerStats[]>([
+  { id: '660271', name: 'Shohei Ohtani', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting', 'pitching'] },
+  { id: '808967', name: 'Yoshinobu Yamamoto', team: 'LAD', teamId: '119', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
+  { id: '605141', name: 'Mookie Betts', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
+  { id: '518692', name: 'Freddie Freeman', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] }
+])
+
+const filteredTrackedPlayers = computed(() => {
+  if (playerTypeFilter.value === 'all') return trackedPlayers.value
+  return trackedPlayers.value.filter(p => p.roles.includes(playerTypeFilter.value as 'hitting' | 'pitching'))
+})
+
+const fetchPlayerStats = async () => {
+  for (const p of trackedPlayers.value) {
+    p.loading = true
+    p.error = ''
+    try {
+      // 1. Try to fetch Current Season Stats dynamically
+      const resLive = await fetch(`https://statsapi.mlb.com/api/v1/people/${p.id}/stats?stats=season&season=${currentYear}&group=hitting,pitching`)
+      const dataLive = await resLive.json()
+      
+      let foundCurrent = false
+      if (dataLive.stats && dataLive.stats.length > 0) {
+        const hitting = dataLive.stats.find((s:any) => s.group.displayName === 'hitting')?.splits?.[0]
+        const pitching = dataLive.stats.find((s:any) => s.group.displayName === 'pitching')?.splits?.[0]
+        
+        if (hitting || pitching) {
+          if (hitting) p.hitting = { ...hitting.stat, year: String(currentYear) }
+          if (pitching) p.pitching = { ...pitching.stat, year: String(currentYear) }
+          foundCurrent = true
+        }
+      }
+
+      // 2. Fallback to YearByYear if current season data is completely missing
+      if (!foundCurrent) {
+        const resHistory = await fetch(`https://statsapi.mlb.com/api/v1/people/${p.id}/stats?stats=yearByYear&group=hitting,pitching`)
+        const dataHistory = await resHistory.json()
+        if (dataHistory.stats) {
+          const hittingGroup = dataHistory.stats.find((s:any) => s.group.displayName === 'hitting')
+          const pitchingGroup = dataHistory.stats.find((s:any) => s.group.displayName === 'pitching')
+          if (hittingGroup?.splits?.length) {
+            const last = hittingGroup.splits[hittingGroup.splits.length - 1]
+            p.hitting = { ...last.stat, year: last.year }
+          }
+          if (pitchingGroup?.splits?.length) {
+            const last = pitchingGroup.splits[pitchingGroup.splits.length - 1]
+            p.pitching = { ...last.stat, year: last.year }
+          }
+        }
+      }
+      
+      // Auto-select based on what data is available if not strictly dual
+      if (!p.hitting && p.pitching) p.activeStatType = 'pitching'
+      if (p.hitting && !p.pitching) p.activeStatType = 'hitting'
+    } catch (err) {
+      p.error = '無法取得即時成績'
+    } finally {
+      p.loading = false
+    }
+  }
+}
 
 type SortMode = 'time' | 'prob_desc' | 'alpha'
 const sortMode = ref<SortMode>('time')
@@ -176,13 +255,42 @@ const fetchAll = async () => {
   nbaLoading.value = false
   
   const now = new Date()
-  lastUpdateStr.value = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+  lastUpdateStr.value = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
+}
+
+// Predict season progress dynamically based on current date
+const getSeasonProgress = (league: 'MLB' | 'NBA') => {
+  const now = new Date()
+  const year = now.getFullYear()
+  
+  if (league === 'NBA') {
+    // Dynamic NBA Logic: Previous Year Oct to Current Year April
+    const start = new Date(year - 1, 9, 21).getTime()
+    const end = new Date(year, 3, 12).getTime()
+    if (now.getTime() > end) return { played: 82, total: 82, status: '季後賽' }
+    if (now.getTime() < start) return { played: 0, total: 82, status: '休賽季' }
+    const totalDays = (end - start) / (1000 * 3600 * 24)
+    const currentDays = (now.getTime() - start) / (1000 * 3600 * 24)
+    let played = Math.round((currentDays / totalDays) * 82)
+    return { played: Math.min(played, 82), total: 82, status: played >= 78 ? '季末/季後賽' : '例行賽' }
+  } else {
+    // Dynamic MLB Logic: Current Year March to Sep
+    const start = new Date(year, 2, 26).getTime()
+    const end = new Date(year, 8, 27).getTime()
+    if (now.getTime() > end) return { played: 162, total: 162, status: '季後賽' }
+    if (now.getTime() < start) return { played: 0, total: 162, status: '休賽季' }
+    const totalDays = (end - start) / (1000 * 3600 * 24)
+    const currentDays = (now.getTime() - start) / (1000 * 3600 * 24)
+    let played = Math.round((currentDays / totalDays) * 162)
+    return { played: Math.max(1, Math.min(played, 162)), total: 162, status: '例行賽' }
+  }
 }
 
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   fetchAll()
+  fetchPlayerStats()
   autoRefreshTimer = setInterval(() => {
     if (!document.hidden) {
       fetchAll()
@@ -198,61 +306,186 @@ onUnmounted(() => {
 <template>
   <div class="flex flex-col h-full w-full bg-[#05080f] text-slate-300">
 
-    <!-- Page Header -->
-    <div class="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 border-b border-slate-800">
-      <div>
-        <h1 class="text-xl font-black text-white tracking-wide flex items-center gap-2">
-          運彩賠率
-        </h1>
-        <p class="text-slate-500 text-xs font-medium flex items-center gap-1.5 mt-0.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
-          每小時自動同步 · 最後更新於 {{ lastUpdateStr }}
-        </p>
+    <!-- Stats Header (Adaptive) -->
+    <div class="h-16 md:h-20 border-b border-slate-800 flex items-center px-2 md:px-6 space-x-2 md:space-x-3 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
+      
+      <!-- Box 1: Overall Title -->
+      <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">即時報價</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">運彩賠率</div>
+        </div>
       </div>
-      <div class="flex items-center gap-2">
-        <!-- Sort Toggle -->
-        <button @click="cycleSort"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95 border border-slate-700 text-xs font-bold">
-          <span>{{ currentSort.icon }}</span>
-          <span class="hidden sm:inline">{{ currentSort.label }}</span>
+
+      <!-- Box 2: MLB Stats -->
+      <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0" title="MLB 賽季進度">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center shrink-0">
+          <span class="text-[12px] md:text-[16px] leading-none text-blue-400 opacity-80 backdrop-grayscale">⚾</span>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">MLB 賽季</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ getSeasonProgress('MLB').played }} <span class="text-[8px] md:text-[10px] text-slate-500">/ 162</span></div>
+        </div>
+      </div>
+
+      <!-- Box 3: NBA Stats -->
+      <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0 relative" title="NBA 賽季進度">
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-orange-900/30 border border-orange-800/50 flex items-center justify-center shrink-0">
+          <span class="text-[12px] md:text-[16px] leading-none text-orange-400 opacity-80">🏀</span>
+        </div>
+        <div class="min-w-0 relative w-full">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">NBA 賽季</div>
+          <div class="flex items-center justify-between">
+            <div class="text-white font-bold text-xs md:text-lg leading-none">{{ getSeasonProgress('NBA').played }} <span class="text-[8px] md:text-[10px] text-slate-500 font-normal">/ 82</span></div>
+            <span v-if="getSeasonProgress('NBA').status.includes('季後賽')" class="text-[8px] bg-red-500/20 text-red-500 px-1.5 py-0.5 rounded border border-red-500/30 font-black animate-pulse">季後賽激戰</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live badge & Sort -->
+      <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto justify-center">
+        <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
+          <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+          <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">ODDS LIVE</span>
+        </div>
+        <div class="flex items-center justify-end w-full mt-1">
+          <span class="text-[10px] text-slate-500 font-mono flex items-center">最後更新: {{ lastUpdateStr }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="min-h-11 md:h-12 border-b border-slate-800 flex items-center px-1.5 md:px-6 shrink-0 bg-[#0a0f1c] w-full">
+      <div class="flex w-full items-center overflow-x-auto no-scrollbar flex-nowrap">
+        <button 
+          v-for="league in (['MLB', 'NBA', '球員'] as const)"
+          :key="league"
+          @click="activeLeague = league"
+          class="flex-1 min-w-[max-content] h-11 md:h-12 px-3 md:px-4 border-b-2 transition-colors relative text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center shrink-0"
+          :class="activeLeague === league ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
+        >
+          <span class="mr-1 md:mr-2 inline-block">{{ league === 'MLB' ? '⚾' : (league === 'NBA' ? '🏀' : '🌟') }}</span>
+          {{ league }}
         </button>
       </div>
     </div>
 
-    <!-- League Tab Nav -->
-    <div class="flex shrink-0 border-b border-slate-800 bg-[#05080f]">
-      <button
-        v-for="league in (['MLB', 'NBA'] as const)"
-        :key="league"
-        @click="activeLeague = league"
-        class="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-black tracking-widest uppercase transition-all border-b-2"
-        :class="activeLeague === league
-          ? 'border-blue-500 text-blue-400 bg-blue-500/5'
-          : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/40'"
-      >
-        <span>{{ league === 'MLB' ? '⚾' : '🏀' }}</span>
-        {{ league }}
-        <!-- Badge: game count -->
-        <span v-if="league === 'MLB' && !mlbLoading && mlbGames.length > 0"
-          class="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full font-bold">
-          {{ mlbGames.length }}
-        </span>
-        <span v-if="league === 'NBA' && !nbaLoading && nbaGames.length > 0"
-          class="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded-full font-bold">
-          {{ nbaGames.length }}
-        </span>
-      </button>
-    </div>
-
     <!-- Scrollable Body -->
     <div class="flex-1 overflow-y-auto px-4 pb-20 scrollbar-hide">
+
+      <!-- ===== Players Tab ===== -->
+      <template v-if="activeLeague === '球員'">
+        <div class="mt-4 mb-3 flex items-center gap-2">
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-lg">🌟</span>
+            <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">重點球員追蹤</h2>
+          </div>
+          
+          <div class="flex-1 h-px bg-slate-800 ml-1 mr-2"></div>
+
+          <!-- Player Sub-Filter -->
+          <div class="flex items-center bg-[#0a0f1c] border border-slate-800 p-0.5 rounded-lg shrink-0">
+            <button 
+              v-for="f in ([{k:'all', l:'全部'}, {k:'hitting', l:'打者'}, {k:'pitching', l:'投手'}] as const)"
+              :key="f.k"
+              @click="playerTypeFilter = f.k"
+              class="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all whitespace-nowrap"
+              :class="playerTypeFilter === f.k ? 'bg-blue-500/10 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'"
+            >
+              {{ f.l }}
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-for="player in filteredTrackedPlayers" :key="player.id" class="flex flex-col bg-[#0a0f1c] border border-blue-900/30 rounded-xl overflow-hidden shadow-lg relative">
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-50 pointer-events-none"></div>
+            
+            <div class="flex items-center p-4 border-b border-slate-800/80">
+              <img :src="`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${player.id}/headshot/67/current`" class="w-14 h-14 rounded-full bg-slate-800 border-2 border-slate-700 object-cover mr-4" />
+              <div class="flex-1 flex flex-col sm:flex-row sm:items-center justify-between mr-2">
+                <div>
+                  <h3 class="text-white font-bold">{{ player.name }}</h3>
+                  <span class="text-xs text-blue-400 font-black tracking-widest">{{ player.team }}</span>
+                </div>
+                <!-- Toggle Button -->
+                <div v-if="player.hitting && player.pitching" class="bg-black/40 p-0.5 rounded-lg flex items-center border border-slate-800 mt-2 sm:mt-0 w-max">
+                  <button @click="player.activeStatType = 'hitting'" :class="player.activeStatType === 'hitting' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">打擊</button>
+                  <button @click="player.activeStatType = 'pitching'" :class="player.activeStatType === 'pitching' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">投球</button>
+                </div>
+              </div>
+              <button @click="fetchPlayerStats" class="p-1.5 text-slate-500 hover:text-white rounded transition-colors self-start sm:self-auto" title="重新整理">
+                <svg v-if="player.loading" class="animate-spin w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              </button>
+            </div>
+
+            <div class="p-4 flex-1">
+              <div v-if="player.loading && !player.hitting && !player.pitching" class="flex justify-center items-center py-6">
+                <span class="text-slate-500 text-xs">載入中...</span>
+              </div>
+              
+              <div v-else-if="player.error" class="flex justify-center items-center py-6 text-red-400 text-xs text-center border border-red-500/20 bg-red-500/5 rounded">
+                {{ player.error }}
+              </div>
+
+              <div v-else class="space-y-4">
+                <!-- Hitting Stats -->
+                <div v-if="player.hitting && player.activeStatType === 'hitting'">
+                  <h4 class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1 flex justify-between">
+                    <span>打擊成績 (Hitting)</span>
+                    <span class="text-blue-400/80">{{ player.hitting.year }} 賽季</span>
+                  </h4>
+                  <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">AVG</p><p class="text-sm font-black text-white">{{ player.hitting.avg || '.000' }}</p></div>
+                    <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">HR</p><p class="text-sm font-black text-rose-400">{{ player.hitting.homeRuns || '0' }}</p></div>
+                    <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">RBI</p><p class="text-sm font-black text-emerald-400">{{ player.hitting.rbi || '0' }}</p></div>
+                    <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G (場次)</p><p class="text-xs font-black text-slate-300">{{ player.hitting.gamesPlayed || '0' }}</p></div>
+                    <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">AB (打數)</p><p class="text-xs font-black text-slate-300">{{ player.hitting.atBats || '0' }}</p></div>
+                    <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">OPS</p><p class="text-xs font-black text-sky-400">{{ player.hitting.ops || '.000' }}</p></div>
+                  </div>
+                </div>
+
+                <!-- Pitching Stats -->
+                <div v-if="player.pitching && player.activeStatType === 'pitching'">
+                  <h4 class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1 flex justify-between">
+                    <span>投球成績 (Pitching)</span>
+                    <span class="text-indigo-400/80">{{ player.pitching.year }} 賽季</span>
+                  </h4>
+                  <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">ERA</p><p class="text-sm font-black text-rose-400">{{ player.pitching.era || '0.00' }}</p></div>
+                    <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">W-L</p><p class="text-sm font-black text-white">{{ player.pitching.wins || '0' }}-{{ player.pitching.losses || '0' }}</p></div>
+                    <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">SO</p><p class="text-sm font-black text-emerald-400">{{ player.pitching.strikeOuts || '0' }}</p></div>
+                    <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G (場次)</p><p class="text-xs font-black text-slate-300">{{ player.pitching.gamesPlayed || '0' }}</p></div>
+                    <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">IP (局數)</p><p class="text-xs font-black text-slate-300">{{ player.pitching.inningsPitched || '0.0' }}</p></div>
+                    <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">WHIP</p><p class="text-xs font-black text-sky-400">{{ player.pitching.whip || '0.00' }}</p></div>
+                  </div>
+                </div>
+
+                <div v-if="!player.hitting && !player.pitching" class="text-center text-slate-500 text-xs py-4">
+                  尚未有本賽季數據
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
 
       <!-- ===== MLB Tab ===== -->
       <template v-if="activeLeague === 'MLB'">
         <div class="mt-4 mb-3 flex items-center gap-2">
           <span class="text-lg">⚾</span>
           <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">MLB 美國職棒</h2>
-          <div class="flex-1 h-px bg-slate-800 ml-1"></div>
+          <div class="flex-1 h-px bg-slate-800 ml-1 mr-2"></div>
+          
+          <!-- Sort Toggle (MLB) -->
+          <button @click="cycleSort" class="flex items-center space-x-1.5 px-2 py-1 bg-[#111827] border border-slate-700 rounded-md transition-all hover:border-blue-500 group active:scale-95">
+            <span class="text-xs">{{ currentSort.icon }}</span>
+            <span class="text-[11px] font-black text-slate-400 group-hover:text-blue-400 uppercase tracking-tight">{{ currentSort.label }}</span>
+          </button>
         </div>
 
         <!-- MLB Loading -->
@@ -362,7 +595,13 @@ onUnmounted(() => {
         <div class="mt-4 mb-3 flex items-center gap-2">
           <span class="text-lg">🏀</span>
           <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">NBA 美國職籃</h2>
-          <div class="flex-1 h-px bg-slate-800 ml-1"></div>
+          <div class="flex-1 h-px bg-slate-800 ml-1 mr-2"></div>
+
+          <!-- Sort Toggle (NBA) -->
+          <button @click="cycleSort" class="flex items-center space-x-1.5 px-2 py-1 bg-[#111827] border border-slate-700 rounded-md transition-all hover:border-orange-500 group active:scale-95">
+            <span class="text-xs">{{ currentSort.icon }}</span>
+            <span class="text-[11px] font-black text-slate-400 group-hover:text-orange-400 uppercase tracking-tight">{{ currentSort.label }}</span>
+          </button>
         </div>
 
         <!-- NBA Loading -->
