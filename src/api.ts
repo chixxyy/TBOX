@@ -154,5 +154,10 @@ export const api = {
 
   async getNBAOdds() {
     return apiFetch(`https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?regions=us&markets=h2h&oddsFormat=decimal&bookmakers=draftkings,pinnacle,fanduel`);
+  },
+
+  // MLB Player Stats API
+  async getPlayerStats(personId: string, season: number) {
+    return apiFetch(`https://statsapi.mlb.com/api/v1/people/${personId}/stats?stats=season&group=hitting,pitching&season=${season}`);
   }
 };

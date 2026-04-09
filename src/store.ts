@@ -80,8 +80,21 @@ interface NewsItem {
 export const globalMovers = ref<Mover[]>([])
 export const globalNews = ref<NewsItem[]>([])
 
-// Single session management
-export const currentSessionId = ref(crypto.randomUUID())
+// --- Session Management ---
+// Fallback for crypto.randomUUID() which breaks on Safari < 15.4
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  // Standard RFC4122 version 4 UUID fallback
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+export const currentSessionId = ref(generateUUID())
 export const isKickedOut = ref(false)
 let lastAuthStartTime = Date.now() // 動態追蹤最後一次認證開始時間
 let sessionSyncChannel: any = null
