@@ -453,6 +453,18 @@ export const notificationHistory = useStorage<NotificationLog[]>('tbox-notificat
 export const isNotificationsEnabled = useStorage('tbox-notifications-enabled', false)
 export const hasClickedNotifications = useStorage('tbox-has-clicked-notifications', false)
 
+// Expose debug functions to window for console testing
+if (typeof window !== 'undefined') {
+  (window as any).testSound = () => {
+    playNewsChime()
+    console.log('🎵 測試音效已播放')
+  }
+  (window as any).testNotify = (title: string = '測試通知', msg: string = '這是一條手動觸發的測試訊息') => {
+    showToast(title, msg)
+    console.log('🚀 測試通知已發送')
+  }
+}
+
 export const showToast = (title: string, message: string, silent: boolean = false) => {
   const id = Date.now().toString() + Math.random().toString(36).substring(2, 7)
 

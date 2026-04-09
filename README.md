@@ -69,5 +69,17 @@ npm run check
 
 ## 🧪 測試帳號
 
-- **Email**: `test@test.com`
+- **Email**: `admin@tbox.pro` (已通過新版嚴謹驗證)
 - **Password**: `test1234`
+
+---
+
+## 🛠️ 開發者測試指令 (Console Debug)
+
+若需在線上環境快速測試通知或音效，可開啟瀏覽器 F12 控制台 (Console) 並輸入：
+
+- **測試音效播放**：`testSound()`
+- **測試通知推播**：`testNotify('標題', '內容')`
+
+> [!IMPORTANT]
+> 測試通知前，請確保右上角的 **「通知鈴鐺」** 已切換為開啟狀態（藍色），否則通知會被系統攔截。
