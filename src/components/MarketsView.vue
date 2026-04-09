@@ -24,8 +24,8 @@ type Category = { label: string; tag: string }
 const categories: Category[] = [
   { label: '全部', tag: '' },
   { label: '加密貨幣', tag: 'crypto' },
-  { label: '政治', tag: 'politics' },
   { label: '金融', tag: 'economics' },
+  { label: '政治', tag: 'politics' },
   { label: '科技', tag: 'science' },
   { label: '國際', tag: 'world' },
 ]
