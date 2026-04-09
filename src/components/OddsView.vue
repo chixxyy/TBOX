@@ -363,7 +363,7 @@ onUnmounted(() => {
         <div class="min-w-0 relative flex-1">
           <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate mb-0.5">NBA 賽季</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none whitespace-nowrap">{{ getSeasonProgress('NBA').played }} <span class="text-[8px] md:text-[10px] text-slate-500 font-normal">/ 82</span></div>
-          <span v-if="getSeasonProgress('NBA').status.includes('季後賽')" class="absolute -top-1 -right-0.5 md:-top-5 md:right-0 text-[6px] md:text-[8px] bg-red-500/20 text-red-500 px-1 py-0.5 rounded border border-red-500/30 font-black animate-pulse whitespace-nowrap">季後賽激戰</span>
+          <span v-if="getSeasonProgress('NBA').status.includes('季後賽')" class="absolute -top-1 -right-0.5 md:-top-5 md:right-0 text-[6px] md:text-[8px] bg-red-500/20 text-red-500 px-1 py-0.5 rounded border border-red-500/30 font-black animate-pulse whitespace-nowrap">季後賽</span>
         </div>
       </div>
 
