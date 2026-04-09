@@ -102,8 +102,8 @@ const handleUpdatePassword = async () => {
     return
   }
   
-  if (newPassword.value.length < 6) {
-    showToast('錯誤', '密碼長度至少需要 6 位字元')
+  if (newPassword.value.length < 8) {
+    showToast('錯誤', '密碼長度至少需要 8 位字元')
     return
   }
 
@@ -162,7 +162,7 @@ const confirmUpdatePassword = async () => {
     if (errorMsg.includes('should be different from the old password')) {
       errorMsg = '新密碼不能與舊密碼相同'
     } else if (errorMsg.includes('least 6 characters')) {
-      errorMsg = '密碼長度至少需要 6 位字元'
+      errorMsg = '密碼長度至少需要 8 位字元'
     }
     
     showToast('更新失敗', errorMsg)
@@ -317,7 +317,7 @@ const confirmUpdatePassword = async () => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                   <div class="space-y-4">
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-[0.2em] ml-1">新的存取密碼</label>
-                    <input v-model="newPassword" type="password" placeholder="至少 6 位字元" class="w-full bg-slate-950/50 border border-white/10 rounded-2xl px-6 py-4 md:py-5 text-white focus:outline-none focus:border-orange-500/50 transition-all text-base md:text-lg font-bold placeholder:text-slate-800" />
+                    <input v-model="newPassword" type="password" placeholder="至少 8 位字元" class="w-full bg-slate-950/50 border border-white/10 rounded-2xl px-6 py-4 md:py-5 text-white focus:outline-none focus:border-orange-500/50 transition-all text-base md:text-lg font-bold placeholder:text-slate-800" />
                   </div>
                   <div class="space-y-4">
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-[0.2em] ml-1">再次確認新密碼</label>

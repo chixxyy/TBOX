@@ -331,11 +331,11 @@ onUnmounted(() => {
   <div class="flex flex-col h-full w-full bg-[#05080f] text-slate-300">
 
     <!-- Stats Header (Adaptive) -->
-    <div class="h-16 md:h-20 border-b border-slate-800 flex items-center px-2 md:px-6 space-x-2 md:space-x-3 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
+    <div class="h-16 md:h-20 border-b border-slate-800 flex items-center px-1.5 md:px-6 space-x-1 md:space-x-3 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
       
       <!-- Box 1: Overall Title -->
-      <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
+      <div class="flex-1 flex items-center space-x-1 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-1.5 md:px-4 py-1.5 md:py-2.5 min-w-0">
+        <div class="w-6 h-6 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
         </div>
         <div class="min-w-0">
@@ -345,8 +345,8 @@ onUnmounted(() => {
       </div>
 
       <!-- Box 2: MLB Stats -->
-      <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0" title="MLB 賽季進度">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center shrink-0">
+      <div class="flex-1 flex items-center space-x-1 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-1.5 md:px-4 py-1.5 md:py-2.5 min-w-0" title="MLB 賽季進度">
+        <div class="w-6 h-6 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center shrink-0">
           <span class="text-[12px] md:text-[16px] leading-none text-blue-400 opacity-80 backdrop-grayscale">⚾</span>
         </div>
         <div class="min-w-0">
@@ -356,16 +356,14 @@ onUnmounted(() => {
       </div>
 
       <!-- Box 3: NBA Stats -->
-      <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0 relative" title="NBA 賽季進度">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-orange-900/30 border border-orange-800/50 flex items-center justify-center shrink-0">
+      <div class="flex-1 flex items-center space-x-1 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-1.5 md:px-4 py-1.5 md:py-2.5 min-w-0 relative" title="NBA 賽季進度">
+        <div class="w-6 h-6 md:w-9 md:h-9 rounded-full bg-orange-900/30 border border-orange-800/50 flex items-center justify-center shrink-0">
           <span class="text-[12px] md:text-[16px] leading-none text-orange-400 opacity-80">🏀</span>
         </div>
-        <div class="min-w-0 relative w-full">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">NBA 賽季</div>
-          <div class="flex items-center justify-between">
-            <div class="text-white font-bold text-xs md:text-lg leading-none">{{ getSeasonProgress('NBA').played }} <span class="text-[8px] md:text-[10px] text-slate-500 font-normal">/ 82</span></div>
-            <span v-if="getSeasonProgress('NBA').status.includes('季後賽')" class="text-[8px] bg-red-500/20 text-red-500 px-1.5 py-0.5 rounded border border-red-500/30 font-black animate-pulse">季後賽激戰</span>
-          </div>
+        <div class="min-w-0 relative flex-1">
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate mb-0.5">NBA 賽季</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none whitespace-nowrap">{{ getSeasonProgress('NBA').played }} <span class="text-[8px] md:text-[10px] text-slate-500 font-normal">/ 82</span></div>
+          <span v-if="getSeasonProgress('NBA').status.includes('季後賽')" class="absolute -top-1 -right-0.5 md:-top-5 md:right-0 text-[6px] md:text-[8px] bg-red-500/20 text-red-500 px-1 py-0.5 rounded border border-red-500/30 font-black animate-pulse whitespace-nowrap">季後賽激戰</span>
         </div>
       </div>
 

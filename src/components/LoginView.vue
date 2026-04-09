@@ -31,7 +31,7 @@ const getErrorMessage = (err: any) => {
   const msg = err.message || ''
   if (msg.includes('Invalid login credentials')) return '帳號或密碼錯誤，請重新輸入'
   if (msg.includes('User already registered')) return '此電子信箱已被註冊，請直接登入'
-  if (msg.includes('Password should be at least 6 characters')) return '密碼長度至少需要 6 位字元'
+  if (msg.includes('Password should be at least') || msg.includes('6 characters')) return '密碼長度至少需要 8 位字元'
   if (msg.includes('Failed to fetch')) return '連線失敗，請檢查網路連線或嘗試關閉 VPN'
   if (msg.includes('Too many requests')) return '請求過於頻繁，請稍後再試'
   if (msg.includes('Unable to validate email address')) return '請輸入有效的電子信箱格式'
@@ -52,6 +52,10 @@ const handleAuth = async () => {
   if (isRegister.value) {
     if (password.value !== confirmPassword.value) {
       showToast('錯誤', '兩次密碼輸入不一致')
+      return
+    }
+    if (password.value.length < 8) {
+      showToast('錯誤', '密碼長度至少需要 8 位字元')
       return
     }
     if (!nickname.value) {
