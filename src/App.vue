@@ -240,8 +240,8 @@ onUnmounted(() => {
               <div class="space-y-4">
                 <div v-for="item in [
                   { title: '運動賽事看板', desc: '新增 MLB/NBA 實時賠率監測功能。' },
-                  { title: '全球運動快訊', desc: '串接 ESPN 實時新聞並支援 AI 翻譯。' },
-                  { title: '智慧分選系統', desc: '可依據勝率與時間快速篩選熱門賽事。' }
+                  { title: '追蹤球星警示', desc: '自動偵測關注球員異動，觸發 Critical 等級優先通知。' },
+                  { title: '系統動效優化', desc: '大幅縮短載入動畫時長，並優化手機端內容捲動反饋。' }
                 ]" :key="item.title" class="flex gap-3">
                   <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
