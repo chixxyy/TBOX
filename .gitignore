@@ -24,3 +24,8 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+.vercel/*
+
+# Scratch / Temp files
+tmp/
+*.tmp
