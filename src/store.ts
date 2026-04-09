@@ -450,7 +450,8 @@ interface NotificationLog {
 
 export const toasts = ref<ToastItem[]>([])
 export const notificationHistory = useStorage<NotificationLog[]>('tbox-notification-history', [])
-export const isNotificationsEnabled = useStorage('tbox-notifications-enabled', true)
+export const isNotificationsEnabled = useStorage('tbox-notifications-enabled', false)
+export const hasClickedNotifications = useStorage('tbox-has-clicked-notifications', false)
 
 export const showToast = (title: string, message: string, silent: boolean = false) => {
   const id = Date.now().toString() + Math.random().toString(36).substring(2, 7)

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, resetPlatformNotice } from '../store'
+import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, hasClickedNotifications, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, resetPlatformNotice } from '../store'
 import { initDesktopNotifications } from '../utils/notify'
 import { onClickOutside } from '@vueuse/core'
 
@@ -25,6 +25,7 @@ onClickOutside(notificationDropdown, () => {
 
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value
+  hasClickedNotifications.value = true // Once clicked, hide the guide forever
   if (showNotifications.value) {
     initDesktopNotifications()
     markAllNotificationsRead()
@@ -85,11 +86,27 @@ const handleLogout = () => {
 
     <!-- Right Side: Notifications Bell -->
     <div class="flex items-center shrink-0 ml-2 relative" ref="notificationDropdown">
-      <button @click.stop="toggleNotifications" class="p-2 relative text-slate-400 hover:text-white transition-colors cursor-pointer">
+      <button 
+        @click.stop="toggleNotifications" 
+        class="p-2 relative transition-all duration-300 cursor-pointer group"
+        :class="isNotificationsEnabled ? 'text-blue-400 hover:text-blue-300' : 'text-slate-500 hover:text-slate-400'"
+      >
+        <!-- Bell Icon with Conditional Slash -->
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          <template v-if="isNotificationsEnabled">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </template>
+          <template v-else>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3l18 18" class="text-red-500/60" />
+          </template>
         </svg>
-        <span v-if="unreadNotificationsCount > 0" class="absolute top-1.5 right-1.5 w-2 h-2 md:w-2.5 md:h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+
+        <!-- Unread Badge -->
+        <span v-if="unreadNotificationsCount > 0 && isNotificationsEnabled" class="absolute top-1.5 right-1.5 w-2 h-2 md:w-2.5 md:h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+        
+        <!-- One-time Setup Guide Pulse -->
+        <span v-if="!isNotificationsEnabled && !hasClickedNotifications" class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-500 rounded-full animate-ping opacity-60"></span>
       </button>
 
       <!-- Dropdown -->
