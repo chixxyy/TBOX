@@ -50,6 +50,26 @@ const handleAuth = async () => {
   }
   
   if (isRegister.value) {
+    // Stricter Email Validation for Registration
+    const isValidEmail = (e: string) => {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+      if (!emailRegex.test(e)) return false
+      
+      const domain = e.split('@')[1]?.toLowerCase()
+      const blocked = ['test.com', 'abc.com', '123.com', 'example.com', 'qq.com', 'tempmail.com', 'mailinator.com']
+      if (domain && blocked.includes(domain)) return false
+      
+      const localPart = e.split('@')[0]
+      if (localPart && localPart.length > 20 && /^[a-z0-9]+$/i.test(localPart)) return false
+      
+      return true
+    }
+
+    if (!isValidEmail(email.value)) {
+      showToast('錯誤', '請輸入有效的電子信箱格式')
+      return
+    }
+    
     if (password.value !== confirmPassword.value) {
       showToast('錯誤', '兩次密碼輸入不一致')
       return
