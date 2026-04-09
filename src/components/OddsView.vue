@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { api } from '../api'
-import { showToast } from '../store'
+import { showToast, trackedPlayers } from '../store'
 
 interface Outcome { name: string; price: number }
 interface Market { key: string; outcomes: Outcome[] }
@@ -116,41 +116,9 @@ const nbaError = ref('')
 const activeLeague = ref<'MLB' | 'NBA' | '球員'>('MLB')
 const lastUpdateStr = ref('')
 
-// ── Player Tracking Data ──
-interface PlayerStats {
-  id: string
-  name: string
-  team: string
-  teamId: string
-  hitting?: any
-  pitching?: any
-  loading: boolean
-  error?: string
-  activeStatType?: 'hitting' | 'pitching'
-  roles: ('hitting' | 'pitching')[]
-}
-
+// ── Player Sub-filter ──
 const currentYear = new Date().getFullYear()
 const playerTypeFilter = ref<'all' | 'hitting' | 'pitching'>('all')
-
-const trackedPlayers = ref<PlayerStats[]>([
-  // --- Two-way Hero ---
-  { id: '660271', name: 'Shohei Ohtani', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting', 'pitching'] },
-  
-  // --- Star Pitchers ---
-  { id: '808967', name: 'Yoshinobu Yamamoto', team: 'LAD', teamId: '119', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  { id: '694973', name: 'Paul Skenes', team: 'PIT', teamId: '134', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  { id: '669373', name: 'Tarik Skubal', team: 'DET', teamId: '116', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  { id: '676979', name: 'Garrett Crochet', team: 'BOS', teamId: '111', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  { id: '657277', name: 'Logan Webb', team: 'SF', teamId: '137', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  
-  // --- Elite Hitters ---
-  { id: '605141', name: 'Mookie Betts', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '518692', name: 'Freddie Freeman', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '592450', name: 'Aaron Judge', team: 'NYY', teamId: '147', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '665742', name: 'Juan Soto', team: 'NYM', teamId: '121', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '677951', name: 'Bobby Witt Jr.', team: 'KC', teamId: '118', loading: false, activeStatType: 'hitting', roles: ['hitting'] }
-])
 
 const filteredTrackedPlayers = computed(() => {
   if (playerTypeFilter.value === 'all') return trackedPlayers.value

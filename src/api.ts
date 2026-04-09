@@ -159,5 +159,10 @@ export const api = {
   // MLB Player Stats API
   async getPlayerStats(personId: string, season: number) {
     return apiFetch(`https://statsapi.mlb.com/api/v1/people/${personId}/stats?stats=season&group=hitting,pitching&season=${season}`);
+  },
+
+  // MLB Transactions API
+  async getMlbTransactions(startDate: string, endDate: string) {
+    return apiFetch(`https://statsapi.mlb.com/api/v1/transactions?sportId=1&startDate=${startDate}&endDate=${endDate}`);
   }
 };

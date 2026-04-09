@@ -10,6 +10,7 @@ import {
   updatePriceAlertTriggered,
   marketPrices,
   portfolio,
+  trackedPlayers,
   type Mover
 } from '../store'
 import { initDesktopNotifications, sendDesktopNotification } from '../utils/notify'
@@ -161,13 +162,47 @@ async function fetchSports(): Promise<any[]> {
   } catch { return [] }
 }
 
+async function fetchMlbTransactions(): Promise<any[]> {
+  try {
+    const now = new Date()
+    const today = now.toISOString().split('T')[0] as string
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] as string
+    const data = await api.getMlbTransactions(threeDaysAgo, today)
+    const transactions = data.transactions || []
+    
+    return transactions.map((t: any) => {
+      const pId = t.person?.id || t.personId
+      const isTracked = trackedPlayers.value.some(p => p.id === String(pId))
+      
+      // Boost timestamp: If it's a transaction from today/yesterday, give it a high hour weight
+      // so it clusters with recent news rather than sinking to 00:00:00
+      const baseTs = new Date(t.date).getTime()
+      const displayTs = baseTs + (12 * 3600 * 1000) + (isTracked ? 12 * 3600 * 1000 : 0)
+
+      return {
+        uid: `mlb-trans-${t.id}`,
+        source: 'MLB.com',
+        cat: 'sports',
+        ts: displayTs,
+        headline: t.description,
+        summary: `${t.typeDesc}: ${t.description}`,
+        url: pId ? `https://www.mlb.com/player/${pId}` : `https://www.mlb.com/transactions`,
+        avatarBg: '002D72',
+        provider: 'mlb-official',
+        isTracked
+      }
+    })
+  } catch { return [] }
+}
+
 async function syncNews() {
   try {
-    const [fh, cc, sp] = await Promise.allSettled([fetchFinnhub(), fetchCC(), fetchSports()])
+    const [fh, cc, sp, mt] = await Promise.allSettled([fetchFinnhub(), fetchCC(), fetchSports(), fetchMlbTransactions()])
     const all = [
       ...(fh.status === 'fulfilled' ? fh.value : []),
       ...(cc.status === 'fulfilled' ? cc.value : []),
       ...(sp.status === 'fulfilled' ? sp.value : []),
+      ...(mt.status === 'fulfilled' ? mt.value : []),
     ]
     const unique = new Map<string, any>()
     all.forEach(item => unique.set(item.uid, item))
@@ -205,11 +240,12 @@ async function syncNews() {
     const providerColors: Record<string, string> = { 
       finnhub: '1d4ed8', 
       cryptocompare: '7c3aed',
-      espn: 'ff0000'
+      espn: 'ff0000',
+      'mlb-official': '002D72'
     }
     
-    globalNews.value = sorted.slice(0, 150).map(item => {
-      const severity = getSeverity(item.headline)
+    globalNews.value = sorted.slice(0, 200).map(item => {
+      const severity = item.isTracked ? 'critical' : getSeverity(item.headline)
       const isCritical = severity === 'critical'
       const bg = item.avatarBg || (providerColors[item.provider as any] || '1d4ed8')
       
@@ -228,8 +264,8 @@ async function syncNews() {
         severity,
         time: getRelativeTime(item.ts) ,
         accentColor: getAccentColor(finalCat, isCritical),
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.source)}&background=${bg}&color=fff&rounded=true&font-size=0.4&bold=true`,
-        handle: `@${item.source.replace(/\s+/g, '')}`,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.source || 'N')}&background=${bg}&color=fff&rounded=true&font-size=0.4&bold=true`,
+        handle: `@${(item.source || 'News').replace(/\s+/g, '')}`,
         isOfficial: true,
         tags: [
           isCritical
