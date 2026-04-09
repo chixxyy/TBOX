@@ -73,8 +73,14 @@ ${recentNews ? recentNews : '雷達目前無重大新聞，靠技術面或信仰
     const cleanJsonStr = contentText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim()
     
     return JSON.parse(cleanJsonStr) as AIAnalysisResult
-  } catch (error) {
+  } catch (error: any) {
     console.error('AI Analysis failed:', error)
-    throw new Error('AI 分析暫時遇到格式問題，請再試一次！')
+    if (error.message && error.message.includes('429')) {
+      throw new Error('呼叫過於頻繁，已達個費額度上限，請稍後再試！')
+    }
+    if (error.message && error.message.includes('503')) {
+      throw new Error('Google AI 伺服器目前負載過高，請稍後再試！')
+    }
+    throw new Error('AI 分析暫時遇到格式問題或網路錯誤，請稍後再試！')
   }
 }
