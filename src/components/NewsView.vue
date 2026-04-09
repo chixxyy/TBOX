@@ -34,7 +34,7 @@ const totalFetched = computed(() => newsItems.value.length)
 const filterTabs = [
   { label: '全部', tag: '' },
   { label: '運動', tag: 'sports' },
-  { label: '加密', tag: 'crypto' },
+  { label: '加密貨幣', tag: 'crypto' },
   { label: '財經', tag: 'general' },
 ]
 const severityFilters = ['Critical', 'High', 'Low']
