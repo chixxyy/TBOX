@@ -13,7 +13,7 @@ import {
   trackedPlayers,
   type Mover
 } from '../store'
-import { initDesktopNotifications, sendDesktopNotification } from '../utils/notify'
+import { sendDesktopNotification } from '../utils/notify'
 import { api } from '../api'
 
 const knownNewsIds = new Set<string>()
@@ -527,7 +527,6 @@ async function syncPortfolioStockPrices() {
 }
 
 onMounted(() => {
-  initDesktopNotifications()
   syncNews()
   syncMovers()
   connectAlertMonitor()

@@ -66,9 +66,9 @@ onMounted(() => {
               isReady.value = true
               clearInterval(checkLogs)
           }
-      }, 200)
+      }, 100)
     }
-  }, 100)
+  }, 80)
 
   // Log Logic with Pause
   let logIndex = 0
@@ -85,7 +85,7 @@ onMounted(() => {
     } else {
       clearInterval(logInterval)
     }
-  }, 600)
+  }, 400)
 })
 
 onUnmounted(() => {
