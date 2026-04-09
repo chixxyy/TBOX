@@ -5,7 +5,7 @@ import {
   globalNews, chatUser, chatSession, chatLoading, 
   isAdmin, goToLogin, userProfile, isChatConnected, 
   openAIDrawer, triggerShare, newsToShare, showShareConfirm,
-  showToast
+  showToast, setScrollProgress
 } from '../store'
 
 const currentUser = chatUser
@@ -164,6 +164,26 @@ const handleRefresh = () => {
 }
 
 const hotNews = computed(() => globalNews.value.slice(0, 20))
+
+let newsRafId: number | null = null
+const handleNewsScroll = (e: Event) => {
+  if (newsRafId) cancelAnimationFrame(newsRafId)
+  newsRafId = requestAnimationFrame(() => {
+    const el = e.target as HTMLElement
+    const scrollMax = el.scrollHeight - el.clientHeight
+    if (scrollMax <= 0) {
+      setScrollProgress(0)
+    } else {
+      const progress = (el.scrollTop / scrollMax) * 100
+      setScrollProgress(progress)
+    }
+  })
+}
+
+// Reset progress when closing sidebar
+watch(showNewsSidebar, (val) => {
+  if (!val) setScrollProgress(0)
+})
 </script>
 
 <template>
@@ -379,7 +399,7 @@ const hotNews = computed(() => globalNews.value.slice(0, 20))
         </button>
       </div>
       
-      <div class="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-700">
+      <div @scroll="handleNewsScroll" class="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-700">
         <div v-if="hotNews.length === 0" class="text-center text-slate-500 text-xs py-8">
           目前沒有新聞可分享
         </div>

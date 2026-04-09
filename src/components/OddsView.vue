@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { api } from '../api'
-import { showToast, trackedPlayers } from '../store'
+import { showToast, trackedPlayers, setScrollProgress } from '../store'
 
 interface Outcome { name: string; price: number }
 interface Market { key: string; outcomes: Outcome[] }
@@ -119,6 +119,25 @@ const lastUpdateStr = ref('')
 // ── Player Sub-filter ──
 const currentYear = new Date().getFullYear()
 const playerTypeFilter = ref<'all' | 'hitting' | 'pitching'>('all')
+
+let rafId: number | null = null
+const handleScroll = (e: Event) => {
+  if (rafId) cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(() => {
+    const el = e.target as HTMLElement
+    const scrollMax = el.scrollHeight - el.clientHeight
+    if (scrollMax <= 0) {
+      setScrollProgress(0)
+    } else {
+      const progress = (el.scrollTop / scrollMax) * 100
+      setScrollProgress(progress)
+    }
+  })
+}
+
+onUnmounted(() => {
+  if (rafId) cancelAnimationFrame(rafId)
+})
 
 const filteredTrackedPlayers = computed(() => {
   if (playerTypeFilter.value === 'all') return trackedPlayers.value
@@ -307,7 +326,7 @@ onUnmounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
         </div>
         <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">即時報價</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">即時更新</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none">運彩賠率</div>
         </div>
       </div>
@@ -364,7 +383,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Scrollable Body -->
-    <div class="flex-1 overflow-y-auto px-4 pb-20 scrollbar-hide">
+    <div @scroll="handleScroll" class="flex-1 overflow-y-auto px-4 pb-20 scrollbar-hide">
 
       <!-- ===== Players Tab ===== -->
       <template v-if="activeLeague === '球員'">
