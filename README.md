@@ -69,7 +69,7 @@ npm run check
 
 ## 🧪 測試帳號
 
-- **Email**: `admin@tbox.pro` (已通過新版嚴謹驗證)
+- **Email**: `test@test.com`
 - **Password**: `test1234`
 
 ---
