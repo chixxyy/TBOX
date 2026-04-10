@@ -277,6 +277,7 @@ const findScore = (game: Game, league: 'MLB' | 'NBA') => {
     const scoreTime = new Date(s.date).getTime()
     const timeDiffHours = Math.abs(gameTime - scoreTime) / (1000 * 3600)
     
+    // Safety check: only match games within 12 hours
     if (timeDiffHours > 12) return false
 
     const homeWords = game.home_team.split(' ')
@@ -317,44 +318,44 @@ const getLiveStatus = (game: Game, league: 'MLB' | 'NBA') => {
     scores: {
       home: scoreData.competitions[0].competitors.find((c:any) => c.homeAway === 'home')?.score || '0',
       away: scoreData.competitions[0].competitors.find((c:any) => c.homeAway === 'away')?.score || '0'
-    }
+    },
+    situation: scoreData.competitions[0].situation || null,
+    competitors: scoreData.competitions[0].competitors // expose raw competitors for ID matching
   }
 }
 
-const fetchAll = async () => {
+const fetchOddsOnly = async () => {
   mlbLoading.value = true
   nbaLoading.value = true
   mlbError.value = ''
   nbaError.value = ''
 
-  const [mlb, nba, mlbS, nbaS] = await Promise.allSettled([
+  const [mlb, nba] = await Promise.allSettled([
     api.getMLBOdds(), 
-    api.getNBAOdds(),
-    api.getEspnScores('mlb'),
-    api.getEspnScores('nba')
+    api.getNBAOdds()
   ])
 
   if (mlb.status === 'fulfilled') {
     mlbGames.value = mlb.value
   } else {
-    mlbError.value = (mlb.reason as Error).message || '無法取得 MLB 資料'
+    mlbError.value = (mlb.reason as Error).message || '無法取得 MLB 賠率'
   }
   
   if (nba.status === 'fulfilled') {
     nbaGames.value = nba.value
   } else {
-    nbaError.value = (nba.reason as Error).message || '無法取得 NBA 資料'
+    nbaError.value = (nba.reason as Error).message || '無法取得 NBA 賠率'
   }
-
-  if (mlbS.status === 'fulfilled') mlbScores.value = mlbS.value.events || []
-  if (nbaS.status === 'fulfilled') nbaScores.value = nbaS.value.events || []
 
   mlbLoading.value = false
   nbaLoading.value = false
-  
-  const now = new Date()
-  lastUpdateStr.value = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
 }
+
+const isRapidMode = computed(() => {
+  const mlbLive = mlbScores.value.some(s => s.status.type.state === 'in')
+  const nbaLive = nbaScores.value.some(s => s.status.type.state === 'in')
+  return mlbLive || nbaLive
+})
 
 const fetchScoresOnly = async () => {
   try {
@@ -364,9 +365,40 @@ const fetchScoresOnly = async () => {
     ])
     if (mlbS.status === 'fulfilled') mlbScores.value = mlbS.value.events || []
     if (nbaS.status === 'fulfilled') nbaScores.value = nbaS.value.events || []
+    
+    // Update timestamp on every score sync
+    const now = new Date()
+    lastUpdateStr.value = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
+
+    // Diagnostic console log for verification
+    const liveMlb = mlbScores.value.filter(s => s.status.type.state === 'in').length
+    const liveNba = nbaScores.value.filter(s => s.status.type.state === 'in').length
+    console.log(`%c[Sports Sync] ${isRapidMode.value ? '⚡ Rapid (15s)' : '🍃 Eco (60s)'} | MLB Live: ${liveMlb} | NBA Live: ${liveNba} | Time: ${lastUpdateStr.value}`, "color: #fbbf24; font-weight: bold;");
+    if (isRapidMode.value) {
+      const mlbInfo = mlbScores.value.filter(s => s.status.type.state === 'in').map(s => `${s.name}: ${s.competitions[0].competitors[0].score}-${s.competitions[0].competitors[1].score}`)
+      const nbaInfo = nbaScores.value.filter(s => s.status.type.state === 'in').map(s => `${s.name}: ${s.competitions[0].competitors[0].score}-${s.competitions[0].competitors[1].score}`)
+      if (mlbInfo.length) console.log("⚾ MLB LIVE:", mlbInfo.join(" | "))
+      if (nbaInfo.length) console.log("🏀 NBA LIVE:", nbaInfo.join(" | "))
+    }
   } catch (e) {
     console.error('Failed to update scores', e)
+  } finally {
+    // Hidden logic: 15s if live games exist, else 1min
+    scheduleNextScoreFetch()
   }
+}
+
+const scheduleNextScoreFetch = () => {
+  if (scoreTimer) clearTimeout(scoreTimer)
+  const interval = isRapidMode.value ? 15000 : 60000
+  scoreTimer = setTimeout(() => {
+    if (!document.hidden) fetchScoresOnly()
+    else scheduleNextScoreFetch()
+  }, interval)
+}
+
+const fetchAll = async () => {
+  await Promise.all([fetchOddsOnly(), fetchScoresOnly()])
 }
 
 // Predict season progress dynamically based on current date
@@ -397,26 +429,25 @@ const getSeasonProgress = (league: 'MLB' | 'NBA') => {
   }
 }
 
-let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
+let oddsTimer: ReturnType<typeof setInterval> | null = null
+let scoreTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(() => {
   fetchAll()
   fetchPlayerStats()
-  autoRefreshTimer = setInterval(() => {
-    if (!document.hidden) {
-      fetchAll()
-    }
-  }, 3600000) // 1 hour
+  
+  // Odds Timer: 3 Minutes
+  oddsTimer = setInterval(() => {
+    if (!document.hidden) fetchOddsOnly()
+  }, 180_000)
 
-  // Score Auto Refresh (Every 2 minutes)
-  const scoreTimer = setInterval(() => {
-    if (!document.hidden) fetchScoresOnly()
-  }, 120000)
-  onUnmounted(() => clearInterval(scoreTimer))
+  // Start the adaptive hidden logic
+  // (The loop is self-sustaining via setTimeout in fetchScoresOnly)
 })
 
 onUnmounted(() => {
-  if (autoRefreshTimer) clearInterval(autoRefreshTimer)
+  if (oddsTimer) clearInterval(oddsTimer)
+  if (scoreTimer) clearTimeout(scoreTimer)
 })
 </script>
 
@@ -637,7 +668,7 @@ onUnmounted(() => {
 
           <!-- Time & Status -->
           <div class="flex items-center justify-between mb-3 text-xs">
-            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-sm transition-all"
+            <div class="flex items-center gap-2 px-2.5 py-1 rounded-full border shadow-sm transition-all"
               :class="getLiveStatus(game, 'MLB').isLive ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' : 'bg-slate-900/60 border-slate-800 text-slate-400'">
               
               <template v-if="getLiveStatus(game, 'MLB').isLive">
@@ -645,11 +676,37 @@ onUnmounted(() => {
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-sm"></span>
                 </span>
-                <span class="font-black tracking-widest text-[11px] flex items-center gap-1">
-                  <span v-if="getLiveStatus(game, 'MLB').label.includes('↑')" class="text-sky-400 text-sm font-black">↑</span>
-                  <span v-else-if="getLiveStatus(game, 'MLB').label.includes('↓')" class="text-amber-400 text-sm font-black">↓</span>
-                  {{ getLiveStatus(game, 'MLB').label.replace('↑','').replace('↓','') }}
-                </span>
+                
+                <div class="flex items-center gap-3">
+                  <!-- Inning Label -->
+                  <span class="font-black tracking-widest text-[11px] flex items-center gap-1">
+                    <span v-if="getLiveStatus(game, 'MLB').label.includes('↑')" class="text-sky-400 text-sm font-black">↑</span>
+                    <span v-else-if="getLiveStatus(game, 'MLB').label.includes('↓')" class="text-amber-400 text-sm font-black">↓</span>
+                    {{ getLiveStatus(game, 'MLB').label.replace('↑','').replace('↓','') }}
+                  </span>
+
+                  <!-- Base Diamond & Outs -->
+                  <div v-if="getLiveStatus(game, 'MLB').situation" class="flex items-center gap-2.5 pl-2 border-l border-white/10 h-4 translate-y-[0.5px]">
+                    <!-- Bases SVG -->
+                    <div class="relative w-[18px] h-[18px] flex items-center justify-center">
+                      <!-- 2nd Base -->
+                      <div class="absolute top-[1.5px] w-[5.5px] h-[5.5px] rotate-45 border border-white/20 transition-colors duration-300"
+                        :class="getLiveStatus(game, 'MLB').situation.onSecond ? 'bg-amber-400 border-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.6)]' : 'bg-transparent'"></div>
+                      <!-- 3rd Base -->
+                      <div class="absolute left-[1.5px] w-[5.5px] h-[5.5px] rotate-45 border border-white/20 transition-colors duration-300"
+                        :class="getLiveStatus(game, 'MLB').situation.onThird ? 'bg-amber-400 border-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.6)]' : 'bg-transparent'"></div>
+                      <!-- 1st Base -->
+                      <div class="absolute right-[1.5px] w-[5.5px] h-[5.5px] rotate-45 border border-white/20 transition-colors duration-300"
+                        :class="getLiveStatus(game, 'MLB').situation.onFirst ? 'bg-amber-400 border-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.6)]' : 'bg-transparent'"></div>
+                    </div>
+
+                    <!-- Outs Dots -->
+                    <div class="flex gap-1 items-center mb-[-1px]">
+                      <div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full transition-colors duration-300"
+                        :class="i <= (getLiveStatus(game, 'MLB').situation.outs || 0) ? 'bg-rose-500 shadow-[0_0_5px_rgba(244,63,94,0.5)]' : 'bg-slate-700'"></div>
+                    </div>
+                  </div>
+                </div>
               </template>
               
               <template v-else>
@@ -797,9 +854,34 @@ onUnmounted(() => {
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-sm"></span>
                 </span>
-                <span class="font-black tracking-widest text-[11px] uppercase">
-                  {{ getLiveStatus(game, 'NBA').label }}
-                </span>
+                <div class="flex items-center gap-3">
+                  <span class="font-black tracking-widest text-[11px] uppercase">
+                    {{ getLiveStatus(game, 'NBA').label }}
+                  </span>
+                  
+                  <!-- NBA Situation (Option B: Possession & Bonus) -->
+                  <div v-if="getLiveStatus(game, 'NBA').situation" class="flex items-center gap-2 pl-2 border-l border-white/10 h-4 translate-y-[0.5px]">
+                    <!-- Possession Arrow Icon -->
+                    <div class="flex items-center gap-1">
+                      <!-- Left Arrow (Away) -->
+                      <svg v-if="getLiveStatus(game, 'NBA').situation.possession === getLiveStatus(game, 'NBA').competitors.find((c:any) => c.homeAway === 'away')?.id" 
+                        xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-amber-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                      <!-- Right Arrow (Home) -->
+                      <svg v-if="getLiveStatus(game, 'NBA').situation.possession === getLiveStatus(game, 'NBA').competitors.find((c:any) => c.homeAway === 'home')?.id" 
+                        xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-amber-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+
+                    <!-- Bonus Indicator -->
+                    <div v-if="getLiveStatus(game, 'NBA').situation.homeBonus || getLiveStatus(game, 'NBA').situation.awayBonus" 
+                      class="flex items-center px-1.5 py-0.5 bg-rose-600 rounded-sm text-[8px] font-black text-white leading-none tracking-tighter shadow-[0_0_5px_rgba(225,29,72,0.4)]">
+                      BONUS
+                    </div>
+                  </div>
+                </div>
               </template>
               
               <template v-else>
@@ -823,7 +905,12 @@ onUnmounted(() => {
                   class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
                 <div class="min-w-0">
                   <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">客隊</div>
-                  <div class="text-[15px] font-black text-slate-100 truncate tracking-tight">{{ game.away_team }}</div>
+                  <div class="text-[15px] font-black text-slate-100 truncate tracking-tight flex items-center gap-2">
+                    {{ game.away_team }}
+                    <!-- Possession Light -->
+                    <span v-if="getLiveStatus(game, 'NBA').isLive && getLiveStatus(game, 'NBA').situation?.possession === getLiveStatus(game, 'NBA').competitors.find((c:any) => c.homeAway === 'away')?.id" 
+                      class="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] animate-pulse shrink-0"></span>
+                  </div>
                 </div>
               </div>
               <div class="flex items-center gap-3">
@@ -852,7 +939,12 @@ onUnmounted(() => {
                   class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
                 <div class="min-w-0">
                   <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">主隊</div>
-                  <div class="text-[15px] font-black text-slate-100 truncate tracking-tight">{{ game.home_team }}</div>
+                  <div class="text-[15px] font-black text-slate-100 truncate tracking-tight flex items-center gap-2">
+                    {{ game.home_team }}
+                    <!-- Possession Light -->
+                    <span v-if="getLiveStatus(game, 'NBA').isLive && getLiveStatus(game, 'NBA').situation?.possession === getLiveStatus(game, 'NBA').competitors.find((c:any) => c.homeAway === 'home')?.id" 
+                      class="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] animate-pulse shrink-0"></span>
+                  </div>
                 </div>
               </div>
               <div class="flex items-center gap-3">
