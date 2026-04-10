@@ -415,7 +415,9 @@ const getSeasonProgress = (league: 'MLB' | 'NBA') => {
     const totalDays = (end - start) / (1000 * 3600 * 24)
     const currentDays = (now.getTime() - start) / (1000 * 3600 * 24)
     let played = Math.round((currentDays / totalDays) * 82)
-    return { played: Math.min(played, 82), total: 82, status: played >= 78 ? '季末/季後賽' : '例行賽' }
+    let status = '例行賽'
+    if (played >= 78) status = '例行賽末段'
+    return { played: Math.min(played, 82), total: 82, status }
   } else {
     // Dynamic MLB Logic: Current Year March to Sep
     const start = new Date(year, 2, 26).getTime()
@@ -425,7 +427,9 @@ const getSeasonProgress = (league: 'MLB' | 'NBA') => {
     const totalDays = (end - start) / (1000 * 3600 * 24)
     const currentDays = (now.getTime() - start) / (1000 * 3600 * 24)
     let played = Math.round((currentDays / totalDays) * 162)
-    return { played: Math.max(1, Math.min(played, 162)), total: 162, status: '例行賽' }
+    let status = '例行賽'
+    if (played >= 155) status = '例行賽末段'
+    return { played: Math.max(1, Math.min(played, 162)), total: 162, status }
   }
 }
 
@@ -473,9 +477,10 @@ onUnmounted(() => {
         <div class="w-6 h-6 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center shrink-0">
           <span class="text-[12px] md:text-[16px] leading-none text-blue-400 opacity-80 backdrop-grayscale">⚾</span>
         </div>
-        <div class="min-w-0">
+        <div class="min-w-0 relative flex-1">
           <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">MLB 賽季</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none">{{ getSeasonProgress('MLB').played }} <span class="text-[8px] md:text-[10px] text-slate-500">/ 162</span></div>
+          <span v-if="getSeasonProgress('MLB').status === '季後賽'" class="absolute -top-1 -right-0.5 md:-top-5 md:right-0 text-[6px] md:text-[8px] bg-blue-500/20 text-blue-500 px-1 py-0.5 rounded border border-blue-500/30 font-black animate-pulse whitespace-nowrap uppercase">Postseason</span>
         </div>
       </div>
 
