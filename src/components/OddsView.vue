@@ -116,6 +116,10 @@ const nbaError = ref('')
 const activeLeague = ref<'MLB' | 'NBA' | '球員'>('MLB')
 const lastUpdateStr = ref('')
 
+// ── Score Data ──
+const mlbScores = ref<any[]>([])
+const nbaScores = ref<any[]>([])
+
 // ── Player Sub-filter ──
 const currentYear = new Date().getFullYear()
 const playerTypeFilter = ref<'all' | 'hitting' | 'pitching'>('all')
@@ -263,30 +267,106 @@ const applySort = (games: Game[]) => {
 const sortedMlbGames = computed(() => applySort(mlbGames.value))
 const sortedNbaGames = computed(() => applySort(nbaGames.value))
 
+// ── Score Matching Logic ──
+const findScore = (game: Game, league: 'MLB' | 'NBA') => {
+  const scores = league === 'MLB' ? mlbScores.value : nbaScores.value
+  return scores.find(s => {
+    // Match based on home/away team name overlap AND within a 12-hour window
+    // This prevents matching yesterday's "Final" game to tomorrow's scheduled game
+    const gameTime = new Date(game.commence_time).getTime()
+    const scoreTime = new Date(s.date).getTime()
+    const timeDiffHours = Math.abs(gameTime - scoreTime) / (1000 * 3600)
+    
+    if (timeDiffHours > 12) return false
+
+    const homeWords = game.home_team.split(' ')
+    const awayWords = game.away_team.split(' ')
+    const homeKey = (homeWords[homeWords.length - 1] || '').toLowerCase()
+    const awayKey = (awayWords[awayWords.length - 1] || '').toLowerCase()
+    return s.name.toLowerCase().includes(homeKey) && s.name.toLowerCase().includes(awayKey)
+  })
+}
+
+const getLiveStatus = (game: Game, league: 'MLB' | 'NBA') => {
+  const scoreData = findScore(game, league)
+  if (!scoreData || scoreData.status.type.state === 'pre') {
+    return { isLive: false, label: formatTime(game.commence_time) }
+  }
+  
+  const status = scoreData.status
+  let detail = status.type.shortDetail
+  
+  if (league === 'MLB') {
+    // Advanced MLB translation logic
+    const isInning = detail.toLowerCase().includes('inning') || /\d/.test(detail)
+    detail = detail.replace(/Top/i, '↑').replace(/Bot/i, '↓').replace(/Mid/i, '中').replace(/End/i, '末')
+    detail = detail.replace(/1st/i, '1').replace(/2nd/i, '2').replace(/3rd/i, '3').replace(/(\d+)th/i, '$1')
+    detail = detail.replace(/Inning/i, '')
+    if (isInning && !detail.includes('局') && !detail.includes('末') && !detail.includes('中')) {
+      detail = detail.trim() + ' 局'
+    }
+  } else {
+    detail = detail.replace('1st', '1節').replace('2nd', '2節').replace('3rd', '3節').replace('4th', '4節')
+    detail = detail.replace('Quarter', '節').replace('Half', '半場')
+  }
+
+  return { 
+    isLive: status.type.state === 'in', 
+    label: detail,
+    isFinal: status.type.state === 'post',
+    scores: {
+      home: scoreData.competitions[0].competitors.find((c:any) => c.homeAway === 'home')?.score || '0',
+      away: scoreData.competitions[0].competitors.find((c:any) => c.homeAway === 'away')?.score || '0'
+    }
+  }
+}
+
 const fetchAll = async () => {
   mlbLoading.value = true
   nbaLoading.value = true
   mlbError.value = ''
   nbaError.value = ''
 
-  const [mlb, nba] = await Promise.allSettled([api.getMLBOdds(), api.getNBAOdds()])
+  const [mlb, nba, mlbS, nbaS] = await Promise.allSettled([
+    api.getMLBOdds(), 
+    api.getNBAOdds(),
+    api.getEspnScores('mlb'),
+    api.getEspnScores('nba')
+  ])
 
   if (mlb.status === 'fulfilled') {
     mlbGames.value = mlb.value
   } else {
     mlbError.value = (mlb.reason as Error).message || '無法取得 MLB 資料'
   }
-  mlbLoading.value = false
-
+  
   if (nba.status === 'fulfilled') {
     nbaGames.value = nba.value
   } else {
     nbaError.value = (nba.reason as Error).message || '無法取得 NBA 資料'
   }
+
+  if (mlbS.status === 'fulfilled') mlbScores.value = mlbS.value.events || []
+  if (nbaS.status === 'fulfilled') nbaScores.value = nbaS.value.events || []
+
+  mlbLoading.value = false
   nbaLoading.value = false
   
   const now = new Date()
   lastUpdateStr.value = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
+}
+
+const fetchScoresOnly = async () => {
+  try {
+    const [mlbS, nbaS] = await Promise.allSettled([
+      api.getEspnScores('mlb'),
+      api.getEspnScores('nba')
+    ])
+    if (mlbS.status === 'fulfilled') mlbScores.value = mlbS.value.events || []
+    if (nbaS.status === 'fulfilled') nbaScores.value = nbaS.value.events || []
+  } catch (e) {
+    console.error('Failed to update scores', e)
+  }
 }
 
 // Predict season progress dynamically based on current date
@@ -327,6 +407,12 @@ onMounted(() => {
       fetchAll()
     }
   }, 3600000) // 1 hour
+
+  // Score Auto Refresh (Every 2 minutes)
+  const scoreTimer = setInterval(() => {
+    if (!document.hidden) fetchScoresOnly()
+  }, 120000)
+  onUnmounted(() => clearInterval(scoreTimer))
 })
 
 onUnmounted(() => {
@@ -374,15 +460,13 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Live badge & Sort -->
-      <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto justify-center">
+      <!-- Live badge & Sync -->
+      <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto">
         <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-          <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">ODDS LIVE</span>
+          <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">Sports Live</span>
         </div>
-        <div class="flex items-center justify-end w-full mt-1">
-          <span class="text-[10px] text-slate-500 font-mono flex items-center">最後更新: {{ lastUpdateStr }}</span>
-        </div>
+        <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateStr }}</span>
       </div>
     </div>
 
@@ -551,54 +635,90 @@ onUnmounted(() => {
           class="bg-[#0a0f1c] rounded-2xl border border-slate-800/60 p-4 hover:border-slate-600 transition-colors shadow-lg relative overflow-hidden group">
           <div class="absolute top-0 right-0 w-28 h-28 bg-blue-500/5 blur-3xl rounded-full translate-x-10 -translate-y-10 group-hover:bg-blue-500/8 pointer-events-none"></div>
 
-          <!-- Time -->
+          <!-- Time & Status -->
           <div class="flex items-center justify-between mb-3 text-xs">
-            <span class="text-slate-400 flex items-center gap-1.5 bg-slate-900/60 px-2 py-0.5 rounded font-mono">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-              </svg>
-              {{ formatTime(game.commence_time) }}
-            </span>
-            <span class="text-[10px] text-slate-600 bg-slate-800 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">MLB</span>
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-sm transition-all"
+              :class="getLiveStatus(game, 'MLB').isLive ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' : 'bg-slate-900/60 border-slate-800 text-slate-400'">
+              
+              <template v-if="getLiveStatus(game, 'MLB').isLive">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-sm"></span>
+                </span>
+                <span class="font-black tracking-widest text-[11px] flex items-center gap-1">
+                  <span v-if="getLiveStatus(game, 'MLB').label.includes('↑')" class="text-sky-400 text-sm font-black">↑</span>
+                  <span v-else-if="getLiveStatus(game, 'MLB').label.includes('↓')" class="text-amber-400 text-sm font-black">↓</span>
+                  {{ getLiveStatus(game, 'MLB').label.replace('↑','').replace('↓','') }}
+                </span>
+              </template>
+              
+              <template v-else>
+                <div class="flex items-center gap-1.5 opacity-80">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-emerald-400/80" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="font-mono">{{ getLiveStatus(game, 'MLB').label }}</span>
+                </div>
+              </template>
+            </div>
+            <span class="text-[10px] text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-slate-700/50">MLB</span>
           </div>
 
           <!-- Teams -->
-          <div class="space-y-3">
+          <div class="space-y-4">
             <!-- Away -->
             <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5 min-w-0">
-                <img :src="getMlbLogo(game.away_team)" :alt="game.away_team"
-                  class="w-10 h-10 rounded-full bg-white object-contain p-1 ring-2 ring-black shrink-0 shadow" />
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="relative">
+                  <img :src="getMlbLogo(game.away_team)" :alt="game.away_team"
+                    class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
+                </div>
                 <div class="min-w-0">
-                  <div class="text-[10px] text-slate-500 font-bold tracking-widest">客隊</div>
-                  <div class="text-sm font-black text-slate-200 truncate">{{ game.away_team }}</div>
+                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">客隊</div>
+                  <div class="text-[15px] font-black text-slate-100 truncate tracking-tight">{{ game.away_team }}</div>
                 </div>
               </div>
-              <div class="shrink-0 min-w-[62px] text-center px-2.5 py-1.5 rounded-lg border font-bold font-mono text-sm"
-                :class="[getOddsStyle(getOdds(game, game.away_team)).bg, getOddsStyle(getOdds(game, game.away_team)).text]">
-                {{ getOdds(game, game.away_team) }}
+              <div class="flex items-center gap-3">
+                <div v-if="getLiveStatus(game, 'MLB').isLive || getLiveStatus(game, 'MLB').isFinal" 
+                  class="text-2xl font-black px-2 tabular-nums transition-all"
+                  :class="getLiveStatus(game, 'MLB').isLive ? 'text-white' : 'text-slate-500'">
+                  {{ getLiveStatus(game, 'MLB').scores?.away }}
+                </div>
+                <div class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer"
+                  :class="[getOddsStyle(getOdds(game, game.away_team)).bg, getOddsStyle(getOdds(game, game.away_team)).text]">
+                  {{ getOdds(game, game.away_team) }}
+                </div>
               </div>
             </div>
 
-            <div class="flex items-center gap-3">
-              <div class="flex-1 h-px bg-slate-800"></div>
-              <span class="text-[10px] font-black text-slate-600">VS</span>
-              <div class="flex-1 h-px bg-slate-800"></div>
+            <div class="relative flex items-center gap-3">
+              <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent via-slate-800 to-transparent"></div>
+              <span class="text-[9px] font-black text-slate-700 tracking-tighter uppercase px-2 py-0.5 border border-slate-800/50 rounded-full italic">VS</span>
+              <div class="flex-1 h-[1px] bg-gradient-to-l from-transparent via-slate-800 to-transparent"></div>
             </div>
 
             <!-- Home -->
             <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5 min-w-0">
-                <img :src="getMlbLogo(game.home_team)" :alt="game.home_team"
-                  class="w-10 h-10 rounded-full bg-white object-contain p-1 ring-2 ring-black shrink-0 shadow" />
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="relative">
+                  <img :src="getMlbLogo(game.home_team)" :alt="game.home_team"
+                    class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
+                </div>
                 <div class="min-w-0">
-                  <div class="text-[10px] text-slate-500 font-bold tracking-widest">主隊</div>
-                  <div class="text-sm font-black text-slate-200 truncate">{{ game.home_team }}</div>
+                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">主隊</div>
+                  <div class="text-[15px] font-black text-slate-100 truncate tracking-tight">{{ game.home_team }}</div>
                 </div>
               </div>
-              <div class="shrink-0 min-w-[62px] text-center px-2.5 py-1.5 rounded-lg border font-bold font-mono text-sm"
-                :class="[getOddsStyle(getOdds(game, game.home_team)).bg, getOddsStyle(getOdds(game, game.home_team)).text]">
-                {{ getOdds(game, game.home_team) }}
+              <div class="flex items-center gap-3">
+                <div v-if="getLiveStatus(game, 'MLB').isLive || getLiveStatus(game, 'MLB').isFinal" 
+                  class="text-2xl font-black px-2 tabular-nums transition-all"
+                  :class="getLiveStatus(game, 'MLB').isLive ? 'text-white' : 'text-slate-500'">
+                  {{ getLiveStatus(game, 'MLB').scores?.home }}
+                </div>
+                <div class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer"
+                  :class="[getOddsStyle(getOdds(game, game.home_team)).bg, getOddsStyle(getOdds(game, game.home_team)).text]">
+                  {{ getOdds(game, game.home_team) }}
+                </div>
               </div>
             </div>
           </div>
@@ -667,54 +787,84 @@ onUnmounted(() => {
           class="bg-[#0a0f1c] rounded-2xl border border-slate-800/60 p-4 hover:border-slate-600 transition-colors shadow-lg relative overflow-hidden group">
           <div class="absolute top-0 right-0 w-28 h-28 bg-orange-500/5 blur-3xl rounded-full translate-x-10 -translate-y-10 group-hover:bg-orange-500/8 pointer-events-none"></div>
 
-          <!-- Time -->
+          <!-- Time & Status -->
           <div class="flex items-center justify-between mb-3 text-xs">
-            <span class="text-slate-400 flex items-center gap-1.5 bg-slate-900/60 px-2 py-0.5 rounded font-mono">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-              </svg>
-              {{ formatTime(game.commence_time) }}
-            </span>
-            <span class="text-[10px] text-slate-600 bg-slate-800 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">NBA</span>
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border shadow-sm transition-all"
+              :class="getLiveStatus(game, 'NBA').isLive ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' : 'bg-slate-900/60 border-slate-800 text-slate-400'">
+              
+              <template v-if="getLiveStatus(game, 'NBA').isLive">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-sm"></span>
+                </span>
+                <span class="font-black tracking-widest text-[11px] uppercase">
+                  {{ getLiveStatus(game, 'NBA').label }}
+                </span>
+              </template>
+              
+              <template v-else>
+                <div class="flex items-center gap-1.5 opacity-80">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-orange-400/80" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="font-mono">{{ getLiveStatus(game, 'NBA').label }}</span>
+                </div>
+              </template>
+            </div>
+            <span class="text-[10px] text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-slate-700/50">NBA</span>
           </div>
 
           <!-- Teams -->
-          <div class="space-y-3">
+          <div class="space-y-4">
             <!-- Away -->
             <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5 min-w-0">
+              <div class="flex items-center gap-3 min-w-0">
                 <img :src="getNbaLogo(game.away_team)" :alt="game.away_team"
-                  class="w-10 h-10 rounded-full bg-white object-contain p-1 ring-2 ring-black shrink-0 shadow" />
+                  class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
                 <div class="min-w-0">
-                  <div class="text-[10px] text-slate-500 font-bold tracking-widest">客隊</div>
-                  <div class="text-sm font-black text-slate-200 truncate">{{ game.away_team }}</div>
+                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">客隊</div>
+                  <div class="text-[15px] font-black text-slate-100 truncate tracking-tight">{{ game.away_team }}</div>
                 </div>
               </div>
-              <div class="shrink-0 min-w-[62px] text-center px-2.5 py-1.5 rounded-lg border font-bold font-mono text-sm"
-                :class="[getOddsStyle(getOdds(game, game.away_team)).bg, getOddsStyle(getOdds(game, game.away_team)).text]">
-                {{ getOdds(game, game.away_team) }}
+              <div class="flex items-center gap-3">
+                <div v-if="getLiveStatus(game, 'NBA').isLive || getLiveStatus(game, 'NBA').isFinal" 
+                  class="text-2xl font-black px-2 tabular-nums transition-all"
+                  :class="getLiveStatus(game, 'NBA').isLive ? 'text-white' : 'text-slate-500'">
+                  {{ getLiveStatus(game, 'NBA').scores?.away }}
+                </div>
+                <div class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer"
+                  :class="[getOddsStyle(getOdds(game, game.away_team)).bg, getOddsStyle(getOdds(game, game.away_team)).text]">
+                  {{ getOdds(game, game.away_team) }}
+                </div>
               </div>
             </div>
 
-            <div class="flex items-center gap-3">
-              <div class="flex-1 h-px bg-slate-800"></div>
-              <span class="text-[10px] font-black text-slate-600">VS</span>
-              <div class="flex-1 h-px bg-slate-800"></div>
+            <div class="relative flex items-center gap-3">
+              <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent via-slate-800 to-transparent"></div>
+              <span class="text-[9px] font-black text-slate-700 tracking-tighter uppercase px-2 py-0.5 border border-slate-800/50 rounded-full italic">VS</span>
+              <div class="flex-1 h-[1px] bg-gradient-to-l from-transparent via-slate-800 to-transparent"></div>
             </div>
 
             <!-- Home -->
             <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5 min-w-0">
+              <div class="flex items-center gap-3 min-w-0">
                 <img :src="getNbaLogo(game.home_team)" :alt="game.home_team"
-                  class="w-10 h-10 rounded-full bg-white object-contain p-1 ring-2 ring-black shrink-0 shadow" />
+                  class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
                 <div class="min-w-0">
-                  <div class="text-[10px] text-slate-500 font-bold tracking-widest">主隊</div>
-                  <div class="text-sm font-black text-slate-200 truncate">{{ game.home_team }}</div>
+                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">主隊</div>
+                  <div class="text-[15px] font-black text-slate-100 truncate tracking-tight">{{ game.home_team }}</div>
                 </div>
               </div>
-              <div class="shrink-0 min-w-[62px] text-center px-2.5 py-1.5 rounded-lg border font-bold font-mono text-sm"
-                :class="[getOddsStyle(getOdds(game, game.home_team)).bg, getOddsStyle(getOdds(game, game.home_team)).text]">
-                {{ getOdds(game, game.home_team) }}
+              <div class="flex items-center gap-3">
+                <div v-if="getLiveStatus(game, 'NBA').isLive || getLiveStatus(game, 'NBA').isFinal" 
+                  class="text-2xl font-black px-2 tabular-nums transition-all"
+                  :class="getLiveStatus(game, 'NBA').isLive ? 'text-white' : 'text-slate-500'">
+                  {{ getLiveStatus(game, 'NBA').scores?.home }}
+                </div>
+                <div class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer"
+                  :class="[getOddsStyle(getOdds(game, game.home_team)).bg, getOddsStyle(getOdds(game, game.home_team)).text]">
+                  {{ getOdds(game, game.home_team) }}
+                </div>
               </div>
             </div>
           </div>

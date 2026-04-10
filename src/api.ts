@@ -164,5 +164,11 @@ export const api = {
   // MLB Transactions API
   async getMlbTransactions(startDate: string, endDate: string) {
     return apiFetch(`https://statsapi.mlb.com/api/v1/transactions?sportId=1&startDate=${startDate}&endDate=${endDate}`);
+  },
+
+  // ESPN Hidden API for Live Scores
+  async getEspnScores(league: 'mlb' | 'nba') {
+    const sport = league === 'nba' ? 'basketball' : 'baseball';
+    return apiFetch(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard`);
   }
 };

@@ -1,4 +1,4 @@
-# TradingBox 2.0
+# TradingBox
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-線上體驗-blue?style=for-the-badge&logo=vercel)](https://trading-box.vercel.app/)
 

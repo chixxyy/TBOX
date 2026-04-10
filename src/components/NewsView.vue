@@ -211,7 +211,7 @@ onUnmounted(() => {
       <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto">
         <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-          <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">News Live Stream</span>
+          <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">News Live</span>
         </div>
         <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateTime }}</span>
       </div>
