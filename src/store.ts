@@ -78,7 +78,8 @@ interface NewsItem {
 }
 
 export const globalMovers = ref<Mover[]>([])
-export const globalNews = ref<NewsItem[]>([])
+export const globalNews = useStorage<NewsItem[]>('tbox-global-news', [])
+export const lastNewsUpdate = useStorage('tbox-last-news-update', '')
 
 // --- Player Tracking State (Shared) ---
 interface PlayerStats {
@@ -184,7 +185,6 @@ const initSessionSync = (userId: string) => {
 export const isMoversLoading = ref(true)
 export const isNewsLoading = ref(true)
 export const lastMoversUpdate = ref('')
-export const lastNewsUpdate = ref('')
 
 // --- Global Share State ---
 export const showShareConfirm = ref(false)

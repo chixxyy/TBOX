@@ -29,7 +29,10 @@ const get24hTime = () => new Date().toLocaleTimeString('zh-TW', {
 // --- HELPERS ---
 
 function getRelativeTime(timestamp: number) {
-  const mins = Math.floor((Date.now() - timestamp) / 60000)
+  if (!timestamp || isNaN(timestamp)) return 'now'
+  const diff = Date.now() - timestamp
+  if (diff < 0) return 'now' // Handle future dates from buggy APIs
+  const mins = Math.floor(diff / 60000)
   if (mins < 60) return `${mins}m`
   const hours = Math.floor(mins / 60)
   if (hours < 24) return `${hours}h`
@@ -527,6 +530,12 @@ async function syncPortfolioStockPrices() {
 }
 
 onMounted(() => {
+  // 1. Initial hydration from cache: Populate known IDs to prevent duplicate alerts
+  if (globalNews.value.length > 0) {
+    globalNews.value.forEach(n => knownNewsIds.add(n.id))
+    isNewsLoading.value = false
+  }
+
   syncNews()
   syncMovers()
   connectAlertMonitor()
