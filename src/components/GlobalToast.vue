@@ -25,7 +25,7 @@ const resumeTimer = (id: string) => {
   const timerId = setTimeout(() => {
     removeToast(id)
     timers.delete(id)
-  }, 5000) // 5 seconds for better visibility
+  }, 1500) // Restored to 1.5 seconds
   timers.set(id, timerId)
 }
 
