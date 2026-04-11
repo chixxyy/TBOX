@@ -515,7 +515,8 @@ async function syncPortfolioStockPrices() {
   const stocks = portfolio.value.filter(p => !p.symbol.endsWith('USDT') && p.symbol !== 'FGI' && p.symbol !== '^VIX' && p.symbol !== 'BDI')
   if (stocks.length === 0) return
 
-  for (const s of stocks) {
+  // Fetch all stock quotes in parallel instead of sequentially
+  await Promise.all(stocks.map(async (s) => {
     try {
       const quote = await api.getFinnhubQuote(s.symbol)
       if (quote && quote.c) {
@@ -534,7 +535,7 @@ async function syncPortfolioStockPrices() {
     } catch (e) {
       console.error(`Failed to sync stock price for ${s.symbol}:`, e)
     }
-  }
+  }))
 }
 
 onMounted(() => {
@@ -544,10 +545,22 @@ onMounted(() => {
     isNewsLoading.value = false
   }
 
+  // 2. Cold-start bypass: if cached news is stale or too small, force a fresh full fetch
+  //    This ensures users always see ~200 items on first load, not a half-filled stale cache
+  const cachedCount = globalNews.value.length
+  if (cachedCount < 50) {
+    // Not enough data — clear LS news caches and fetch fresh immediately
+    try {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('tbox_cache_')) localStorage.removeItem(k)
+      })
+    } catch (e) { /* ignore */ }
+  }
+
   syncNews()
   syncMovers()
   connectAlertMonitor()
-  syncPortfolioStockPrices() // Initial sync
+  syncPortfolioStockPrices() // Initial sync — now parallel!
   fetchFearGreedIndex() // Initial FGI sync
   fetchBdiData() // Initial BDI sync
   newsTimer = setInterval(syncNews, 30000)
