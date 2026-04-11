@@ -124,7 +124,12 @@ onMounted(() => {
 
 const formatTime = (ts: number) => {
   const d = new Date(ts)
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  const y = d.getFullYear()
+  const m = (d.getMonth() + 1).toString().padStart(2, '0')
+  const date = d.getDate().toString().padStart(2, '0')
+  const h = d.getHours().toString().padStart(2, '0')
+  const min = d.getMinutes().toString().padStart(2, '0')
+  return `${y}/${m}/${date} ${h}:${min}`
 }
 
 const sendMessage = async () => {
