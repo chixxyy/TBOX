@@ -7,14 +7,9 @@ const ODDS_API_KEY = import.meta.env.VITE_ODDS_API_KEY as string;
 const requestCache = new Map<string, { data: any, timestamp: number }>();
 const activeRequests = new Map<string, Promise<any>>();
 
-
-
-// Cache TTLs:
-// - News: 25s (slightly under 30s poll interval so each cycle is fresh)
-// - Quotes: 10s (frequent updates for live price)
-const NEWS_CACHE_TTL = 25000;
-const QUOTE_CACHE_TTL = 10000;
-const ODDS_CACHE_TTL = 600000; // 10 minutes - Protect quota
+// Cache TTLs (news has NO cache — always fetch fresh):
+const QUOTE_CACHE_TTL = 10000;   // 10s — prevent hammering same symbol
+const ODDS_CACHE_TTL = 600000;   // 10 min — paid quota protection
 
 async function apiFetch(url: string, options: RequestInit = {}) {
   const isFinnhub = url.includes('finnhub.io');
@@ -38,28 +33,24 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   }
 
   const cacheKey = finalUrl;
-  const storageKey = `tbox_cache_${btoa(cacheKey).slice(0, 32)}`; // Minimized safe key
+  const storageKey = `tbox_cache_${btoa(cacheKey).slice(0, 32)}`;
 
-  // Cache check hierarchy: Memory -> LocalStorage
-  if (isFinnhub || isOddsApi) {
-    let ttl = 10000;
-    if (isNews) ttl = NEWS_CACHE_TTL;
-    else if (isQuote) ttl = QUOTE_CACHE_TTL;
-    else if (isOddsApi) ttl = ODDS_CACHE_TTL;
+  // Cache only for quotes and odds — news always bypasses cache
+  if (!isNews && (isQuote || isOddsApi)) {
+    const ttl = isOddsApi ? ODDS_CACHE_TTL : QUOTE_CACHE_TTL;
 
-    // 1. Check Memory Cache
+    // 1. Memory cache
     const memCached = requestCache.get(cacheKey);
     if (memCached && Date.now() - memCached.timestamp < ttl) {
       return memCached.data;
     }
 
-    // 2. Check LocalStorage Cache (Shared across tabs/refreshes)
+    // 2. LocalStorage cache
     try {
       const lsRaw = localStorage.getItem(storageKey);
       if (lsRaw) {
         const lsCached = JSON.parse(lsRaw);
         if (Date.now() - lsCached.timestamp < ttl) {
-          // Re-populate memory cache
           requestCache.set(cacheKey, lsCached);
           return lsCached.data;
         }
@@ -90,7 +81,7 @@ async function apiFetch(url: string, options: RequestInit = {}) {
 
     const data = await response.json();
 
-    if (isFinnhub || isOddsApi) {
+    if (!isNews && (isQuote || isOddsApi)) {
       const cacheEntry = { data, timestamp: Date.now() };
       requestCache.set(cacheKey, cacheEntry);
       try {
