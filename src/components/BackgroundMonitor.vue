@@ -515,8 +515,7 @@ async function syncPortfolioStockPrices() {
   const stocks = portfolio.value.filter(p => !p.symbol.endsWith('USDT') && p.symbol !== 'FGI' && p.symbol !== '^VIX' && p.symbol !== 'BDI')
   if (stocks.length === 0) return
 
-  // Fetch all stock quotes in parallel instead of sequentially
-  await Promise.all(stocks.map(async (s) => {
+  for (const s of stocks) {
     try {
       const quote = await api.getFinnhubQuote(s.symbol)
       if (quote && quote.c) {
@@ -535,7 +534,7 @@ async function syncPortfolioStockPrices() {
     } catch (e) {
       console.error(`Failed to sync stock price for ${s.symbol}:`, e)
     }
-  }))
+  }
 }
 
 onMounted(() => {
