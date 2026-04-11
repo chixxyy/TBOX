@@ -29,7 +29,8 @@ async function fetchTickerNews() {
     
     // Get top 15 news for the ticker banner
     alerts.value = allNews.slice(0, 15).map((item: any, index: number) => {
-      const isCritical = item.headline.toLowerCase().includes('hack') || item.headline.toLowerCase().includes('sec')
+      const headline = item.headline || ''
+      const isCritical = headline.toLowerCase().includes('hack') || headline.toLowerCase().includes('sec')
       let typeStr = (item.category || 'INFO').toUpperCase()
       if (isCritical) {
         typeStr = 'CRITICAL'
@@ -40,9 +41,9 @@ async function fetchTickerNews() {
       return {
         id: item.id || index,
         type: typeStr,
-        message: item.headline,
-        time: getRelativeTime(item.datetime * 1000),
-        url: item.url
+        message: headline,
+        time: getRelativeTime((item.datetime || 0) * 1000),
+        url: item.url || '#'
       }
     })
   } catch (e) {
