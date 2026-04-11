@@ -70,12 +70,12 @@ const formatPrice = (priceStr: string) => {
   return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-import { api } from '../network'
+import { api, getFinnhubToken } from '../network'
 
 let reconnectTimerBinance: any = null
 let reconnectTimerFinnhub: any = null
 let finnhubRetryCount = 0
-const MAX_FINNHUB_RETRIES = 1
+const MAX_FINNHUB_RETRIES = 3
 
 const connectBinance = () => {
   if (wsBinance) {
@@ -127,7 +127,7 @@ const connectFinnhub = () => {
     return
   }
 
-  const token = import.meta.env.VITE_FINNHUB_TOKEN as string
+  const token = getFinnhubToken()
   if (!token) return
 
   try {
@@ -223,10 +223,11 @@ const fetchVixData = async () => {
 
 const startStockPolling = () => {
   if (stockPollingTimer) return
-  console.log('Stock updates switched to polling mode (30s interval)')
   stockPollingTimer = setInterval(async () => {
     const stockAssets = assets.value.filter(a => a.type === 'stock')
     for (const asset of stockAssets) {
+      // Add 1s delay to avoid Finnhub 429
+      await new Promise(r => setTimeout(r, 1000))
       try {
         if (asset.symbol === '^VIX') {
           const vix = await fetchVixData()
@@ -271,7 +272,7 @@ const startStockPolling = () => {
         }
       } catch (err) { /* Silent fail for polling */ }
     }
-  }, 30000)
+  }, 60000)
 }
 
 onMounted(() => {

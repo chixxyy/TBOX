@@ -1,5 +1,14 @@
-const FINNHUB_TOKEN = import.meta.env.VITE_FINNHUB_TOKEN as string;
+const FINNHUB_TOKENS = (import.meta.env.VITE_FINNHUB_TOKEN as string || '').split(',').map(t => t.trim()).filter(Boolean);
 const ODDS_API_KEY = import.meta.env.VITE_ODDS_API_KEY as string;
+
+/**
+ * Returns a random Finnhub token from the available pool to balance quota usage.
+ */
+export function getFinnhubToken() {
+  if (FINNHUB_TOKENS.length === 0) return '';
+  const idx = Math.floor(Math.random() * FINNHUB_TOKENS.length);
+  return FINNHUB_TOKENS[idx];
+}
 
 /**
  * Universal fetch wrapper with optional custom headers and caching
@@ -25,7 +34,8 @@ async function apiFetch(url: string, options: RequestInit = {}) {
 
   if (isFinnhub) {
     const connector = finalUrl.includes('?') ? '&' : '?';
-    finalUrl = `${finalUrl}${connector}token=${FINNHUB_TOKEN}`;
+    // Use token rotation for Finnhub to multiply quota
+    finalUrl = `${finalUrl}${connector}token=${getFinnhubToken()}`;
   } else if (isOddsApi && !url.startsWith('/api')) {
     // Only append key if calling external Odds API directly (for local dev)
     const connector = finalUrl.includes('?') ? '&' : '?';
@@ -78,7 +88,12 @@ async function apiFetch(url: string, options: RequestInit = {}) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error(`API Error [${response.status}]:`, errorData);
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      
+      // Specifically throw the error code if available (needed for Odds API quota check)
+      const errorMsg = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+      const err: any = new Error(errorMsg);
+      if (errorData.error_code) err.code = errorData.error_code;
+      throw err;
     }
 
     const data = await response.json();

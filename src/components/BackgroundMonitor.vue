@@ -128,42 +128,27 @@ async function fetchCC(): Promise<any[]> {
 
 async function fetchSports(): Promise<any[]> {
   try {
-    const feeds = [
-      'https://www.espn.com/espn/rss/news',
-      'https://www.espn.com/espn/rss/nba/news',
-      'https://www.espn.com/espn/rss/mlb/news'
-    ]
+    // 使用自家 Vercel Proxy (/api/rss) 徹底消滅 429 報錯
+    const res = await fetch('/api/rss')
+    const data = await res.json()
     
-    // Fetch all sports feeds in parallel
-    const allResults = await Promise.allSettled(
-      feeds.map(url => 
-        fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`)
-          .then(res => res.json())
-      )
-    )
+    if (data.status !== 'ok') return []
     
-    const sportsNews: any[] = []
-    
-    allResults.forEach(res => {
-      if (res.status === 'fulfilled' && res.value.status === 'ok') {
-        (res.value.items || []).forEach((item: any) => {
-          sportsNews.push({
-            uid: `espn-${item.guid || item.link}`,
-            source: 'ESPN',
-            cat: 'sports',
-            ts: new Date(item.pubDate).getTime(),
-            headline: item.title,
-            summary: item.description?.replace(/<[^>]*>?/gm, '').slice(0, 200) || '',
-            url: item.link || '#',
-            avatarBg: 'ff0000',
-            provider: 'espn'
-          })
-        })
-      }
-    })
-    
-    return sportsNews
-  } catch { return [] }
+    return (data.items || []).map((item: any) => ({
+      uid: `espn-${item.guid || item.link}`,
+      source: 'ESPN',
+      cat: 'sports',
+      ts: new Date(item.pubDate).getTime(),
+      headline: item.title,
+      summary: item.description,
+      url: item.link || '#',
+      avatarBg: 'ff0000',
+      provider: 'espn'
+    }))
+  } catch (err) {
+    console.warn('[Sports Sync] Failed via Logic Proxy:', err)
+    return []
+  }
 }
 
 async function fetchMlbTransactions(): Promise<any[]> {
@@ -518,6 +503,8 @@ async function syncPortfolioStockPrices() {
   if (stocks.length === 0) return
 
   for (const s of stocks) {
+    // Add 1s delay to avoid Finnhub 429
+    await new Promise(r => setTimeout(r, 1000))
     try {
       const quote = await api.getFinnhubQuote(s.symbol)
       if (quote && quote.c) {

@@ -116,6 +116,7 @@ const mlbLoading = ref(true)
 const nbaLoading = ref(true)
 const mlbError = ref('')
 const nbaError = ref('')
+const isQuotaExceeded = ref(false)
 const activeLeague = ref<'MLB' | 'NBA' | '球員'>('MLB')
 const lastUpdateStr = ref('')
 
@@ -330,34 +331,60 @@ const getLiveStatus = (game: Game, league: 'MLB' | 'NBA') => {
 }
 
 const fetchOddsOnly = async () => {
-  // Ultra Smart Polling:
-  // 1. If MLB/NBA are empty, we must fetch once to get the baseline records.
-  // 2. Otherwise, only fetch if there are games in 'pre' (Upcoming) or 'in' (Live) state.
+  if (isQuotaExceeded.value) return;
+
   const hasWorkToDo = (scores: any[]) => scores.length === 0 || scores.some(s => s.status.type.state === 'pre' || s.status.type.state === 'in');
   
   const needsMlb = hasWorkToDo(mlbScores.value);
   const needsNba = hasWorkToDo(nbaScores.value);
 
   if (!needsMlb && !needsNba) {
-    console.log('%c[Sports Sync] 💤 Odds Engine Sleeping (No upcoming or live games)', "color: #64748b; font-style: italic;");
+    console.log('%c[Sports Sync] 💤 Odds Engine Sleeping', "color: #64748b; font-style: italic;");
     return;
   }
 
   mlbLoading.value = true
   nbaLoading.value = true
+  mlbError.value = ''
+  nbaError.value = ''
   
-  console.log(`%c[Sports Sync] 🎲 Syncing Proxied Odds | MLB: ${needsMlb ? 'REQ' : 'IDLE'} | NBA: ${needsNba ? 'REQ' : 'IDLE'}`, "color: #3b82f6; font-weight: bold;");
+  try {
+    const [mlb, nba] = await Promise.allSettled([
+      needsMlb ? api.getMLBOdds() : Promise.resolve(mlbGames.value), 
+      needsNba ? api.getNBAOdds() : Promise.resolve(nbaGames.value)
+    ])
 
-  const [mlb, nba] = await Promise.allSettled([
-    needsMlb ? api.getMLBOdds() : Promise.resolve(mlbGames.value), 
-    needsNba ? api.getNBAOdds() : Promise.resolve(nbaGames.value)
-  ])
+    if (mlb.status === 'fulfilled') {
+      mlbGames.value = mlb.value
+    } else {
+      const err = mlb.reason as any;
+      if (err.code === 'OUT_OF_USAGE_CREDITS') {
+        isQuotaExceeded.value = true;
+        mlbError.value = 'API 配額已達上限'
+        if (oddsTimer) clearInterval(oddsTimer);
+      } else {
+        mlbError.value = err.message || '無法取得賠率'
+      }
+    }
 
-  if (mlb.status === 'fulfilled') mlbGames.value = mlb.value
-  if (nba.status === 'fulfilled') nbaGames.value = nba.value
-
-  mlbLoading.value = false
-  nbaLoading.value = false
+    if (nba.status === 'fulfilled') {
+      nbaGames.value = nba.value
+    } else {
+      const err = nba.reason as any;
+      if (err.code === 'OUT_OF_USAGE_CREDITS') {
+        isQuotaExceeded.value = true;
+        nbaError.value = 'API 配額已達上限'
+        if (oddsTimer) clearInterval(oddsTimer);
+      } else {
+        nbaError.value = err.message || '無法取得賠率'
+      }
+    }
+  } catch (err) {
+    console.error('[Odds Engine] Sync Error:', err)
+  } finally {
+    mlbLoading.value = false
+    nbaLoading.value = false
+  }
 }
 
 const isRapidMode = computed(() => {
@@ -730,7 +757,16 @@ onUnmounted(() => {
         </div>
 
         <!-- MLB Error -->
-        <div v-else-if="mlbError" class="py-6 text-center text-red-400 text-sm">⚠️ {{ mlbError }}</div>
+        <div v-else-if="mlbError" class="py-12 text-center px-4">
+          <div class="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 max-w-sm mx-auto">
+            <div class="text-3xl mb-3">⚠️</div>
+            <p class="text-red-400 font-bold mb-1">{{ mlbError }}</p>
+            <p class="text-slate-500 text-xs leading-relaxed" v-if="isQuotaExceeded">
+              免費版 API 的月度額度已用盡。<br/>數據將在下個月重置，或請更換 API KEY。
+            </p>
+            <p class="text-slate-500 text-xs" v-else>連線發生問題，請稍後再試。</p>
+          </div>
+        </div>
 
         <!-- MLB Empty -->
         <div v-else-if="mlbGames.length === 0"
@@ -942,7 +978,16 @@ onUnmounted(() => {
         </div>
 
         <!-- NBA Error -->
-        <div v-else-if="nbaError" class="py-6 text-center text-red-400 text-sm">⚠️ {{ nbaError }}</div>
+        <div v-else-if="nbaError" class="py-12 text-center px-4">
+          <div class="bg-orange-500/5 border border-orange-500/20 rounded-2xl p-6 max-w-sm mx-auto">
+            <div class="text-3xl mb-3">⚠️</div>
+            <p class="text-orange-400 font-bold mb-1">{{ nbaError }}</p>
+            <p class="text-slate-500 text-xs leading-relaxed" v-if="isQuotaExceeded">
+              免費版 API 的月度額度已用盡。<br/>數據將在下個月重置，或請更換 API KEY。
+            </p>
+            <p class="text-slate-500 text-xs" v-else>連線發生問題，請稍後再試。</p>
+          </div>
+        </div>
 
         <!-- NBA Empty -->
         <div v-else-if="nbaGames.length === 0"
