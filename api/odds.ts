@@ -6,8 +6,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sport = league === 'nba' ? 'basketball_nba' : 'baseball_mlb';
   
   // 2. Get API Key from Environment
-  // Note: On Vercel, this is set in the dashboard without the VITE_ prefix for security
-  const apiKey = process.env.ODDS_API_KEY;
+  // Using the user's preferred variable name
+  const apiKey = process.env.VITE_ODDS_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ 

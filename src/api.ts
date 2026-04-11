@@ -1,4 +1,5 @@
 const FINNHUB_TOKEN = import.meta.env.VITE_FINNHUB_TOKEN as string;
+const ODDS_API_KEY = import.meta.env.VITE_ODDS_API_KEY as string;
 
 /**
  * Universal fetch wrapper with optional custom headers and caching
@@ -56,6 +57,10 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   if (isFinnhub) {
     const connector = finalUrl.includes('?') ? '&' : '?';
     finalUrl = `${finalUrl}${connector}token=${FINNHUB_TOKEN}`;
+  } else if (isOddsApi && !url.startsWith('/api')) {
+    // Only append key if calling external Odds API directly (for local dev)
+    const connector = finalUrl.includes('?') ? '&' : '?';
+    finalUrl = `${finalUrl}${connector}apiKey=${ODDS_API_KEY}`;
   }
 
   const cacheKey = finalUrl;
@@ -158,12 +163,18 @@ export const api = {
     return apiFetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}`);
   },
 
-  // The Odds API (Now proxied via /api/odds for CDN caching)
+  // The Odds API (Proxied for prod, Direct for local dev)
   async getMLBOdds() {
+    if (import.meta.env.DEV) {
+      return apiFetch(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?regions=us&markets=h2h&oddsFormat=decimal&bookmakers=draftkings,pinnacle,fanduel`);
+    }
     return apiFetch(`/api/odds?league=mlb`);
   },
 
   async getNBAOdds() {
+    if (import.meta.env.DEV) {
+      return apiFetch(`https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?regions=us&markets=h2h&oddsFormat=decimal&bookmakers=draftkings,pinnacle,fanduel`);
+    }
     return apiFetch(`/api/odds?league=nba`);
   },
 
