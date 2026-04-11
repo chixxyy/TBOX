@@ -81,7 +81,10 @@ async function fetchFinnhub(): Promise<any[]> {
   const results = await Promise.all(
     cats.map(c => api.getFinnhubNews(c).catch(() => []))
   )
-  return results.flat().map((item: any, i: number) => {
+  // Finnhub sometimes returns an error object { error: "..." } on rate limit
+  const flattened = results.flat()
+  const validItems = Array.isArray(flattened) ? flattened.filter(i => i && i.headline) : []
+  return validItems.map((item: any, i: number) => {
     return {
       uid: `fh-${item.id || i}`,
       source: item.source,
@@ -208,7 +211,12 @@ async function syncNews() {
       ...(mt.status === 'fulfilled' ? mt.value : []),
     ]
     const unique = new Map<string, any>()
-    all.forEach(item => unique.set(item.uid, item))
+    all.forEach(item => {
+      // Ultimate defensive check before entering the store
+      if (item && item.headline && item.uid) {
+        unique.set(item.uid, item)
+      }
+    })
     const sorted = Array.from(unique.values()).sort((a, b) => b.ts - a.ts)
 
     const isFirstLoad = knownNewsIds.size === 0
