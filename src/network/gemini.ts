@@ -1,4 +1,4 @@
-import { globalNews } from '../store'
+import { globalNews } from '../stores'
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
 

@@ -5,7 +5,7 @@ import {
   isNewsLoading as isLoading,
   setScrollProgress,
   isChangingTab
-} from '../store'
+} from '../stores'
 
 const scrollContainer = ref<HTMLElement | null>(null)
 

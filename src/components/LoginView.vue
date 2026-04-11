@@ -1,13 +1,13 @@
 ```
 <script setup lang="ts">
 import { ref } from 'vue'
-import { supabase } from '../supabase'
+import { supabase } from '../services/supabase'
 import { 
   showToast, 
   handleLoginSuccess, 
   isKickedOut,
   isForgotPassword
-} from '../store'
+} from '../stores'
 
 const isRegister = ref(false)
 const email = ref('')

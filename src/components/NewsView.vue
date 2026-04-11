@@ -7,7 +7,7 @@ import {
   setScrollProgress,
   isChangingTab,
   showToast
-} from '../store'
+} from '../stores'
 
 const openUrl = (url?: string) => {
   if (url) window.open(url, '_blank', 'noopener,noreferrer')

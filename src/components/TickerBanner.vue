@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { globalNews } from '../store'
+import { globalNews } from '../stores'
 
 function getRelativeTime(timestamp: number) {
   if (!timestamp || isNaN(timestamp) || timestamp <= 0) return 'now'

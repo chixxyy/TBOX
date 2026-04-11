@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { showToast } from '../store'
+import { showToast } from '../stores'
 
 const props = defineProps<{
   eventData: any,

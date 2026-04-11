@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { useStorage } from '@vueuse/core'
-import { playNewsChime } from './utils/audio'
-import { supabase } from './supabase'
+import { playNewsChime } from '../utils/audio'
+import { supabase } from '../services/supabase'
 
 // Only track these 4 assets as requested
 

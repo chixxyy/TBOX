@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { isEntryLoading, chatSession, goToLogin } from '../store'
+import { isEntryLoading, chatSession, goToLogin } from '../stores'
 
 const progress = ref(0)
 const loadingText = ref('系統初始化中...')

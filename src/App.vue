@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import TopHeader from './components/TopHeader.vue'
 import EntryLoader from './components/EntryLoader.vue'
+import { globalNews } from './stores'
 import GlobalToast from './components/GlobalToast.vue'
 import TickerBanner from './components/TickerBanner.vue'
 import AssetList from './components/AssetList.vue'
@@ -32,7 +33,7 @@ import {
   currentSessionId,
   activeSettingsTab,
   showToast
-} from './store'
+} from './stores'
 
 const currentNoticeTab = ref<'交易' | '平台' | '更新'>('平台')
 const dontShowAgain = ref(false)

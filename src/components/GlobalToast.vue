@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue'
-import { toasts, removeToast } from '../store'
+import { toasts, removeToast } from '../stores'
 
 // To handle multiple timers securely by their ID
 const timers = new Map<string, ReturnType<typeof setTimeout>>()

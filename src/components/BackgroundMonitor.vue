@@ -12,9 +12,9 @@ import {
   portfolio,
   trackedPlayers,
   type Mover
-} from '../store'
+} from '../stores'
 import { sendDesktopNotification } from '../utils/notify'
-import { api } from '../api'
+import { api } from '../network'
 
 const knownNewsIds = new Set<string>()
 const sessionStartTime = Date.now()

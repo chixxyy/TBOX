@@ -15,9 +15,9 @@ if (typeof window !== 'undefined') {
 }
 
 import { createApp } from 'vue'
-import './style.css'
+import './styles/main.css'
 import App from './App.vue'
-import { showToast } from './store'
+import { showToast } from './stores'
 import { playNewsChime } from './utils/audio'
 
 // Attach REAL implementations after they are imported

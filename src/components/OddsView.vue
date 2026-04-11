@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { api } from '../api'
-import { showToast, trackedPlayers, setScrollProgress } from '../store'
+import { api } from '../network'
+import { showToast, trackedPlayers, setScrollProgress } from '../stores'
 
 interface Outcome { name: string; price: number }
 interface Market { key: string; outcomes: Outcome[] }

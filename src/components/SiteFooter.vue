@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { scrollProgress, isChangingTab } from '../store'
+import { scrollProgress, isChangingTab } from '../stores'
 
 const uptime = ref('00:00:00')
 const startTime = Date.now()

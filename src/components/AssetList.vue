@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useFetch } from '@vueuse/core'
-import { activeSymbol, setActiveSymbol, marketPrices, initialAssets, openAIDrawer } from '../store'
+import { activeSymbol, setActiveSymbol, marketPrices, initialAssets, openAIDrawer } from '../stores'
 
 interface Asset {
   symbol: string
@@ -70,7 +70,7 @@ const formatPrice = (priceStr: string) => {
   return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-import { api } from '../api'
+import { api } from '../network'
 
 let reconnectTimerBinance: any = null
 let reconnectTimerFinnhub: any = null

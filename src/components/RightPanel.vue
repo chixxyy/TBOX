@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
-import { activeSymbol, priceAlerts, addPriceAlert, removePriceAlert, chatSession, goToLogin } from '../store'
+import { activeSymbol, priceAlerts, addPriceAlert, removePriceAlert, chatSession, goToLogin } from '../stores'
 import NewsFeed from './NewsFeed.vue'
 
 const currentView = ref('FEED')

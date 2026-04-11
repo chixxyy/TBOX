@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import MarketCard from './MarketCard.vue'
-import { api } from '../api'
-import { setScrollProgress, isChangingTab } from '../store'
+import { api } from '../network'
+import { setScrollProgress, isChangingTab } from '../stores'
 
 let rafId: number | null = null
 const handleScroll = (e: Event) => {

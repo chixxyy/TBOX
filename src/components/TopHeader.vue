@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, hasClickedNotifications, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, resetPlatformNotice } from '../store'
+import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, hasClickedNotifications, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, resetPlatformNotice } from '../stores'
 import { initDesktopNotifications } from '../utils/notify'
 import { onClickOutside } from '@vueuse/core'
 

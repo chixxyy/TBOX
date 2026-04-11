@@ -8,7 +8,7 @@ import {
   handleLoginSuccess,
   activeSettingsTab,
   isSecurityUpdating
-} from '../store'
+} from '../stores'
 
 const nickname = ref('')
 const bio = ref('')
@@ -21,7 +21,7 @@ const confirmNewPassword = ref('')
 const showPasswordConfirm = ref(false)
 const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
 
-import { supabase } from '../supabase'
+import { supabase } from '../services/supabase'
 
 const avatarColors = [
   { name: 'Blue', hex: '3b82f6' },

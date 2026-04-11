@@ -3,8 +3,8 @@ import { ref, watch, computed } from 'vue'
 import { 
   showAIDrawer, activeAIAsset, chatSession, 
   userProfile, chatUser, addChatMessage, activeTab, showToast 
-} from '../store'
-import { analyzeAsset, type AIAnalysisResult } from '../api/gemini'
+} from '../stores'
+import { analyzeAsset, type AIAnalysisResult } from '../network/gemini'
 
 const isLoading = ref(false)
 const errorMsg = ref('')

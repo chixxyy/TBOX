@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, shallowRef, watch, computed } from 'vue'
 import { createChart, ColorType, LineSeries, HistogramSeries } from 'lightweight-charts'
-import { activeSymbol, activeInterval, setActiveInterval, formattedActiveSymbol, marketPrices } from '../store'
+import { activeSymbol, activeInterval, setActiveInterval, formattedActiveSymbol, marketPrices } from '../stores'
 import { useFetch } from '@vueuse/core'
 
 const sentimentInfo = computed(() => {

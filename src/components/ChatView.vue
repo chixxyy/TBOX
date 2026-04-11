@@ -6,7 +6,7 @@ import {
   isAdmin, goToLogin, userProfile, isChatConnected, 
   openAIDrawer, triggerShare, newsToShare, showShareConfirm,
   showToast, setScrollProgress
-} from '../store'
+} from '../stores'
 
 const currentUser = chatUser
 const currentAvatar = computed(() => userProfile.value?.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.value}&background=3b82f6&color=fff&rounded=true`)

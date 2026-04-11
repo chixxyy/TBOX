@@ -18,7 +18,7 @@ import {
   goToLogin,
   openAIDrawer,
   showToast
-} from '../store'
+} from '../stores'
 
 let rafId: number | null = null
 const handleScroll = (e: Event) => {
