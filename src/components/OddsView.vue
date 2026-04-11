@@ -416,8 +416,23 @@ const fetchStandings = async () => {
       api.getEspnStandings('mlb'),
       api.getEspnStandings('nba')
     ])
-    mlbStandings.value = mlbRes?.children || []
-    nbaStandings.value = nbaRes?.children || []
+    
+    // Helper to sort entries by win percentage
+    const processStandings = (children: any[]) => {
+      return (children || []).map(child => {
+        if (child.standings && child.standings.entries) {
+          child.standings.entries.sort((a: any, b: any) => {
+            const aPct = a.stats.find((s: any) => s.name === 'winPercent')?.value || 0
+            const bPct = b.stats.find((s: any) => s.name === 'winPercent')?.value || 0
+            return bPct - aPct
+          })
+        }
+        return child
+      })
+    }
+
+    mlbStandings.value = processStandings(mlbRes?.children)
+    nbaStandings.value = processStandings(nbaRes?.children)
   } catch (err) {
     console.error('Failed to fetch standings', err)
   }
