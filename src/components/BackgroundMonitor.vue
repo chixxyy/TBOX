@@ -201,7 +201,7 @@ async function fetchMlbTransactions(): Promise<any[]> {
   } catch { return [] }
 }
 
-async function syncNews() {
+async function syncNews(skipNotifications = false) {
   try {
     const [fh, cc, sp, mt] = await Promise.allSettled([fetchFinnhub(), fetchCC(), fetchSports(), fetchMlbTransactions()])
     const all = [
@@ -222,10 +222,14 @@ async function syncNews() {
     const isFirstLoad = knownNewsIds.size === 0
     let hasNew = false
     const newItems: any[] = []
+    const staleThreshold = 4 * 60 * 60 * 1000 // 4 hours
+    const now = Date.now()
+    
     sorted.forEach(item => {
       if (!knownNewsIds.has(item.uid)) {
-        // Only trigger a notification if not first load AND the item was published after this session started
-        if (!isFirstLoad && item.ts > sessionStartTime) {
+        // Trigger notification if NOT skipping (initial sync) AND NOT the first session load
+        // Also added a safety check: News shouldn't be more than 4 hours old to avoid spamming very old items.
+        if (!isFirstLoad && !skipNotifications && (now - item.ts < staleThreshold)) {
           hasNew = true
           newItems.push(item)
         }
@@ -556,7 +560,7 @@ onMounted(() => {
     } catch (e) { /* ignore */ }
   }
 
-  syncNews()
+  syncNews(true) // Initial sync — pass true to skip notifications (even if cache is stale)
   syncMovers()
   connectAlertMonitor()
   syncPortfolioStockPrices() // Initial sync — now parallel!
