@@ -75,8 +75,4 @@ export function playNewsChime() {
   } catch (e) { /* silent fail */ }
 }
 
-// Expose to window for console testing
-if (typeof window !== 'undefined') {
-  const w = window as any
-  w.testNewsSound = playNewsChime
-}
+

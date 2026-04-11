@@ -130,10 +130,10 @@ const handleLogout = () => {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
                   </svg>
                 </div>
-                <span class="text-[10px] font-black uppercase tracking-wider">{{ isNotificationsEnabled ? '通知已啟用' : '通知已關閉' }}</span>
+                <span class="text-[10px] font-black uppercase tracking-wider">{{ isNotificationsEnabled ? '已啟用' : '已關閉' }}</span>
               </button>
             </div>
-            <button v-if="notificationHistory.length > 0" @click="clearNotifications" class="text-xs text-slate-400 hover:text-blue-400 transition-colors border border-slate-700 px-2 py-0.5 rounded bg-slate-900/50">清除全部</button>
+            <button v-if="notificationHistory.length > 0" @click="clearNotifications" class="text-xs text-slate-400 hover:text-blue-400 transition-colors border border-slate-700 px-2 py-0.5 rounded bg-slate-900/50">清除</button>
           </div>
           
           <div class="flex-1 overflow-y-auto p-2">
