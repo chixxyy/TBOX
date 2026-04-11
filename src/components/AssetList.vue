@@ -19,7 +19,7 @@ interface Asset {
 const assets = ref<Asset[]>(initialAssets.map(a => ({
   ...a,
   price: '---',
-  change: '0.00%',
+  change: '---',
   up: true,
   rawPrice: 0
 })) as Asset[])
@@ -277,49 +277,18 @@ const startStockPolling = () => {
 onMounted(() => {
   // 1. Non-blocking initial fetches
   const fetchStocks = async () => {
-    try {
-      const stockAssets = assets.value.filter(a => a.type === 'stock')
-      await Promise.all(stockAssets.map(async (asset) => {
-        try {
-          if (asset.symbol === '^VIX') {
-            const vix = await fetchVixData()
-            if (vix) {
-              asset.rawPrice = vix.price
-              asset.price = formatPrice(vix.price.toString())
-              asset.change = vix.change
-              asset.up = vix.up
-              asset.prevClose = vix.prevClose
-              marketPrices.value[asset.symbol] = {
-                price: asset.price,
-                change: asset.change,
-                up: asset.up,
-                rawPrice: asset.rawPrice,
-                prevClose: asset.prevClose
-              }
-            }
-            return
-          }
-
-          let targetSymbol = asset.symbol
-          let isBdi = asset.symbol === 'BDI'
-          if (isBdi) targetSymbol = 'BDRY'
-
-          const quote = await api.getFinnhubQuote(targetSymbol)
-          if (quote && quote.c) {
-            if (isBdi) {
-              const scaledPrice = Math.round(quote.c * 255)
-              asset.rawPrice = scaledPrice
-              asset.price = scaledPrice.toLocaleString()
-              asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
-              asset.up = quote.dp >= 0
-              asset.prevClose = Math.round(quote.pc * 255)
-            } else {
-              asset.rawPrice = quote.c
-              asset.price = formatPrice(quote.c.toString())
-              asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
-              asset.up = quote.dp >= 0
-              asset.prevClose = quote.pc
-            }
+    const stockAssets = assets.value.filter(a => a.type === 'stock')
+    // Sequential to prevent activeRequests dedup from cross-contaminating symbols
+    for (const asset of stockAssets) {
+      try {
+        if (asset.symbol === '^VIX') {
+          const vix = await fetchVixData()
+          if (vix) {
+            asset.rawPrice = vix.price
+            asset.price = formatPrice(vix.price.toString())
+            asset.change = vix.change
+            asset.up = vix.up
+            asset.prevClose = vix.prevClose
             marketPrices.value[asset.symbol] = {
               price: asset.price,
               change: asset.change,
@@ -328,9 +297,38 @@ onMounted(() => {
               prevClose: asset.prevClose
             }
           }
-        } catch (err) { console.error(`Finnhub init error ${asset.symbol}:`, err) }
-      }))
-    } catch (e) { console.error('Stock init failed:', e) }
+          continue
+        }
+
+        const isBdi = asset.symbol === 'BDI'
+        const targetSymbol = isBdi ? 'BDRY' : asset.symbol
+
+        const quote = await api.getFinnhubQuote(targetSymbol)
+        if (quote && quote.c) {
+          if (isBdi) {
+            const scaledPrice = Math.round(quote.c * 255)
+            asset.rawPrice = scaledPrice
+            asset.price = scaledPrice.toLocaleString()
+            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+            asset.up = quote.dp >= 0
+            asset.prevClose = Math.round(quote.pc * 255)
+          } else {
+            asset.rawPrice = quote.c
+            asset.price = formatPrice(quote.c.toString())
+            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+            asset.up = quote.dp >= 0
+            asset.prevClose = quote.pc
+          }
+          marketPrices.value[asset.symbol] = {
+            price: asset.price,
+            change: asset.change,
+            up: asset.up,
+            rawPrice: asset.rawPrice,
+            prevClose: asset.prevClose
+          }
+        }
+      } catch (err) { console.error(`Finnhub init error ${asset.symbol}:`, err) }
+    }
   }
 
   const fetchCryptos = async () => {
@@ -436,7 +434,7 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').
             :class="asset.up ? 'group-hover:text-green-400' : 'group-hover:text-red-400'">{{ asset.price }}</span>
           <span 
             class="text-[9px] md:text-[10px] w-12 md:w-16 py-0.5 rounded font-bold"
-            :class="asset.up ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'"
+            :class="asset.change === '---' ? 'text-slate-500' : (asset.up ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20')"
           >
             {{ asset.change }}
           </span>

@@ -33,29 +33,31 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   }
 
   const cacheKey = finalUrl;
-  const storageKey = `tbox_cache_${btoa(cacheKey).slice(0, 32)}`;
 
   // Cache only for quotes and odds — news always bypasses cache
   if (!isNews && (isQuote || isOddsApi)) {
     const ttl = isOddsApi ? ODDS_CACHE_TTL : QUOTE_CACHE_TTL;
 
-    // 1. Memory cache
+    // Memory cache (quotes only use memory — localStorage key collision bug with btoa truncation)
     const memCached = requestCache.get(cacheKey);
     if (memCached && Date.now() - memCached.timestamp < ttl) {
       return memCached.data;
     }
 
-    // 2. LocalStorage cache
-    try {
-      const lsRaw = localStorage.getItem(storageKey);
-      if (lsRaw) {
-        const lsCached = JSON.parse(lsRaw);
-        if (Date.now() - lsCached.timestamp < ttl) {
-          requestCache.set(cacheKey, lsCached);
-          return lsCached.data;
+    // LocalStorage cache — Odds API only (long-lived, URL is distinct enough)
+    if (isOddsApi) {
+      const storageKey = `tbox_odds_${btoa(url).slice(-20)}`;
+      try {
+        const lsRaw = localStorage.getItem(storageKey);
+        if (lsRaw) {
+          const lsCached = JSON.parse(lsRaw);
+          if (Date.now() - lsCached.timestamp < ttl) {
+            requestCache.set(cacheKey, lsCached);
+            return lsCached.data;
+          }
         }
-      }
-    } catch (e) { /* ignore LS errors */ }
+      } catch (e) { /* ignore */ }
+    }
   }
 
   // Dedup concurrent identical requests
@@ -81,12 +83,16 @@ async function apiFetch(url: string, options: RequestInit = {}) {
 
     const data = await response.json();
 
+    // Save to memory cache for quotes and odds
     if (!isNews && (isQuote || isOddsApi)) {
-      const cacheEntry = { data, timestamp: Date.now() };
-      requestCache.set(cacheKey, cacheEntry);
+      requestCache.set(cacheKey, { data, timestamp: Date.now() });
+    }
+    // Save to localStorage for odds only
+    if (isOddsApi) {
+      const storageKey = `tbox_odds_${btoa(url).slice(-20)}`;
       try {
-        localStorage.setItem(storageKey, JSON.stringify(cacheEntry));
-      } catch (e) { /* ignore LS errors */ }
+        localStorage.setItem(storageKey, JSON.stringify({ data, timestamp: Date.now() }));
+      } catch (e) { /* ignore */ }
     }
 
     return data;
