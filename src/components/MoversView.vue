@@ -172,12 +172,22 @@ const filteredMovers = computed(() => {
 
 const stats = computed(() => {
   const up = movers.value.filter(m => m.isUp).length
-  const maxMove = movers.value.length > 0 ? Math.max(...movers.value.map(m => m.changePercent)) : 0
+  const down = movers.value.filter(m => !m.isUp).length
+  
+  // Gain calculations
+  const gains = movers.value.filter(m => m.isUp).map(m => m.changePercent)
+  const maxGain = gains.length > 0 ? Math.max(...gains) : 0
+  
+  // Loss calculations (absolute values for display)
+  const losses = movers.value.filter(m => !m.isUp).map(m => Math.abs(m.changePercent))
+  const maxLoss = losses.length > 0 ? Math.max(...losses) : 0
   
   return {
     total: movers.value.length,
     up,
-    maxMove: maxMove.toFixed(1) + '%'
+    down,
+    maxMove: maxGain.toFixed(1) + '%',
+    maxDrop: maxLoss.toFixed(1) + '%'
   }
 })
 
@@ -365,12 +375,14 @@ const confirmDeleteAction = async () => {
           </div>
         </div>
         <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
-          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center text-green-400 shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
+               :class="activeFilter === 'losers' ? 'bg-red-900/30 border border-red-800/50 text-red-400' : 'bg-green-900/30 border border-green-800/50 text-green-400'">
+            <svg v-if="activeFilter === 'losers'" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">上漲信號</div>
-            <div class="text-white font-bold text-xs md:text-lg leading-none">{{ stats.up }}</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ activeFilter === 'losers' ? '下跌信號' : '上漲信號' }}</div>
+            <div class="text-white font-bold text-xs md:text-lg leading-none">{{ activeFilter === 'losers' ? stats.down : stats.up }}</div>
           </div>
         </div>
       </template>
@@ -399,17 +411,24 @@ const confirmDeleteAction = async () => {
       </template>
 
       <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0"
-          :class="activeFilter === 'portfolio' ? 'bg-indigo-900/30 border border-indigo-800/50 text-indigo-400' : 'bg-red-900/30 border border-red-800/50 text-red-500'">
-          <svg v-if="activeFilter !== 'portfolio'" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
+          :class="activeFilter === 'portfolio' ? 'bg-indigo-900/30 border border-indigo-800/50 text-indigo-400' : (activeFilter === 'losers' ? 'bg-red-900/30 border border-red-800/50 text-red-500' : 'bg-green-900/30 border border-green-800/50 text-green-500')">
+          <template v-if="activeFilter === 'portfolio'">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </template>
+          <template v-else-if="activeFilter === 'losers'">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+          </template>
+          <template v-else>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+          </template>
         </div>
         <div class="min-w-0">
           <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">
-            {{ activeFilter === 'portfolio' ? '預估盈虧 (USD)' : '最高漲幅' }}
+            {{ activeFilter === 'portfolio' ? '預估盈虧 (USD)' : (activeFilter === 'losers' ? '最大跌幅' : '最高漲幅') }}
           </div>
           <div class="text-white font-bold text-xs md:text-lg leading-none truncate">
-            {{ activeFilter === 'portfolio' ? '$' + portfolioStats.pnl : stats.maxMove }}
+            {{ activeFilter === 'portfolio' ? '$' + portfolioStats.pnl : (activeFilter === 'losers' ? stats.maxDrop : stats.maxMove) }}
           </div>
         </div>
       </div>
