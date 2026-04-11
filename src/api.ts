@@ -170,5 +170,38 @@ export const api = {
   async getEspnScores(league: 'mlb' | 'nba') {
     const sport = league === 'nba' ? 'basketball' : 'baseball';
     return apiFetch(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard`);
+  },
+
+  // ESPN Standings API (Daily Cached)
+  async getEspnStandings(league: 'mlb' | 'nba') {
+    const sport = league === 'nba' ? 'basketball' : 'baseball';
+    const dateStr = new Date().toISOString().split('T')[0];
+    const cacheKey = `standings_${league}_${dateStr}`;
+    
+    // Check cache first
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch(e) {
+      // Ignore parse err
+    }
+
+    // Fetch if not cached
+    const data = await apiFetch(`https://site.api.espn.com/apis/v2/sports/${sport}/${league}/standings`);
+    
+    try {
+      // Clean up old standings caches
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith(`standings_${league}_`) && key !== cacheKey) {
+          localStorage.removeItem(key);
+        }
+      });
+      // Save new cache
+      localStorage.setItem(cacheKey, JSON.stringify(data));
+    } catch(e) {
+      // LocalStorage might be full or blocked
+    }
+    
+    return data;
   }
 };

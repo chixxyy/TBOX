@@ -122,6 +122,8 @@ const lastUpdateStr = ref('')
 // ── Score Data ──
 const mlbScores = ref<any[]>([])
 const nbaScores = ref<any[]>([])
+const mlbStandings = ref<any[]>([])
+const nbaStandings = ref<any[]>([])
 
 // ── Player Sub-filter ──
 const currentYear = new Date().getFullYear()
@@ -401,7 +403,24 @@ const scheduleNextScoreFetch = () => {
 }
 
 const fetchAll = async () => {
-  await Promise.all([fetchOddsOnly(), fetchScoresOnly()])
+  await Promise.all([
+    fetchOddsOnly(), 
+    fetchScoresOnly(),
+    fetchStandings()
+  ])
+}
+
+const fetchStandings = async () => {
+  try {
+    const [mlbRes, nbaRes] = await Promise.all([
+      api.getEspnStandings('mlb'),
+      api.getEspnStandings('nba')
+    ])
+    mlbStandings.value = mlbRes?.children || []
+    nbaStandings.value = nbaRes?.children || []
+  } catch (err) {
+    console.error('Failed to fetch standings', err)
+  }
 }
 
 // Predict season progress dynamically based on current date
@@ -651,6 +670,40 @@ onUnmounted(() => {
           </button>
         </div>
 
+        <!-- MLB Playoff Standings (Top) -->
+        <div v-if="mlbStandings.length > 0" class="mb-6 space-y-3 px-0.5">
+           <div class="flex items-center justify-between">
+             <div class="flex items-center gap-2">
+               <h3 class="text-white font-black text-sm flex items-center gap-2">🏆 季後賽</h3>
+               <span class="text-[9px] font-black text-slate-600 tracking-widest uppercase">AL / NL Top 8</span>
+             </div>
+             <span class="text-[8px] font-black text-slate-500 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-800 uppercase tracking-tighter">Daily Cached</span>
+           </div>
+           <div class="flex flex-col sm:flex-row gap-3">
+              <div v-for="league in mlbStandings" :key="league.name" class="flex-1 overflow-hidden bg-[#0a0f1c]/60 rounded-xl border border-slate-800/40 shadow-sm">
+                 <div class="bg-slate-800/30 px-3 py-1 text-[9px] font-black text-slate-500 border-b border-slate-800/40 tracking-wider uppercase text-center">
+                   {{ league.name.replace(' League', '') }}
+                 </div>
+                 <div class="divide-y divide-slate-800/20">
+                    <div v-for="(entry, index) in league.standings.entries.slice(0, 8)" :key="entry.team.id" 
+                         class="flex items-center justify-between px-3 py-1 text-xs hover:bg-slate-800/30 transition-colors">
+                      <div class="flex items-center gap-2 w-full overflow-hidden">
+                        <span class="font-mono font-black text-[9px] w-2.5 shrink-0 text-center" 
+                              :class="Number(index) < 6 ? 'text-amber-500' : 'text-slate-600'">{{ Number(index) + 1 }}</span>
+                        <img :src="getMlbLogo(entry.team.displayName)" class="w-4 h-4 rounded-full bg-white object-contain p-0.5 shrink-0" />
+                        <span class="text-slate-200 font-bold truncate text-[10px]">{{ entry.team.name }}</span>
+                      </div>
+                      <div class="flex items-center gap-2 shrink-0 font-mono text-[9px] font-black">
+                         <span class="text-slate-500 w-8 text-right tracking-tighter">
+                           {{ entry.stats.find((s:any)=>s.name==='wins')?.value }}-{{ entry.stats.find((s:any)=>s.name==='losses')?.value }}
+                         </span>
+                      </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+
         <!-- MLB Loading -->
         <div v-if="mlbLoading" class="flex items-center gap-3 py-8 justify-center text-slate-500">
           <div class="w-5 h-5 rounded-full border-2 border-slate-700 border-t-blue-400 animate-spin"></div>
@@ -827,6 +880,40 @@ onUnmounted(() => {
             <span class="text-xs">{{ currentSort.icon }}</span>
             <span class="text-[11px] font-black text-slate-400 group-hover:text-orange-400 uppercase tracking-tight">{{ currentSort.label }}</span>
           </button>
+        </div>
+
+        <!-- NBA Playoff Standings (Top) -->
+        <div v-if="nbaStandings.length > 0" class="mb-6 space-y-3 px-0.5">
+           <div class="flex items-center justify-between">
+             <div class="flex items-center gap-2">
+               <h3 class="text-white font-black text-sm flex items-center gap-2">🏆 季後賽</h3>
+               <span class="text-[9px] font-black text-slate-600 tracking-widest uppercase">East / West Top 8</span>
+             </div>
+             <span class="text-[8px] font-black text-slate-500 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-800 uppercase tracking-tighter">Daily Cached</span>
+           </div>
+           <div class="flex flex-col sm:flex-row gap-3">
+              <div v-for="conference in nbaStandings" :key="conference.name" class="flex-1 overflow-hidden bg-[#0a0f1c]/60 rounded-xl border border-slate-800/40 shadow-sm">
+                 <div class="bg-slate-800/30 px-3 py-1 text-[9px] font-black text-slate-500 border-b border-slate-800/40 tracking-wider uppercase text-center">
+                   {{ conference.name.replace(' Conference', '') }}
+                 </div>
+                 <div class="divide-y divide-slate-800/20">
+                    <div v-for="(entry, index) in conference.standings.entries.slice(0, 8)" :key="entry.team.id" 
+                         class="flex items-center justify-between px-3 py-1 text-xs hover:bg-slate-800/30 transition-colors">
+                      <div class="flex items-center gap-2 w-full overflow-hidden">
+                        <span class="font-mono font-black text-[9px] w-2.5 shrink-0 text-center" 
+                              :class="Number(index) < 6 ? 'text-green-500' : (Number(index) < 8 ? 'text-amber-500' : 'text-slate-600')">{{ Number(index) + 1 }}</span>
+                        <img :src="getNbaLogo(entry.team.displayName)" class="w-4 h-4 rounded-full bg-white object-contain p-0.5 shrink-0" />
+                        <span class="text-slate-200 font-bold truncate text-[10px]">{{ entry.team.name }}</span>
+                      </div>
+                      <div class="flex items-center gap-2 shrink-0 font-mono text-[9px] font-black">
+                         <span class="text-slate-500 w-8 text-right tracking-tighter">
+                           {{ entry.stats.find((s:any)=>s.name==='wins')?.value }}-{{ entry.stats.find((s:any)=>s.name==='losses')?.value }}
+                         </span>
+                      </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
         </div>
 
         <!-- NBA Loading -->
