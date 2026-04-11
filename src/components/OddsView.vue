@@ -65,8 +65,11 @@ const formatTime = (iso: string) => {
   const diff = (d.getTime() - now.getTime()) / 3600000
   if (diff < 0 && diff > -4) return '進行中 🔴'
   if (diff <= -4) return '已結束'
-  if (diff < 24) return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')} 開打`
-  return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+  
+  const datePart = `${d.getMonth() + 1}/${d.getDate()}`
+  const timePart = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  
+  return `${datePart} ${timePart} 開打`
 }
 
 const getOdds = (game: Game, team: string) => {
