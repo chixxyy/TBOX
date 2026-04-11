@@ -7,33 +7,7 @@ const ODDS_API_KEY = import.meta.env.VITE_ODDS_API_KEY as string;
 const requestCache = new Map<string, { data: any, timestamp: number }>();
 const activeRequests = new Map<string, Promise<any>>();
 
-// Two INDEPENDENT throttle queues — news and quotes must not block each other
-let lastNewsCall = 0;
-let newsQueue = Promise.resolve();
 
-let lastQuoteCall = 0;
-let quoteQueue = Promise.resolve();
-
-function makeThrottledSlot(getQueue: () => Promise<void>, setQueue: (p: Promise<void>) => void, getTime: () => number, setTime: (t: number) => void, minInterval: number) {
-  const p = getQueue().then(async () => {
-    const diff = Date.now() - getTime();
-    if (diff < minInterval) await new Promise(r => setTimeout(r, minInterval - diff));
-    setTime(Date.now());
-  });
-  setQueue(p);
-  return p;
-}
-
-function getNewsSlot() {
-  return makeThrottledSlot(
-    () => newsQueue, p => { newsQueue = p }, () => lastNewsCall, t => { lastNewsCall = t }, 350
-  );
-}
-function getQuoteSlot() {
-  return makeThrottledSlot(
-    () => quoteQueue, p => { quoteQueue = p }, () => lastQuoteCall, t => { lastQuoteCall = t }, 350
-  );
-}
 
 // Cache TTLs:
 // - News: 25s (slightly under 30s poll interval so each cycle is fresh)
@@ -99,10 +73,6 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   }
 
   const fetchPromise = (async () => {
-    // Dispatch to the appropriate independent queue
-    if (isNews) await getNewsSlot();
-    else if (isQuote) await getQuoteSlot();
-
     const response = await fetch(finalUrl, { ...options, headers });
 
     if (response.status === 429) {
