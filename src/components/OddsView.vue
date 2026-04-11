@@ -330,27 +330,31 @@ const getLiveStatus = (game: Game, league: 'MLB' | 'NBA') => {
 }
 
 const fetchOddsOnly = async () => {
+  // Ultra Smart Polling:
+  // 1. If MLB/NBA are empty, we must fetch once to get the baseline records.
+  // 2. Otherwise, only fetch if there are games in 'pre' (Upcoming) or 'in' (Live) state.
+  const hasWorkToDo = (scores: any[]) => scores.length === 0 || scores.some(s => s.status.type.state === 'pre' || s.status.type.state === 'in');
+  
+  const needsMlb = hasWorkToDo(mlbScores.value);
+  const needsNba = hasWorkToDo(nbaScores.value);
+
+  if (!needsMlb && !needsNba) {
+    console.log('%c[Sports Sync] 💤 Odds Engine Sleeping (No upcoming or live games)', "color: #64748b; font-style: italic;");
+    return;
+  }
+
   mlbLoading.value = true
   nbaLoading.value = true
-  mlbError.value = ''
-  nbaError.value = ''
+  
+  console.log(`%c[Sports Sync] 🎲 Syncing Proxied Odds | MLB: ${needsMlb ? 'REQ' : 'IDLE'} | NBA: ${needsNba ? 'REQ' : 'IDLE'}`, "color: #3b82f6; font-weight: bold;");
 
   const [mlb, nba] = await Promise.allSettled([
-    api.getMLBOdds(), 
-    api.getNBAOdds()
+    needsMlb ? api.getMLBOdds() : Promise.resolve(mlbGames.value), 
+    needsNba ? api.getNBAOdds() : Promise.resolve(nbaGames.value)
   ])
 
-  if (mlb.status === 'fulfilled') {
-    mlbGames.value = mlb.value
-  } else {
-    mlbError.value = (mlb.reason as Error).message || '無法取得 MLB 賠率'
-  }
-  
-  if (nba.status === 'fulfilled') {
-    nbaGames.value = nba.value
-  } else {
-    nbaError.value = (nba.reason as Error).message || '無法取得 NBA 賠率'
-  }
+  if (mlb.status === 'fulfilled') mlbGames.value = mlb.value
+  if (nba.status === 'fulfilled') nbaGames.value = nba.value
 
   mlbLoading.value = false
   nbaLoading.value = false

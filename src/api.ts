@@ -1,10 +1,4 @@
-/**
- * Centralized API utility for TradingBox
- * Handles fetch logic for Polymarket, Finnhub, and Proxy endpoints.
- */
-
 const FINNHUB_TOKEN = import.meta.env.VITE_FINNHUB_TOKEN as string;
-const ODDS_API_KEY = import.meta.env.VITE_ODDS_API_KEY as string;
 
 /**
  * Universal fetch wrapper with optional custom headers and caching
@@ -45,12 +39,13 @@ function getQuoteSlot() {
 // - Quotes: 10s (frequent updates for live price)
 const NEWS_CACHE_TTL = 25000;
 const QUOTE_CACHE_TTL = 10000;
+const ODDS_CACHE_TTL = 600000; // 10 minutes - Protect quota
 
 async function apiFetch(url: string, options: RequestInit = {}) {
   const isFinnhub = url.includes('finnhub.io');
   const isNews = isFinnhub && url.includes('/news');
   const isQuote = isFinnhub && url.includes('/quote');
-  const isOddsApi = url.includes('the-odds-api.com');
+  const isOddsApi = url.includes('the-odds-api.com') || url.includes('/api/odds');
 
   let finalUrl = url;
   const headers: Record<string, string> = {
@@ -61,24 +56,36 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   if (isFinnhub) {
     const connector = finalUrl.includes('?') ? '&' : '?';
     finalUrl = `${finalUrl}${connector}token=${FINNHUB_TOKEN}`;
-  } else if (isOddsApi) {
-    const connector = finalUrl.includes('?') ? '&' : '?';
-    finalUrl = `${finalUrl}${connector}apiKey=${ODDS_API_KEY}`;
   }
 
   const cacheKey = finalUrl;
+  const storageKey = `tbox_cache_${btoa(cacheKey).slice(0, 32)}`; // Minimized safe key
 
-  // Cache check with appropriate TTL per request type
+  // Cache check hierarchy: Memory -> LocalStorage
   if (isFinnhub || isOddsApi) {
-    const cached = requestCache.get(cacheKey);
     let ttl = 10000;
     if (isNews) ttl = NEWS_CACHE_TTL;
     else if (isQuote) ttl = QUOTE_CACHE_TTL;
-    else if (isOddsApi) ttl = 120000; // 2 minutes strict cache to protect heavy quota hit
-    
-    if (cached && Date.now() - cached.timestamp < ttl) {
-      return cached.data;
+    else if (isOddsApi) ttl = ODDS_CACHE_TTL;
+
+    // 1. Check Memory Cache
+    const memCached = requestCache.get(cacheKey);
+    if (memCached && Date.now() - memCached.timestamp < ttl) {
+      return memCached.data;
     }
+
+    // 2. Check LocalStorage Cache (Shared across tabs/refreshes)
+    try {
+      const lsRaw = localStorage.getItem(storageKey);
+      if (lsRaw) {
+        const lsCached = JSON.parse(lsRaw);
+        if (Date.now() - lsCached.timestamp < ttl) {
+          // Re-populate memory cache
+          requestCache.set(cacheKey, lsCached);
+          return lsCached.data;
+        }
+      }
+    } catch (e) { /* ignore LS errors */ }
   }
 
   // Dedup concurrent identical requests
@@ -109,7 +116,11 @@ async function apiFetch(url: string, options: RequestInit = {}) {
     const data = await response.json();
 
     if (isFinnhub || isOddsApi) {
-      requestCache.set(cacheKey, { data, timestamp: Date.now() });
+      const cacheEntry = { data, timestamp: Date.now() };
+      requestCache.set(cacheKey, cacheEntry);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(cacheEntry));
+      } catch (e) { /* ignore LS errors */ }
     }
 
     return data;
@@ -147,13 +158,13 @@ export const api = {
     return apiFetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}`);
   },
 
-  // The Odds API
+  // The Odds API (Now proxied via /api/odds for CDN caching)
   async getMLBOdds() {
-    return apiFetch(`https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?regions=us&markets=h2h&oddsFormat=decimal&bookmakers=draftkings,pinnacle,fanduel`);
+    return apiFetch(`/api/odds?league=mlb`);
   },
 
   async getNBAOdds() {
-    return apiFetch(`https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?regions=us&markets=h2h&oddsFormat=decimal&bookmakers=draftkings,pinnacle,fanduel`);
+    return apiFetch(`/api/odds?league=nba`);
   },
 
   // MLB Player Stats API
