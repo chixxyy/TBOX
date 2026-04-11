@@ -17,8 +17,6 @@ import { sendDesktopNotification } from '../utils/notify'
 import { api } from '../network'
 
 const knownNewsIds = new Set<string>()
-const sessionStartTime = Date.now()
-
 const get24hTime = () => new Date().toLocaleTimeString('zh-TW', { 
   hour12: false, 
   hour: '2-digit', 
