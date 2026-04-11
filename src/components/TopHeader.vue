@@ -34,7 +34,9 @@ const toggleNotifications = () => {
 
 const formatTime = (ts: number) => {
   const d = new Date(ts)
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  const date = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`
+  const time = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  return `${date} ${time}`
 }
 
 const handleLogout = () => {
