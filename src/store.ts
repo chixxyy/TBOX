@@ -458,10 +458,15 @@ export const hasClickedNotifications = useStorage('tbox-has-clicked-notification
 export const showToast = (title: string, message: string, silent: boolean = false, force: boolean = false) => {
   const id = Date.now().toString() + Math.random().toString(36).substring(2, 7)
 
-  // Show popup and play sound if enabled OR if forced by debug command
+  // Show popup if enabled OR if forced by debug command (to verify rendering)
   if (isNotificationsEnabled.value || force) {
     toasts.value.push({ id, title, message })
-    if (!silent) playNewsChime()
+    
+    // SOUND logic: Only play if bell is actually ON and not a silent toast
+    // This allows testing the "silent" behavior of the bell toggle
+    if (!silent && isNotificationsEnabled.value) {
+      playNewsChime()
+    }
   }
 
   // Always record in history
