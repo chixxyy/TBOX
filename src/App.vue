@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import TopHeader from './components/TopHeader.vue'
 import EntryLoader from './components/EntryLoader.vue'
-import { globalNews } from './stores'
 import GlobalToast from './components/GlobalToast.vue'
 import TickerBanner from './components/TickerBanner.vue'
 import AssetList from './components/AssetList.vue'
