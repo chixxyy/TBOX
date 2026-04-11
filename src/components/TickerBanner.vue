@@ -1,68 +1,38 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { api } from '../api'
-
-const alerts = ref<any[]>([])
-let refreshInterval: ReturnType<typeof setInterval>
+import { computed } from 'vue'
+import { globalNews } from '../store'
 
 function getRelativeTime(timestamp: number) {
-  const mins = Math.floor((Date.now() - timestamp) / 60000)
+  if (!timestamp || isNaN(timestamp) || timestamp <= 0) return 'now'
+  const diff = Date.now() - timestamp
+  if (diff < 0) return 'now'
+  const mins = Math.floor(diff / 60000)
   if (mins < 60) return `${mins}m`
   const hours = Math.floor(mins / 60)
   if (hours < 24) return `${hours}h`
   return `${Math.floor(hours / 24)}d`
 }
 
-async function fetchTickerNews() {
-  try {
-    const categories = ['crypto', 'general', 'forex']
-    const results = await Promise.all(
-      categories.map(cat => api.getFinnhubNews(cat).catch(() => []))
-    )
-    let allNews = results.flat()
-    
-    allNews.sort((a, b) => b.datetime - a.datetime)
-    
-    const uniqueNewsMap = new Map()
-    allNews.forEach(item => uniqueNewsMap.set(item.id, item))
-    allNews = Array.from(uniqueNewsMap.values())
-    
-    // Get top 15 news for the ticker banner
-    alerts.value = allNews.slice(0, 15).map((item: any, index: number) => {
-      const headline = item.headline || ''
-      const isCritical = headline.toLowerCase().includes('hack') || headline.toLowerCase().includes('sec')
-      let typeStr = (item.category || 'INFO').toUpperCase()
-      if (isCritical) {
-        typeStr = 'CRITICAL'
-      } else if (index < 3 && typeStr === 'CRYPTO') {
-        typeStr = 'HIGH'
-      }
+const alerts = computed(() => {
+  return globalNews.value.slice(0, 15).map((item: any, index: number) => {
+    const headline = item.headline || ''
+    const h = headline.toLowerCase()
+    const isCritical = h.includes('hack') || h.includes('sec')
+    let typeStr = (item.cat || 'INFO').toUpperCase()
+    if (isCritical) {
+      typeStr = 'CRITICAL'
+    } else if (index < 3 && typeStr === 'CRYPTO') {
+      typeStr = 'HIGH'
+    }
 
-      return {
-        id: item.id || index,
-        type: typeStr,
-        message: headline,
-        time: getRelativeTime((item.datetime || 0) * 1000),
-        url: item.url || '#'
-      }
-    })
-  } catch (e) {
-    console.error('Failed to fetch ticker news', e)
-    // Fallback if API fails
-    alerts.value = [
-      { id: 1, type: 'HIGH', message: 'API Rate Limit Exceeded or Network Error', time: '1m ago', url: '#' }
-    ]
-  }
-}
-
-onMounted(() => {
-  fetchTickerNews()
-  // Refresh every 3 minutes
-  refreshInterval = setInterval(fetchTickerNews, 180000)
-})
-
-onUnmounted(() => {
-  if (refreshInterval) clearInterval(refreshInterval)
+    return {
+      id: item.id || index,
+      type: typeStr,
+      message: headline,
+      time: getRelativeTime(item.ts || 0),
+      url: item.url || '#'
+    }
+  })
 })
 
 const resetCache = () => {
