@@ -508,10 +508,10 @@ onMounted(() => {
   fetchAll()
   fetchPlayerStats()
   
-  // Odds Timer: 3 Minutes
+  // Odds Timer: 30 Minutes (to save API quota)
   oddsTimer = setInterval(() => {
     if (!document.hidden) fetchOddsOnly()
-  }, 180_000)
+  }, 1_800_000)
 
   // Start the adaptive hidden logic
   // (The loop is self-sustaining via setTimeout in fetchScoresOnly)
