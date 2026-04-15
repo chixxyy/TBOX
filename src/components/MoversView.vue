@@ -234,7 +234,7 @@ onUnmounted(() => window.removeEventListener('click', closeOnOutside))
 
 const handleAdd = async () => {
   if (!newSymbol.value || !newAmount.value || !newPrice.value) return
-  if (newSymbol.value === 'FGI' || newSymbol.value === '^VIX') {
+  if (newSymbol.value === 'FGI' || newSymbol.value === 'BDI' || newSymbol.value.startsWith('^')) {
     showToast('禁止加入', '此指標僅供參考，無法納入個人持倉。')
     return
   }
@@ -552,7 +552,7 @@ const confirmDeleteAction = async () => {
                               v-for="asset in filteredAssets.index" :key="asset.symbol"
                               type="button"
                               @click="selectSymbol(asset.symbol)"
-                              :disabled="asset.symbol === 'FGI' || asset.symbol === '^VIX' || asset.symbol === 'BDI'"
+                              :disabled="asset.symbol === 'FGI' || asset.symbol === 'BDI' || asset.symbol.startsWith('^')"
                               class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-purple-600/10 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed"
                               :class="{ 'bg-purple-600/20': newSymbol === asset.symbol }"
                             >

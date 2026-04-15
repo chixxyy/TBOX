@@ -185,10 +185,10 @@ const connectFinnhub = () => {
 
 let stockPollingTimer: any = null
 
-const fetchVixData = async () => {
+const fetchYahooData = async (symbol: string) => {
   try {
-    // We use range=5d because range=1d often returns chartPreviousClose equal to current price for VIX
-    const url = `/yfinance/v8/finance/chart/^VIX?interval=1d&range=5d`
+    // We use range=5d because range=1d often returns chartPreviousClose equal to current price for some indices
+    const url = `/yfinance/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`
     const { data } = await useFetch(url).json()
     const result = data.value?.chart?.result?.[0]
     if (result && result.indicators?.quote?.[0]?.close) {
@@ -216,7 +216,7 @@ const fetchVixData = async () => {
       }
     }
   } catch (e) {
-    console.error('Failed to fetch VIX from Yahoo:', e)
+    console.error(`Failed to fetch ${symbol} from Yahoo:`, e)
   }
   return null
 }
@@ -229,14 +229,14 @@ const startStockPolling = () => {
       // Add 1s delay to avoid Finnhub 429
       await new Promise(r => setTimeout(r, 1000))
       try {
-        if (asset.symbol === '^VIX') {
-          const vix = await fetchVixData()
-          if (vix) {
-            asset.rawPrice = vix.price
-            asset.price = formatPrice(vix.price.toString())
-            asset.change = vix.change
-            asset.up = vix.up
-            asset.prevClose = vix.prevClose
+        if (asset.symbol.startsWith('^')) {
+          const yahoo = await fetchYahooData(asset.symbol)
+          if (yahoo) {
+            asset.rawPrice = yahoo.price
+            asset.price = formatPrice(yahoo.price.toString())
+            asset.change = yahoo.change
+            asset.up = yahoo.up
+            asset.prevClose = yahoo.prevClose
             marketPrices.value[asset.symbol] = {
               price: asset.price, change: asset.change,
               up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
@@ -282,14 +282,14 @@ onMounted(() => {
     // Sequential to prevent activeRequests dedup from cross-contaminating symbols
     for (const asset of stockAssets) {
       try {
-        if (asset.symbol === '^VIX') {
-          const vix = await fetchVixData()
-          if (vix) {
-            asset.rawPrice = vix.price
-            asset.price = formatPrice(vix.price.toString())
-            asset.change = vix.change
-            asset.up = vix.up
-            asset.prevClose = vix.prevClose
+        if (asset.symbol.startsWith('^')) {
+          const yahoo = await fetchYahooData(asset.symbol)
+          if (yahoo) {
+            asset.rawPrice = yahoo.price
+            asset.price = formatPrice(yahoo.price.toString())
+            asset.change = yahoo.change
+            asset.up = yahoo.up
+            asset.prevClose = yahoo.prevClose
             marketPrices.value[asset.symbol] = {
               price: asset.price,
               change: asset.change,
