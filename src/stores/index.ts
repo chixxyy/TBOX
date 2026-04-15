@@ -111,7 +111,9 @@ export const trackedPlayers = ref<PlayerStats[]>([
   { id: '518692', name: 'Freddie Freeman', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
   { id: '592450', name: 'Aaron Judge', team: 'NYY', teamId: '147', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
   { id: '665742', name: 'Juan Soto', team: 'NYM', teamId: '121', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '677951', name: 'Bobby Witt Jr.', team: 'KC', teamId: '118', loading: false, activeStatType: 'hitting', roles: ['hitting'] }
+  { id: '677951', name: 'Bobby Witt Jr.', team: 'KC', teamId: '118', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
+  { id: '681624', name: 'Andy Pages', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
+  { id: '663656', name: 'Kyle Tucker', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] }
 ])
 
 // --- Session Management ---
