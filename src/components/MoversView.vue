@@ -148,9 +148,22 @@ const filterTabs = [
   { label: '全部異動', tag: 'all' },
   { label: '快速上漲', tag: 'gainers' },
   { label: '極速下跌', tag: 'losers' },
-  { label: '我的持倉', tag: 'portfolio' },
+  { label: '我的資產', tag: 'portfolio' },
 ]
 const activeFilter = ref('all')
+
+const categorizedPortfolio = computed(() => {
+  return {
+    crypto: portfolio.value.filter((item: any) => {
+      const info = initialAssets.find(a => a.symbol === item.symbol)
+      return info?.type === 'crypto'
+    }),
+    stock: portfolio.value.filter((item: any) => {
+      const info = initialAssets.find(a => a.symbol === item.symbol)
+      return info?.type === 'stock'
+    })
+  }
+})
 
 const setTab = async (tag: string) => {
   isChangingTab.value = true
@@ -470,9 +483,9 @@ const confirmDeleteAction = async () => {
                 <div>
                   <h3 class="text-white font-bold flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg>
-                    持倉管理
+                    資產管理
                   </h3>
-                  <p class="text-xs text-slate-500 mt-1">手動輸入代碼以追蹤目前即時盈虧狀況</p>
+                  <p class="text-xs text-slate-500 mt-1">手動輸入代碼以追蹤目前資產即時盈虧狀況</p>
                 </div>
                 <button @click="showAddForm = !showAddForm" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-blue-600/20">
                   {{ showAddForm ? '關閉表單' : '新增倉位' }}
@@ -502,7 +515,6 @@ const confirmDeleteAction = async () => {
                       </svg>
                     </button>
 
-                    <!-- Custom Dropdown Menu -->
                     <transition 
                       enter-active-class="duration-200 ease-out" 
                       enter-from-class="transform opacity-0 scale-95" 
@@ -513,25 +525,12 @@ const confirmDeleteAction = async () => {
                     >
                       <div v-if="showSymbolDropdown" class="absolute top-[calc(100%+4px)] left-0 w-full min-w-[200px] bg-[#0a0f1c] border border-slate-700 shadow-2xl rounded-xl z-[200] overflow-hidden backdrop-blur-xl">
                         <div class="p-2 border-b border-slate-800 bg-[#070b14]">
-                          <input 
-                            v-model="symbolSearch"
-                            type="text" 
-                            placeholder="搜索..." 
-                            class="w-full bg-[#05080f] border border-slate-700 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 transition-colors"
-                            auto-focus
-                          />
+                          <input v-model="symbolSearch" type="text" placeholder="搜索..." class="w-full bg-[#05080f] border border-slate-700 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 transition-colors" auto-focus />
                         </div>
                         <div class="max-h-[240px] overflow-y-auto custom-scrollbar p-1">
-                          <!-- Crypto Section -->
                           <div v-if="filteredAssets.crypto.length > 0">
                             <div class="px-2 py-1 text-[9px] font-black text-blue-500 uppercase tracking-widest opacity-70">Crypto</div>
-                            <button 
-                              v-for="asset in filteredAssets.crypto" :key="asset.symbol"
-                              type="button"
-                              @click="selectSymbol(asset.symbol)"
-                              class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-blue-600/10 transition-colors group"
-                              :class="{ 'bg-blue-600/20': newSymbol === asset.symbol }"
-                            >
+                            <button v-for="asset in filteredAssets.crypto" :key="asset.symbol" @click="selectSymbol(asset.symbol)" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-blue-600/10 transition-colors group" :class="{ 'bg-blue-600/20': newSymbol === asset.symbol }">
                               <div class="flex items-center gap-3">
                                 <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=3b82f6&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
                                 <div class="text-left">
@@ -539,23 +538,12 @@ const confirmDeleteAction = async () => {
                                   <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
                                 </div>
                               </div>
-                              <span v-if="newSymbol === asset.symbol" class="text-blue-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                              </span>
                             </button>
                           </div>
                           
-                          <!-- Index Section -->
                           <div v-if="filteredAssets.index.length > 0" class="mt-2">
                             <div class="px-2 py-1 text-[9px] font-black text-purple-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Indices</div>
-                            <button 
-                              v-for="asset in filteredAssets.index" :key="asset.symbol"
-                              type="button"
-                              @click="selectSymbol(asset.symbol)"
-                              :disabled="asset.symbol === 'FGI' || asset.symbol === 'BDI' || asset.symbol.startsWith('^')"
-                              class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-purple-600/10 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed"
-                              :class="{ 'bg-purple-600/20': newSymbol === asset.symbol }"
-                            >
+                            <button v-for="asset in filteredAssets.index" :key="asset.symbol" @click="selectSymbol(asset.symbol)" :disabled="asset.symbol === 'FGI' || asset.symbol === 'BDI' || asset.symbol.startsWith('^')" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-purple-600/10 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" :class="{ 'bg-purple-600/20': newSymbol === asset.symbol }">
                               <div class="flex items-center gap-3">
                                 <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=a855f7&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
                                 <div class="text-left">
@@ -563,22 +551,12 @@ const confirmDeleteAction = async () => {
                                   <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
                                 </div>
                               </div>
-                              <span v-if="newSymbol === asset.symbol" class="text-purple-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                              </span>
                             </button>
                           </div>
 
-                          <!-- Stock Section -->
                           <div v-if="filteredAssets.stock.length > 0" class="mt-2">
                             <div class="px-2 py-1 text-[9px] font-black text-emerald-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Stocks</div>
-                            <button 
-                              v-for="asset in filteredAssets.stock" :key="asset.symbol"
-                              type="button"
-                              @click="selectSymbol(asset.symbol)"
-                              class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-emerald-600/10 transition-colors group"
-                              :class="{ 'bg-emerald-600/20': newSymbol === asset.symbol }"
-                            >
+                            <button v-for="asset in filteredAssets.stock" :key="asset.symbol" @click="selectSymbol(asset.symbol)" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-emerald-600/10 transition-colors group" :class="{ 'bg-emerald-600/20': newSymbol === asset.symbol }">
                               <div class="flex items-center gap-3">
                                 <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=10b981&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
                                 <div class="text-left">
@@ -586,88 +564,131 @@ const confirmDeleteAction = async () => {
                                   <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
                                 </div>
                               </div>
-                              <span v-if="newSymbol === asset.symbol" class="text-emerald-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                              </span>
                             </button>
                           </div>
                         </div>
                       </div>
                     </transition>
                   </div>
+
                   <div class="space-y-1.5">
                     <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">數量 (Amount)</span>
                     <input v-model="newAmount" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
                   </div>
                   <div class="space-y-1.5">
-                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">買入均價 (Price)</span>
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">平均單價 (Price)</span>
                     <input v-model="newPrice" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
                   </div>
                   <div class="space-y-1.5">
-                    <span class="text-[10px] opacity-0 select-none block tracking-wider">Confirm</span>
-                    <button type="submit" class="h-10 w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-lg transition-all shadow-lg shadow-blue-600/20 active:scale-95">確認加入持倉</button>
+                    <span class="text-[10px] opacity-0 select-none block tracking-wider">Btn</span>
+                    <button type="submit" class="h-10 w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-lg transition-all shadow-lg active:scale-95">確認加入</button>
                   </div>
                 </form>
               </transition>
 
               <!-- Holding Cards -->
-              <div v-if="portfolio.length > 0" class="grid grid-cols-1 gap-4">
-                <div v-for="item in portfolio" :key="item.id" 
-                  class="bg-[#0a0f1c] border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between group hover:border-slate-600 transition-all backdrop-blur-sm">
-                  <div class="flex items-center gap-4 mb-4 md:mb-0">
-                    <div class="w-10 h-10 rounded-full bg-blue-900/20 border border-blue-800/30 flex items-center justify-center font-bold text-blue-400 text-xs">
-                      {{ item.symbol.slice(0, 2) }}
+              <div class="space-y-8">
+                <template v-if="portfolio.length > 0">
+                  <!-- Crypto Group -->
+                  <div v-if="categorizedPortfolio.crypto.length > 0">
+                    <div class="flex items-center gap-2 mb-3 px-1">
+                      <div class="w-1.5 h-4 bg-blue-500 rounded-full"></div>
+                      <span class="text-xs font-black text-blue-400 uppercase tracking-widest">加密貨幣 (Crypto)</span>
                     </div>
-                    <div>
-                      <div class="flex items-center gap-2">
-                        <h4 class="text-white font-bold uppercase">{{ formatSymbol(item.symbol) }}</h4>
-                        <span v-if="initialAssets.find(a => a.symbol === item.symbol)?.isIndex" class="text-[9px] bg-purple-900/40 border border-purple-500/30 px-1.5 py-0.5 rounded text-purple-300 font-bold">指數</span>
-                        <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Qty: {{ item.amount }}</span>
+                    <div class="grid grid-cols-1 gap-3">
+                      <div v-for="item in categorizedPortfolio.crypto" :key="item.id" 
+                        class="bg-[#0a0f1c] border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between group hover:border-slate-600 transition-all backdrop-blur-sm">
+                        <div class="flex items-center gap-4 mb-4 md:mb-0">
+                          <div class="w-10 h-10 rounded-full bg-blue-900/20 border border-blue-800/30 flex items-center justify-center font-bold text-blue-400 text-xs">
+                            {{ item.symbol.slice(0, 2) }}
+                          </div>
+                          <div>
+                            <div class="flex items-center gap-2">
+                              <h4 class="text-white font-bold uppercase">{{ formatSymbol(item.symbol) }}</h4>
+                              <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Qty: {{ item.amount }}</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 mt-1 font-mono">買入成本: ${{ item.entryPrice.toLocaleString() }}</p>
+                          </div>
+                        </div>
+
+                        <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 md:gap-16 mt-3 md:mt-0 pt-3 md:pt-0 border-t border-white/5 md:border-t-0">
+                          <div class="text-right">
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">即時現價</p>
+                            <p class="text-white font-mono font-bold">{{ marketPrices[item.symbol]?.price || '$' + item.entryPrice }}</p>
+                          </div>
+                          <div class="text-right min-w-[100px]">
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">估計盈虧</p>
+                            <p :class="((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? 'text-green-400' : 'text-red-400'" class="font-mono font-bold text-lg">
+                              {{ ((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? '+' : '' }}
+                              ${{ (((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toLocaleString('en-US', {maximumFractionDigits: 1}) }}
+                            </p>
+                          </div>
+
+                          <div class="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            <button @click="openAdjust(item)" class="p-2 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-all" title="調整持倉">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                            </button>
+                            <button @click="triggerDelete(item.id, item.symbol)" class="p-2 text-red-400 hover:text-white hover:bg-red-600/20 rounded-lg transition-all" title="刪除">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <p class="text-[10px] text-slate-500 mt-1 font-mono">買入成本: ${{ item.entryPrice.toLocaleString() }}</p>
                     </div>
                   </div>
 
-                  <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 md:gap-16 mt-3 md:mt-0 pt-3 md:pt-0 border-t border-white/5 md:border-t-0">
-                    <div class="text-right">
-                      <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">即時現價</p>
-                      <p class="text-white font-mono font-bold">{{ marketPrices[item.symbol]?.price || '$' + item.entryPrice }}</p>
+                  <!-- Stock Group -->
+                  <div v-if="categorizedPortfolio.stock.length > 0">
+                    <div class="flex items-center gap-2 mb-3 px-1">
+                      <div class="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
+                      <span class="text-xs font-black text-emerald-400 uppercase tracking-widest">股票與指數 (Stocks & Indices)</span>
                     </div>
-                    <div class="text-right min-w-[100px]">
-                      <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">估計盈虧</p>
-                      <p :class="((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? 'text-green-400' : 'text-red-400'" class="font-mono font-bold text-lg">
-                        {{ ((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? '+' : '' }}
-                        ${{ ((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 
-                             ? (((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toLocaleString('en-US', {maximumFractionDigits: 1})
-                             : Math.abs(((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toLocaleString('en-US', {maximumFractionDigits: 1}) 
-                        }}
-                      </p>
-                    </div>
+                    <div class="grid grid-cols-1 gap-3">
+                      <div v-for="item in categorizedPortfolio.stock" :key="item.id" 
+                        class="bg-[#0a0f1c] border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between group hover:border-slate-600 transition-all backdrop-blur-sm">
+                        <div class="flex items-center gap-4 mb-4 md:mb-0">
+                          <div class="w-10 h-10 rounded-full bg-emerald-900/20 border border-emerald-800/30 flex items-center justify-center font-bold text-emerald-400 text-xs">
+                            {{ item.symbol.slice(0, 2) }}
+                          </div>
+                          <div>
+                            <div class="flex items-center gap-2">
+                              <h4 class="text-white font-bold uppercase">{{ formatSymbol(item.symbol) }}</h4>
+                              <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Qty: {{ item.amount }}</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 mt-1 font-mono">買入成本: ${{ item.entryPrice.toLocaleString() }}</p>
+                          </div>
+                        </div>
 
-                    <div class="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                      <button 
-                        @click="openAdjust(item)"
-                        class="p-2 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-all"
-                        title="調整持倉"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                        </svg>
-                      </button>
-                      <button 
-                        @click="triggerDelete(item.id, item.symbol)"
-                        class="p-2 text-red-400 hover:text-white hover:bg-red-600/20 rounded-lg transition-all"
-                        title="刪除"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
+                        <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 md:gap-16 mt-3 md:mt-0 pt-3 md:pt-0 border-t border-white/5 md:border-t-0">
+                          <div class="text-right">
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">即時現價</p>
+                            <p class="text-white font-mono font-bold">{{ marketPrices[item.symbol]?.price || '$' + item.entryPrice }}</p>
+                          </div>
+                          <div class="text-right min-w-[100px]">
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">估計盈虧</p>
+                            <p :class="((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? 'text-green-400' : 'text-red-400'" class="font-mono font-bold text-lg">
+                              {{ ((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? '+' : '' }}
+                              ${{ (((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toLocaleString('en-US', {maximumFractionDigits: 1}) }}
+                            </p>
+                          </div>
+
+                          <div class="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            <button @click="openAdjust(item)" class="p-2 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-all" title="調整持倉">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                            </button>
+                            <button @click="triggerDelete(item.id, item.symbol)" class="p-2 text-red-400 hover:text-white hover:bg-red-600/20 rounded-lg transition-all" title="刪除">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                </template>
+                <div v-else class="py-12 flex flex-col items-center text-slate-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                  <p class="text-xs">尚無倉位，點擊「新增倉位」開始追蹤。</p>
                 </div>
-              </div>
-              <div v-else class="py-12 flex flex-col items-center text-slate-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                <p class="text-xs">尚無倉位，點擊「新增倉位」開始追蹤。</p>
               </div>
             </div>
           </div>
