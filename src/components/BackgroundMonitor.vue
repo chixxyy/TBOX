@@ -135,30 +135,33 @@ async function fetchCC(): Promise<any[]> {
   })
 }
 
-async function fetchSports(): Promise<any[]> {
+async function fetchRss(
+  feedUrl: string, 
+  sourceName: string, 
+  providerId: string, 
+  category: string, 
+  avatarColor: string
+): Promise<any[]> {
   try {
-    // 使用自家 Vercel Proxy (/api/rss) 徹底消滅 429 報錯
-    const res = await fetch('/api/rss?_vite=1')
-    const data = await res.json()
-    
-    if (data.status !== 'ok') return []
-    
+    const url = encodeURIComponent(feedUrl);
+    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
+    const data = await res.json();
+    if (data.status !== 'ok') return [];
     return (data.items || []).map((item: any) => ({
-      uid: `espn-${item.guid || item.link}`,
-      source: 'ESPN',
-      cat: 'sports',
+      uid: `${providerId}-${item.guid || item.link}`,
+      source: sourceName,
+      cat: category,
       ts: new Date(item.pubDate).getTime(),
       headline: item.title,
       summary: item.description,
       url: item.link || '#',
-      avatarBg: 'ff0000',
-      provider: 'espn'
-    }))
-  } catch (err) {
-    console.warn('[Sports Sync] Failed via Logic Proxy:', err)
-    return []
-  }
+      avatarBg: avatarColor,
+      provider: providerId
+    }));
+  } catch { return []; }
 }
+
+const fetchSports = () => fetchRss('https://www.espn.com/espn/rss/news', 'ESPN', 'espn', 'sports', 'ff0000');
 
 async function fetchMlbTransactions(): Promise<any[]> {
   try {
@@ -193,125 +196,12 @@ async function fetchMlbTransactions(): Promise<any[]> {
   } catch { return [] }
 }
 
-async function fetchYahooFinance(): Promise<any[]> {
-  try {
-    const url = encodeURIComponent('https://finance.yahoo.com/news/rss');
-    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
-    const data = await res.json();
-    if (data.status !== 'ok') return [];
-    return (data.items || []).map((item: any) => ({
-      uid: `yahoo-${item.guid || item.link}`,
-      source: 'Yahoo Finance',
-      cat: 'general',
-      ts: new Date(item.pubDate).getTime(),
-      headline: item.title,
-      summary: item.description,
-      url: item.link || '#',
-      avatarBg: '400090',
-      provider: 'yahoo'
-    }));
-  } catch { return []; }
-}
-
-async function fetchBBCSport(): Promise<any[]> {
-  try {
-    const url = encodeURIComponent('https://feeds.bbci.co.uk/sport/rss.xml');
-    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
-    const data = await res.json();
-    if (data.status !== 'ok') return [];
-    return (data.items || []).map((item: any) => ({
-      uid: `bbc-${item.guid || item.link}`,
-      source: 'BBC Sport',
-      cat: 'sports',
-      ts: new Date(item.pubDate).getTime(),
-      headline: item.title,
-      summary: item.description,
-      url: item.link || '#',
-      avatarBg: 'ff0000',
-      provider: 'bbci'
-    }));
-  } catch { return []; }
-}
-
-async function fetchCoinDesk(): Promise<any[]> {
-  try {
-    const url = encodeURIComponent('https://www.coindesk.com/arc/outboundfeeds/rss/');
-    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
-    const data = await res.json();
-    if (data.status !== 'ok') return [];
-    return (data.items || []).map((item: any) => ({
-      uid: `coindesk-${item.guid || item.link}`,
-      source: 'CoinDesk',
-      cat: 'crypto',
-      ts: new Date(item.pubDate).getTime(),
-      headline: item.title,
-      summary: item.description,
-      url: item.link || '#',
-      avatarBg: 'fabd00',
-      provider: 'coindesk'
-    }));
-  } catch { return []; }
-}
-
-async function fetchCNBC(): Promise<any[]> {
-  try {
-    const url = encodeURIComponent('https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664');
-    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
-    const data = await res.json();
-    if (data.status !== 'ok') return [];
-    return (data.items || []).map((item: any) => ({
-      uid: `cnbc-${item.guid || item.link}`,
-      source: 'CNBC',
-      cat: 'general',
-      ts: new Date(item.pubDate).getTime(),
-      headline: item.title,
-      summary: item.description,
-      url: item.link || '#',
-      avatarBg: '005594',
-      provider: 'cnbc'
-    }));
-  } catch { return []; }
-}
-
-async function fetchReuters(): Promise<any[]> {
-  try {
-    const url = encodeURIComponent('https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best');
-    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
-    const data = await res.json();
-    if (data.status !== 'ok') return [];
-    return (data.items || []).map((item: any) => ({
-      uid: `reuters-${item.guid || item.link}`,
-      source: 'Reuters',
-      cat: 'general',
-      ts: new Date(item.pubDate).getTime(),
-      headline: item.title,
-      summary: item.description,
-      url: item.link || '#',
-      avatarBg: 'ff8000',
-      provider: 'reuters'
-    }));
-  } catch { return []; }
-}
-
-async function fetchForexLive(): Promise<any[]> {
-  try {
-    const url = encodeURIComponent('https://www.forexlive.com/feed/');
-    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
-    const data = await res.json();
-    if (data.status !== 'ok') return [];
-    return (data.items || []).map((item: any) => ({
-      uid: `forexlive-${item.guid || item.link}`,
-      source: 'ForexLive',
-      cat: 'general',
-      ts: new Date(item.pubDate).getTime(),
-      headline: item.title,
-      summary: item.description,
-      url: item.link || '#',
-      avatarBg: '00b3b3',
-      provider: 'forexlive'
-    }));
-  } catch { return []; }
-}
+const fetchYahooFinance = () => fetchRss('https://finance.yahoo.com/news/rss', 'Yahoo Finance', 'yahoo', 'general', '400090');
+const fetchBBCSport = () => fetchRss('https://feeds.bbci.co.uk/sport/rss.xml', 'BBC Sport', 'bbci', 'sports', 'ff0000');
+const fetchCoinDesk = () => fetchRss('https://www.coindesk.com/arc/outboundfeeds/rss/', 'CoinDesk', 'coindesk', 'crypto', 'fabd00');
+const fetchCNBC = () => fetchRss('https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664', 'CNBC', 'cnbc', 'general', '005594');
+const fetchReuters = () => fetchRss('https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best', 'Reuters', 'reuters', 'general', 'ff8000');
+const fetchForexLive = () => fetchRss('https://www.forexlive.com/feed/', 'ForexLive', 'forexlive', 'general', '00b3b3');
 
 
 async function syncNews(skipNotifications = false) {
