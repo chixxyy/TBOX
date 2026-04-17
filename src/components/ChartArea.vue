@@ -149,6 +149,20 @@ const loadHistoricalData = async (targetChart = chart.value) => {
           : 'rgba(239, 68, 68, 0.4)',
       }))
     }
+  } else if (symbol === 'FGI') {
+    // Special handling for Crypto Fear & Greed Index history
+    const res = await fetch('https://api.alternative.me/fng/?limit=365')
+    const json = await res.json()
+    if (json && json.data) {
+      // API returns newest first, we need oldest first for the chart
+      const historical = json.data.reverse()
+      priceData = historical.map((item: any) => ({
+        time: parseInt(item.timestamp),
+        value: parseFloat(item.value)
+      }))
+      // No volume for FGI
+      volData = []
+    }
   } else {
     // Stock fetched via Yahoo Finance proxy
     let yInterval = '1d'
