@@ -41,11 +41,19 @@ function getRelativeTime(timestamp: number) {
 function getSeverity(headline: string): string {
   const h = (headline || '').toLowerCase()
   // --- Critical Keywords ---
-  if (h.includes('hack') || h.includes('attack') || h.includes('exploit') || h.includes('scam')) return 'critical'
+  // Security & Legal
+  if (h.includes('hack') || h.includes('attack') || h.includes('exploit') || h.includes('scam') || h.includes('fraud')) return 'critical'
+  // Market Extremes (Finance & Crypto)
+  if (h.includes('bankruptcy') || h.includes('insolvent') || h.includes('crash') || h.includes('plunge') || h.includes('emergency') || h.includes('default') || h.includes('recession') || h.includes('black swan')) return 'critical'
+  // Sports Major
   if (h.includes('season-ending') || h.includes('arrested') || h.includes('suspended') || h.includes('blockbuster trade')) return 'critical'
   
   // --- High Keywords ---
-  if (h.includes('sec ') || h.includes('fed ') || h.includes('cpi') || h.includes('binance')) return 'high'
+  // Macro Finance
+  if (h.includes('sec ') || h.includes('fed ') || h.includes('cpi') || h.includes('rate hike') || h.includes('rate cut') || h.includes('inflation') || h.includes('stimulus') || h.includes('bailout')) return 'high'
+  // Crypto Major
+  if (h.includes('binance') || h.includes('coinbase') || h.includes('etf') || h.includes('halving') || h.includes('whale')) return 'high'
+  // Sports Notable
   if (h.includes('injury') || h.includes(' out ') || h.includes('lineup') || h.includes('contract extension') || h.includes('signing')) return 'high'
   
   return 'low'
@@ -199,6 +207,13 @@ async function syncNews(skipNotifications = false) {
       if (item && item.headline && item.uid) {
         // Normalize categories early for distribution
         let finalCat = item.cat
+        if (item.provider === 'cryptocompare') {
+          finalCat = 'crypto'
+        } else if (item.provider === 'espn' || item.provider === 'mlb-official') {
+          finalCat = 'sports'
+        }
+        
+        // Secondary safety: Map everything else not sports/crypto to general
         if (finalCat !== 'sports' && finalCat !== 'crypto') {
           finalCat = 'general'
         }
@@ -245,6 +260,13 @@ async function syncNews(skipNotifications = false) {
     
     // Combine and sort again to interleave them by latest time
     const distributedSorted = finalSelection.sort((a, b) => b.ts - a.ts)
+
+    // [DEBUG] Log distribution counts
+    const counts = finalSelection.reduce((acc: any, i) => {
+      acc[i.cat] = (acc[i.cat] || 0) + 1
+      return acc
+    }, {})
+    console.log(`[NEWS_SYNC] Distribution: Finance: ${counts.general || 0}, Crypto: ${counts.crypto || 0}, Sports: ${counts.sports || 0} | Total: ${finalSelection.length}`)
 
     const isFirstLoad = knownNewsIds.size === 0
     let hasNew = false
