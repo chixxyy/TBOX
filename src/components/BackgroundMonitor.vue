@@ -17,6 +17,7 @@ import { sendDesktopNotification } from '../utils/notify'
 import { api } from '../network'
 
 const knownNewsIds = new Set<string>()
+const masterNewsPool = new Map<string, any>()
 const get24hTime = () => new Date().toLocaleTimeString('zh-TW', { 
   hour12: false, 
   hour: '2-digit', 
@@ -193,7 +194,6 @@ async function syncNews(skipNotifications = false) {
       ...(sp.status === 'fulfilled' ? sp.value : []),
       ...(mt.status === 'fulfilled' ? mt.value : []),
     ]
-    const unique = new Map<string, any>()
     all.forEach(item => {
       // Ultimate defensive check before entering the store
       if (item && item.headline && item.uid) {
@@ -203,20 +203,48 @@ async function syncNews(skipNotifications = false) {
           finalCat = 'general'
         }
         item.cat = finalCat
-        unique.set(item.uid, item)
+        masterNewsPool.set(item.uid, item)
       }
     })
     
-    // Sort all by timestamp descending first
-    const allSorted = Array.from(unique.values()).sort((a, b) => b.ts - a.ts)
+    // Clean up old news (> 24 hours) to prevent infinite memory growth
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
+    for (const [uid, item] of masterNewsPool.entries()) {
+      if (item.ts < oneDayAgo) {
+        masterNewsPool.delete(uid)
+      }
+    }
     
-    // Apply 40% Finance (general), 40% Crypto, 20% Sports distribution (Max 200 items)
-    const generalNews = allSorted.filter(i => i.cat === 'general').slice(0, 80)
-    const cryptoNews = allSorted.filter(i => i.cat === 'crypto').slice(0, 80)
-    const sportsNews = allSorted.filter(i => i.cat === 'sports').slice(0, 40)
+    // Sort all by timestamp descending first
+    const allSorted = Array.from(masterNewsPool.values()).sort((a, b) => b.ts - a.ts)
+    
+    // Apply 40% Finance (general), 40% Crypto, 20% Sports distribution (Max 200 items total)
+    const MAX_TOTAL = 200
+    const quotas = { general: 80, crypto: 80, sports: 40 }
+    
+    const generalPool = allSorted.filter(i => i.cat === 'general')
+    const cryptoPool = allSorted.filter(i => i.cat === 'crypto')
+    const sportsPool = allSorted.filter(i => i.cat === 'sports')
+    
+    // 1. First pass: Take items according to quotas
+    const initialSelection = [
+      ...generalPool.slice(0, quotas.general),
+      ...cryptoPool.slice(0, quotas.crypto),
+      ...sportsPool.slice(0, quotas.sports)
+    ]
+    
+    const selectedUids = new Set(initialSelection.map(i => i.uid))
+    
+    // 2. Second pass: Fill the gap if total < 200 using the latest remaining news from ANY category
+    let finalSelection = [...initialSelection]
+    if (finalSelection.length < MAX_TOTAL) {
+      const remainingPool = allSorted.filter(i => !selectedUids.has(i.uid))
+      const gapSize = MAX_TOTAL - finalSelection.length
+      finalSelection.push(...remainingPool.slice(0, gapSize))
+    }
     
     // Combine and sort again to interleave them by latest time
-    const distributedSorted = [...generalNews, ...cryptoNews, ...sportsNews].sort((a, b) => b.ts - a.ts)
+    const distributedSorted = finalSelection.sort((a, b) => b.ts - a.ts)
 
     const isFirstLoad = knownNewsIds.size === 0
     let hasNew = false
