@@ -197,10 +197,26 @@ async function syncNews(skipNotifications = false) {
     all.forEach(item => {
       // Ultimate defensive check before entering the store
       if (item && item.headline && item.uid) {
+        // Normalize categories early for distribution
+        let finalCat = item.cat
+        if (finalCat !== 'sports' && finalCat !== 'crypto') {
+          finalCat = 'general'
+        }
+        item.cat = finalCat
         unique.set(item.uid, item)
       }
     })
-    const sorted = Array.from(unique.values()).sort((a, b) => b.ts - a.ts)
+    
+    // Sort all by timestamp descending first
+    const allSorted = Array.from(unique.values()).sort((a, b) => b.ts - a.ts)
+    
+    // Apply 40% Finance (general), 40% Crypto, 20% Sports distribution (Max 200 items)
+    const generalNews = allSorted.filter(i => i.cat === 'general').slice(0, 80)
+    const cryptoNews = allSorted.filter(i => i.cat === 'crypto').slice(0, 80)
+    const sportsNews = allSorted.filter(i => i.cat === 'sports').slice(0, 40)
+    
+    // Combine and sort again to interleave them by latest time
+    const distributedSorted = [...generalNews, ...cryptoNews, ...sportsNews].sort((a, b) => b.ts - a.ts)
 
     const isFirstLoad = knownNewsIds.size === 0
     let hasNew = false
@@ -208,7 +224,7 @@ async function syncNews(skipNotifications = false) {
     const staleThreshold = 4 * 60 * 60 * 1000 // 4 hours
     const now = Date.now()
     
-    sorted.forEach(item => {
+    distributedSorted.forEach(item => {
       if (!knownNewsIds.has(item.uid)) {
         // Trigger notification if NOT skipping (initial sync) AND NOT the first session load
         // Also added a safety check: News shouldn't be more than 4 hours old to avoid spamming very old items.
@@ -242,26 +258,18 @@ async function syncNews(skipNotifications = false) {
       'mlb-official': '002D72'
     }
     
-    globalNews.value = sorted.slice(0, 200).map(item => {
+    globalNews.value = distributedSorted.map(item => {
       const severity = item.isTracked ? 'critical' : getSeverity(item.headline)
       const isCritical = severity === 'critical'
       const bg = item.avatarBg || (providerColors[item.provider as any] || '1d4ed8')
-      
-      // Normalize categories: everything not sports/crypto goes to general (Finance)
-      let finalCat = item.cat
-      if (finalCat !== 'sports' && finalCat !== 'crypto') {
-        finalCat = 'general'
-      }
-      
-      const categoryLabel = finalCat.toUpperCase()
+      const categoryLabel = item.cat.toUpperCase()
       
       return {
         ...item,
         id: item.uid,
-        cat: finalCat,
         severity,
         time: getRelativeTime(item.ts) ,
-        accentColor: getAccentColor(finalCat, isCritical),
+        accentColor: getAccentColor(item.cat, isCritical),
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.source || 'N')}&background=${bg}&color=fff&rounded=true&font-size=0.4&bold=true`,
         handle: `@${(item.source || 'News').replace(/\s+/g, '')}`,
         isOfficial: true,
