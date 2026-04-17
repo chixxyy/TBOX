@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { activeSymbol, priceAlerts, addPriceAlert, removePriceAlert, chatSession, goToLogin } from '../stores'
 import NewsFeed from './NewsFeed.vue'
+import EconomicCalendar from './EconomicCalendar.vue'
 
 const currentView = ref('FEED')
 const isCrypto = computed(() => activeSymbol.value.toLowerCase().endsWith('usdt'))
@@ -140,6 +141,11 @@ onUnmounted(() => {
         :class="currentView === 'ALERTS' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
         @click="currentView = 'ALERTS'"
       >ALERTS</button>
+      <button 
+        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2"
+        :class="currentView === 'CALENDAR' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
+        @click="currentView = 'CALENDAR'"
+      >CALENDAR</button>
     </div>
 
     <!-- News Feed Section -->
@@ -246,6 +252,11 @@ onUnmounted(() => {
           </button>
         </div>
       </template>
+    </div>
+
+    <!-- Calendar Section -->
+    <div v-show="currentView === 'CALENDAR'" class="h-[450px] md:h-auto md:flex-1 w-full overflow-hidden">
+      <EconomicCalendar />
     </div>
 
     <!-- Alert Delete Confirmation Modal -->

@@ -165,6 +165,10 @@ const categorizedPortfolio = computed(() => {
   }
 })
 
+const cryptoCount = computed(() => categorizedPortfolio.value.crypto.length)
+const stockCount = computed(() => categorizedPortfolio.value.stock.length)
+const totalAssets = computed(() => portfolio.value.length)
+
 const setTab = async (tag: string) => {
   isChangingTab.value = true
   activeFilter.value = tag
@@ -490,6 +494,30 @@ const confirmDeleteAction = async () => {
                 <button @click="showAddForm = !showAddForm" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-blue-600/20">
                   {{ showAddForm ? '關閉表單' : '新增倉位' }}
                 </button>
+              </div>
+
+              <!-- Asset Allocation Donut Chart -->
+              <div class="flex items-center gap-3 bg-slate-800/30 p-3 rounded-xl mb-6 border border-slate-700/50">
+                <div class="relative w-12 h-12">
+                  <!-- Background circle -->
+                  <svg viewBox="0 0 36 36" class="w-12 h-12 -rotate-90">
+                    <path class="text-slate-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                    <!-- Crypto segment (Purple) -->
+                    <path class="text-[#7c3aed] transition-all duration-1000" :stroke-dasharray="totalAssets === 0 ? '0, 100' : `${(cryptoCount / totalAssets) * 100}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                    <!-- Stocks segment (Blue) -->
+                    <path class="text-[#1d4ed8] transition-all duration-1000" :stroke-dasharray="totalAssets === 0 ? '0, 100' : `${(stockCount / totalAssets) * 100}, 100`" :stroke-dashoffset="totalAssets === 0 ? '0' : `-${(cryptoCount / totalAssets) * 100}`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-[10px] font-bold text-slate-300">{{ totalAssets }}</span>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white mb-0.5">會員專屬：資產配置分析</div>
+                  <div class="flex items-center gap-2 text-[10px] text-slate-400">
+                    <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[#7c3aed]"></div> 加密貨幣 ({{ cryptoCount }})</div>
+                    <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[#1d4ed8]"></div> 美股/指數 ({{ stockCount }})</div>
+                  </div>
+                </div>
               </div>
 
               <transition enter-active-class="duration-300 ease-out" enter-from-class="transform opacity-0 -translate-y-4" enter-to-class="transform opacity-100 translate-y-0">

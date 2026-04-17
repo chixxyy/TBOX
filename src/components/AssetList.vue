@@ -387,7 +387,7 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').
         <input 
           v-model="filter" 
           type="text" 
-          placeholder="搜尋名稱、幣種或股票" 
+          placeholder="搜尋股票、幣種或指數" 
           class="bg-transparent border-none text-xs text-slate-300 focus:outline-none w-full placeholder-slate-600 font-mono"
         />
       </div>
