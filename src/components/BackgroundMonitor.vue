@@ -195,7 +195,7 @@ async function fetchMlbTransactions(): Promise<any[]> {
 
 async function fetchYahooFinance(): Promise<any[]> {
   try {
-    const url = encodeURIComponent('https://finance.yahoo.com/news/rssindex');
+    const url = encodeURIComponent('https://finance.yahoo.com/news/rss');
     const res = await fetch(`/api/rss?u=${url}&_vite=1`);
     const data = await res.json();
     if (data.status !== 'ok') return [];
