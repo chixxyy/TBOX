@@ -63,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         pubDate: getTag('pubDate') || getTag('date')
       });
       
-      if (items.length >= 20) break; // 提高抓取數量
+      if (items.length >= 50) break; // 提高抓取數量至50，以確保前端有足夠的新聞數量（至少200則）
     }
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
