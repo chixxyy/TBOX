@@ -253,17 +253,80 @@ async function fetchCoinDesk(): Promise<any[]> {
   } catch { return []; }
 }
 
+async function fetchCNBC(): Promise<any[]> {
+  try {
+    const url = encodeURIComponent('https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664');
+    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
+    const data = await res.json();
+    if (data.status !== 'ok') return [];
+    return (data.items || []).map((item: any) => ({
+      uid: `cnbc-${item.guid || item.link}`,
+      source: 'CNBC',
+      cat: 'general',
+      ts: new Date(item.pubDate).getTime(),
+      headline: item.title,
+      summary: item.description,
+      url: item.link || '#',
+      avatarBg: '005594',
+      provider: 'cnbc'
+    }));
+  } catch { return []; }
+}
+
+async function fetchReuters(): Promise<any[]> {
+  try {
+    const url = encodeURIComponent('https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best');
+    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
+    const data = await res.json();
+    if (data.status !== 'ok') return [];
+    return (data.items || []).map((item: any) => ({
+      uid: `reuters-${item.guid || item.link}`,
+      source: 'Reuters',
+      cat: 'general',
+      ts: new Date(item.pubDate).getTime(),
+      headline: item.title,
+      summary: item.description,
+      url: item.link || '#',
+      avatarBg: 'ff8000',
+      provider: 'reuters'
+    }));
+  } catch { return []; }
+}
+
+async function fetchForexLive(): Promise<any[]> {
+  try {
+    const url = encodeURIComponent('https://www.forexlive.com/feed/');
+    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
+    const data = await res.json();
+    if (data.status !== 'ok') return [];
+    return (data.items || []).map((item: any) => ({
+      uid: `forexlive-${item.guid || item.link}`,
+      source: 'ForexLive',
+      cat: 'general',
+      ts: new Date(item.pubDate).getTime(),
+      headline: item.title,
+      summary: item.description,
+      url: item.link || '#',
+      avatarBg: '00b3b3',
+      provider: 'forexlive'
+    }));
+  } catch { return []; }
+}
+
 
 async function syncNews(skipNotifications = false) {
   try {
-    const [fh, cc, sp, mt, yf, bbc, cd] = await Promise.allSettled([
+    const [fh, cc, sp, mt, yf, bbc, cd, cnbc, reuters, fl] = await Promise.allSettled([
       fetchFinnhub(), 
       fetchCC(), 
       fetchSports(), 
       fetchMlbTransactions(),
       fetchYahooFinance(),
       fetchBBCSport(),
-      fetchCoinDesk()
+      fetchCoinDesk(),
+      fetchCNBC(),
+      fetchReuters(),
+      fetchForexLive()
     ])
     const all = [
       ...(fh.status === 'fulfilled' ? fh.value : []),
@@ -273,6 +336,9 @@ async function syncNews(skipNotifications = false) {
       ...(yf.status === 'fulfilled' ? yf.value : []),
       ...(bbc.status === 'fulfilled' ? bbc.value : []),
       ...(cd.status === 'fulfilled' ? cd.value : []),
+      ...(cnbc.status === 'fulfilled' ? cnbc.value : []),
+      ...(reuters.status === 'fulfilled' ? reuters.value : []),
+      ...(fl.status === 'fulfilled' ? fl.value : []),
     ]
     all.forEach(item => {
       // Ultimate defensive check before entering the store
@@ -283,7 +349,7 @@ async function syncNews(skipNotifications = false) {
           finalCat = 'crypto'
         } else if (item.provider === 'espn' || item.provider === 'mlb-official' || item.provider === 'bbci') {
           finalCat = 'sports'
-        } else if (item.provider === 'yahoo') {
+        } else if (item.provider === 'yahoo' || item.provider === 'cnbc' || item.provider === 'reuters' || item.provider === 'forexlive') {
           finalCat = 'general'
         }
         
@@ -382,7 +448,10 @@ async function syncNews(skipNotifications = false) {
       'mlb-official': '002D72',
       yahoo: '400090',
       bbci: 'ff0000',
-      coindesk: 'fabd00'
+      coindesk: 'fabd00',
+      cnbc: '005594',
+      reuters: 'ff8000',
+      forexlive: '00b3b3'
     }
     
     globalNews.value = distributedSorted.map(item => {

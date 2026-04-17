@@ -19,7 +19,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       'bbci.co.uk',
       'coindesk.com',
       'cointelegraph.com',
-      'reuters.com'
+      'reuters.com',
+      'reutersagency.com',
+      'cnbc.com',
+      'forexlive.com',
+      'investinglive.com'
     ];
     
     const isAllowed = whitelist.some(domain => rssUrl.includes(domain));
