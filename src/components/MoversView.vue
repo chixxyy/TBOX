@@ -635,7 +635,7 @@ const confirmDeleteAction = async () => {
                           
                           <div v-if="filteredAssets.index.length > 0" class="mt-2">
                             <div class="px-2 py-1 text-[9px] font-black text-purple-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Indices</div>
-                            <button v-for="asset in filteredAssets.index" :key="asset.symbol" @click="selectSymbol(asset.symbol)" :disabled="asset.symbol === 'FGI' || asset.symbol === 'BDI' || asset.symbol.startsWith('^')" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-purple-600/10 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" :class="{ 'bg-purple-600/20': newSymbol === asset.symbol }">
+                            <button v-for="asset in filteredAssets.index" :key="asset.symbol" @click="selectSymbol(asset.symbol)" :disabled="asset.symbol === 'BDI' || asset.symbol.startsWith('^')" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-purple-600/10 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" :class="{ 'bg-purple-600/20': newSymbol === asset.symbol }">
                               <div class="flex items-center gap-3">
                                 <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=a855f7&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
                                 <div class="text-left">
