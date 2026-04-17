@@ -138,7 +138,7 @@ async function fetchCC(): Promise<any[]> {
 async function fetchSports(): Promise<any[]> {
   try {
     // 使用自家 Vercel Proxy (/api/rss) 徹底消滅 429 報錯
-    const res = await fetch('/api/rss')
+    const res = await fetch('/api/rss?_vite=1')
     const data = await res.json()
     
     if (data.status !== 'ok') return []
@@ -193,24 +193,98 @@ async function fetchMlbTransactions(): Promise<any[]> {
   } catch { return [] }
 }
 
+async function fetchYahooFinance(): Promise<any[]> {
+  try {
+    const url = encodeURIComponent('https://finance.yahoo.com/news/rssindex');
+    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
+    const data = await res.json();
+    if (data.status !== 'ok') return [];
+    return (data.items || []).map((item: any) => ({
+      uid: `yahoo-${item.guid || item.link}`,
+      source: 'Yahoo Finance',
+      cat: 'general',
+      ts: new Date(item.pubDate).getTime(),
+      headline: item.title,
+      summary: item.description,
+      url: item.link || '#',
+      avatarBg: '400090',
+      provider: 'yahoo'
+    }));
+  } catch { return []; }
+}
+
+async function fetchBBCSport(): Promise<any[]> {
+  try {
+    const url = encodeURIComponent('https://feeds.bbci.co.uk/sport/rss.xml');
+    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
+    const data = await res.json();
+    if (data.status !== 'ok') return [];
+    return (data.items || []).map((item: any) => ({
+      uid: `bbc-${item.guid || item.link}`,
+      source: 'BBC Sport',
+      cat: 'sports',
+      ts: new Date(item.pubDate).getTime(),
+      headline: item.title,
+      summary: item.description,
+      url: item.link || '#',
+      avatarBg: 'ff0000',
+      provider: 'bbci'
+    }));
+  } catch { return []; }
+}
+
+async function fetchCoinDesk(): Promise<any[]> {
+  try {
+    const url = encodeURIComponent('https://www.coindesk.com/arc/outboundfeeds/rss/');
+    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
+    const data = await res.json();
+    if (data.status !== 'ok') return [];
+    return (data.items || []).map((item: any) => ({
+      uid: `coindesk-${item.guid || item.link}`,
+      source: 'CoinDesk',
+      cat: 'crypto',
+      ts: new Date(item.pubDate).getTime(),
+      headline: item.title,
+      summary: item.description,
+      url: item.link || '#',
+      avatarBg: 'fabd00',
+      provider: 'coindesk'
+    }));
+  } catch { return []; }
+}
+
+
 async function syncNews(skipNotifications = false) {
   try {
-    const [fh, cc, sp, mt] = await Promise.allSettled([fetchFinnhub(), fetchCC(), fetchSports(), fetchMlbTransactions()])
+    const [fh, cc, sp, mt, yf, bbc, cd] = await Promise.allSettled([
+      fetchFinnhub(), 
+      fetchCC(), 
+      fetchSports(), 
+      fetchMlbTransactions(),
+      fetchYahooFinance(),
+      fetchBBCSport(),
+      fetchCoinDesk()
+    ])
     const all = [
       ...(fh.status === 'fulfilled' ? fh.value : []),
       ...(cc.status === 'fulfilled' ? cc.value : []),
       ...(sp.status === 'fulfilled' ? sp.value : []),
       ...(mt.status === 'fulfilled' ? mt.value : []),
+      ...(yf.status === 'fulfilled' ? yf.value : []),
+      ...(bbc.status === 'fulfilled' ? bbc.value : []),
+      ...(cd.status === 'fulfilled' ? cd.value : []),
     ]
     all.forEach(item => {
       // Ultimate defensive check before entering the store
       if (item && item.headline && item.uid) {
         // Normalize categories early for distribution
         let finalCat = item.cat
-        if (item.provider === 'cryptocompare') {
+        if (item.provider === 'cryptocompare' || item.provider === 'coindesk') {
           finalCat = 'crypto'
-        } else if (item.provider === 'espn' || item.provider === 'mlb-official') {
+        } else if (item.provider === 'espn' || item.provider === 'mlb-official' || item.provider === 'bbci') {
           finalCat = 'sports'
+        } else if (item.provider === 'yahoo') {
+          finalCat = 'general'
         }
         
         // Secondary safety: Map everything else not sports/crypto to general
@@ -305,7 +379,10 @@ async function syncNews(skipNotifications = false) {
       finnhub: '1d4ed8', 
       cryptocompare: '7c3aed',
       espn: 'ff0000',
-      'mlb-official': '002D72'
+      'mlb-official': '002D72',
+      yahoo: '400090',
+      bbci: 'ff0000',
+      coindesk: 'fabd00'
     }
     
     globalNews.value = distributedSorted.map(item => {

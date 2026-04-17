@@ -6,7 +6,27 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const rssUrl = 'https://www.espn.com/espn/rss/news';
+    const { u } = req.query;
+    
+    // 預設來源
+    const defaultUrl = 'https://www.espn.com/espn/rss/news';
+    let rssUrl = typeof u === 'string' ? decodeURIComponent(u) : defaultUrl;
+
+    // 安全檢查：白名單過濾，防止 SSRF 攻擊
+    const whitelist = [
+      'espn.com',
+      'yahoo.com',
+      'bbci.co.uk',
+      'coindesk.com',
+      'cointelegraph.com',
+      'reuters.com'
+    ];
+    
+    const isAllowed = whitelist.some(domain => rssUrl.includes(domain));
+    if (!isAllowed) {
+      rssUrl = defaultUrl;
+    }
+
     const response = await fetch(rssUrl);
     
     if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
@@ -14,34 +34,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const xml = await response.text();
     const items: any[] = [];
     
-    // 簡易 RSS XML 擷取器 (避免在 Serverless 環境安裝大型庫)
+    // 簡易 RSS XML 擷取器
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
     
     while ((match = itemRegex.exec(xml)) !== null) {
       const content = match[1];
       const getTag = (tag: string) => {
-        const m = content.match(new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/${tag}>`, 'i'));
-        return m ? m[1] : '';
+        // 支援 <tag> 或 <dc:tag> 等格式
+        const m = content.match(new RegExp(`<(${tag}|dc:${tag})[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/\\1>`, 'i'));
+        return m ? m[2] : '';
       };
       
       items.push({
-        guid: getTag('guid'),
+        guid: getTag('guid') || getTag('link'),
         link: getTag('link'),
-        title: getTag('title').replace(/&amp;/g, '&'),
-        description: getTag('description').replace(/<[^>]*>?/gm, '').replace(/&amp;/g, '&'),
-        pubDate: getTag('pubDate')
+        title: getTag('title').replace(/&amp;/g, '&').replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1'),
+        description: getTag('description').replace(/<[^>]*>?/gm, '').replace(/&amp;/g, '&').replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1'),
+        pubDate: getTag('pubDate') || getTag('date')
       });
       
-      if (items.length >= 15) break; // 只取最新 15 則
+      if (items.length >= 20) break; // 提高抓取數量
     }
 
-    // 設定快取 5 分鐘，減輕後端與來源壓力
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
     res.status(200).json({ status: 'ok', items });
     
   } catch (error: any) {
-    console.error('[RSS Proxy Error]:', error.message);
     res.status(500).json({ status: 'error', message: error.message });
   }
 }
