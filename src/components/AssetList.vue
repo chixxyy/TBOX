@@ -197,11 +197,17 @@ const fetchYahooData = async (symbol: string) => {
       const prices = result.indicators.quote[0].close.filter((p: any) => p !== null && p !== undefined)
       
       if (prices.length >= 1) {
-        // Current price is either from meta or the last valid close in the array
-        const currentPrice = meta.regularMarketPrice || prices[prices.length - 1]
+        // Improved price selection: Check for pre/post market prices if available
+        let currentPrice = meta.regularMarketPrice || prices[prices.length - 1]
+        
+        // If we are in pre-market or post-market, Yahoo provides these fields
+        if (meta.marketState === 'PRE' && meta.preMarketPrice) {
+          currentPrice = meta.preMarketPrice
+        } else if ((meta.marketState === 'POST' || meta.marketState === 'CLOSED') && meta.postMarketPrice) {
+          currentPrice = meta.postMarketPrice
+        }
         
         // Settlement price (Yesterday's Close):
-        // If we have at least 2 prices, the one before the last is the previous session's close.
         const prevClose = prices.length >= 2 ? prices[prices.length - 2] : (meta.chartPreviousClose || meta.previousClose || currentPrice)
         
         const change = prevClose && prevClose !== 0 ? ((currentPrice - prevClose) / prevClose) * 100 : 0
@@ -211,7 +217,8 @@ const fetchYahooData = async (symbol: string) => {
           price: currentPrice,
           change: `${safeChange > 0 ? '+' : ''}${safeChange.toFixed(2)}%`,
           up: safeChange >= 0,
-          prevClose: prevClose
+          prevClose: prevClose,
+          marketState: meta.marketState // For debugging/UI if needed
         }
       }
     }
@@ -229,7 +236,9 @@ const startStockPolling = () => {
       // Add 1s delay to avoid Finnhub 429
       await new Promise(r => setTimeout(r, 1000))
       try {
-        if (asset.symbol.startsWith('^')) {
+        // Use Yahoo Finance for Indices and US Stocks to get Pre/Post market data
+        const isSpecial = asset.symbol === 'FGI' || asset.symbol === 'BDI'
+        if (!isSpecial && asset.type === 'stock') {
           const yahoo = await fetchYahooData(asset.symbol)
           if (yahoo) {
             asset.rawPrice = yahoo.price
