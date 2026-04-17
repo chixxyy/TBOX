@@ -536,33 +536,7 @@ function connectAlertMonitor() {
   }
 }
 
-async function fetchFearGreedIndex() {
-  try {
-    const res = await fetch('https://api.alternative.me/fng/')
-    const data = await res.json()
-    if (data && data.data && data.data[0]) {
-      const fngValue = parseInt(data.data[0].value)
-      const classification = data.data[0].value_classification
-      
-      const target = marketPrices.value['FGI']
-      if (!target) {
-        marketPrices.value['FGI'] = {
-          price: fngValue.toString(),
-          change: classification,
-          up: fngValue >= 50,
-          rawPrice: fngValue
-        }
-      } else {
-        target.price = fngValue.toString()
-        target.change = classification
-        target.rawPrice = fngValue
-        target.up = fngValue >= 50
-      }
-    }
-  } catch (e) {
-    console.warn('[FGI_SYNC] Failed to fetch Fear & Greed Index:', e)
-  }
-}
+
 
 async function fetchBdiData() {
   try {
@@ -593,7 +567,7 @@ async function fetchBdiData() {
 
 async function syncPortfolioStockPrices() {
   // Exclude non-tradable indicators like FGI, VIX, or BDI from portfolio sync
-  const stocks = portfolio.value.filter(p => !p.symbol.endsWith('USDT') && p.symbol !== 'FGI' && p.symbol !== '^VIX' && p.symbol !== 'BDI')
+  const stocks = portfolio.value.filter(p => !p.symbol.endsWith('USDT') && p.symbol !== '^TNX' && p.symbol !== '^VIX' && p.symbol !== 'BDI')
   if (stocks.length === 0) return
 
   for (const s of stocks) {
@@ -643,12 +617,10 @@ onMounted(() => {
   syncMovers()
   connectAlertMonitor()
   syncPortfolioStockPrices() // Initial sync — now parallel!
-  fetchFearGreedIndex() // Initial FGI sync
   fetchBdiData() // Initial BDI sync
   newsTimer = setInterval(syncNews, 30000)
   moversTimer = setInterval(syncMovers, 10000)
   setInterval(syncPortfolioStockPrices, 60000) // Every minute
-  setInterval(fetchFearGreedIndex, 300000) // Every 5 minutes
   setInterval(fetchBdiData, 300000) // Every 5 minutes
 })
 

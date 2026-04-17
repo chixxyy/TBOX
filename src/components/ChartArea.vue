@@ -8,12 +8,10 @@ const sentimentInfo = computed(() => {
   const sym = activeSymbol.value
   const price = marketPrices.value[sym]?.rawPrice || 0
   
-  if (sym === 'FGI') {
-    if (price <= 24) return { label: '極度恐懼', color: 'text-red-500 border-red-500/30 bg-red-500/10' }
-    if (price <= 44) return { label: '恐懼', color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
-    if (price <= 54) return { label: '中立', color: 'text-slate-400 border-slate-500/30 bg-slate-400/10' }
-    if (price <= 74) return { label: '貪婪', color: 'text-green-400 border-green-500/30 bg-green-400/10' }
-    return { label: '極度貪婪', color: 'text-emerald-400 border-emerald-500/30 bg-emerald-400/10' }
+  if (sym === '^TNX') {
+    if (price >= 4.5) return { label: '高利壓力', color: 'text-red-500 border-red-500/30 bg-red-500/10' }
+    if (price >= 3.8) return { label: '利率穩健', color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
+    return { label: '降息預期', color: 'text-green-400 border-green-500/30 bg-green-400/10' }
   }
   
   if (sym === '^VIX') {
@@ -148,20 +146,6 @@ const loadHistoricalData = async (targetChart = chart.value) => {
           ? 'rgba(16, 185, 129, 0.5)'
           : 'rgba(239, 68, 68, 0.4)',
       }))
-    }
-  } else if (symbol === 'FGI') {
-    // Special handling for Crypto Fear & Greed Index history
-    const res = await fetch('https://api.alternative.me/fng/?limit=365')
-    const json = await res.json()
-    if (json && json.data) {
-      // API returns newest first, we need oldest first for the chart
-      const historical = json.data.reverse()
-      priceData = historical.map((item: any) => ({
-        time: parseInt(item.timestamp),
-        value: parseFloat(item.value)
-      }))
-      // No volume for FGI
-      volData = []
     }
   } else {
     // Stock fetched via Yahoo Finance proxy

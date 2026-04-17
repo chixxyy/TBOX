@@ -135,7 +135,7 @@ const connectFinnhub = () => {
     
     wsFinnhub.onopen = () => {
       finnhubRetryCount = 0 
-      assets.value.filter(a => a.type === 'stock').forEach(asset => {
+      assets.value.filter(a => a.type === 'stock' && a.symbol !== 'FGI' && a.symbol !== 'BDI' && !a.symbol.startsWith('^')).forEach(asset => {
         wsFinnhub?.send(JSON.stringify({'type':'subscribe', 'symbol': asset.symbol}))
       })
     }
@@ -145,7 +145,7 @@ const connectFinnhub = () => {
         const response = JSON.parse(event.data)
         if (response.type === 'trade') {
           response.data.forEach((trade: any) => {
-            const asset = assets.value.find(a => a.symbol === trade.s && a.type === 'stock')
+            const asset = assets.value.find(a => a.symbol === trade.s && a.type === 'stock' && a.symbol !== 'FGI' && a.symbol !== 'BDI')
             if (asset && asset.prevClose) {
               asset.rawPrice = trade.p
               asset.price = formatPrice(trade.p.toString())
@@ -237,8 +237,26 @@ const startStockPolling = () => {
       await new Promise(r => setTimeout(r, 1000))
       try {
         // Use Yahoo Finance for Indices and US Stocks to get Pre/Post market data
-        const isSpecial = asset.symbol === 'FGI' || asset.symbol === 'BDI'
-        if (!isSpecial && asset.type === 'stock') {
+        const isBdi = asset.symbol === 'BDI'
+
+        if (isBdi) {
+          const quote = await api.getFinnhubQuote('BDRY')
+          if (quote && quote.c) {
+            const bdiValue = Math.round(quote.c * 255)
+            asset.rawPrice = bdiValue
+            asset.price = bdiValue.toLocaleString()
+            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+            asset.up = quote.dp >= 0
+            asset.prevClose = Math.round(quote.pc * 255)
+            marketPrices.value['BDI'] = {
+              price: asset.price, change: asset.change,
+              up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
+            }
+          }
+          continue
+        }
+
+        if (asset.type === 'stock') {
           const yahoo = await fetchYahooData(asset.symbol)
           if (yahoo) {
             asset.rawPrice = yahoo.price
@@ -254,31 +272,6 @@ const startStockPolling = () => {
           continue
         }
 
-        let targetSymbol = asset.symbol
-        let isBdi = asset.symbol === 'BDI'
-        if (isBdi) targetSymbol = 'BDRY'
-
-        const quote = await api.getFinnhubQuote(targetSymbol)
-        if (quote && quote.c) {
-          if (isBdi) {
-            const scaledPrice = Math.round(quote.c * 255)
-            asset.rawPrice = scaledPrice
-            asset.price = scaledPrice.toLocaleString()
-            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
-            asset.up = quote.dp >= 0
-            asset.prevClose = Math.round(quote.pc * 255)
-          } else {
-            asset.rawPrice = quote.c
-            asset.price = formatPrice(quote.c.toString())
-            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
-            asset.up = quote.dp >= 0
-            asset.prevClose = quote.pc
-          }
-          marketPrices.value[asset.symbol] = {
-            price: asset.price, change: asset.change,
-            up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
-          }
-        }
       } catch (err) { /* Silent fail for polling */ }
     }
   }, 60000)
@@ -291,7 +284,26 @@ onMounted(() => {
     // Sequential to prevent activeRequests dedup from cross-contaminating symbols
     for (const asset of stockAssets) {
       try {
-        if (asset.symbol.startsWith('^')) {
+        const isBdi = asset.symbol === 'BDI'
+
+        if (isBdi) {
+          const quote = await api.getFinnhubQuote('BDRY')
+          if (quote && quote.c) {
+            const bdiValue = Math.round(quote.c * 255)
+            asset.rawPrice = bdiValue
+            asset.price = bdiValue.toLocaleString()
+            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
+            asset.up = quote.dp >= 0
+            asset.prevClose = Math.round(quote.pc * 255)
+            marketPrices.value['BDI'] = {
+              price: asset.price, change: asset.change,
+              up: asset.up, rawPrice: asset.rawPrice, prevClose: asset.prevClose
+            }
+          }
+          continue
+        }
+
+        if (asset.type === 'stock') {
           const yahoo = await fetchYahooData(asset.symbol)
           if (yahoo) {
             asset.rawPrice = yahoo.price
@@ -307,37 +319,8 @@ onMounted(() => {
               prevClose: asset.prevClose
             }
           }
-          continue
         }
-
-        const isBdi = asset.symbol === 'BDI'
-        const targetSymbol = isBdi ? 'BDRY' : asset.symbol
-
-        const quote = await api.getFinnhubQuote(targetSymbol)
-        if (quote && quote.c) {
-          if (isBdi) {
-            const scaledPrice = Math.round(quote.c * 255)
-            asset.rawPrice = scaledPrice
-            asset.price = scaledPrice.toLocaleString()
-            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
-            asset.up = quote.dp >= 0
-            asset.prevClose = Math.round(quote.pc * 255)
-          } else {
-            asset.rawPrice = quote.c
-            asset.price = formatPrice(quote.c.toString())
-            asset.change = `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%`
-            asset.up = quote.dp >= 0
-            asset.prevClose = quote.pc
-          }
-          marketPrices.value[asset.symbol] = {
-            price: asset.price,
-            change: asset.change,
-            up: asset.up,
-            rawPrice: asset.rawPrice,
-            prevClose: asset.prevClose
-          }
-        }
-      } catch (err) { console.error(`Finnhub init error ${asset.symbol}:`, err) }
+      } catch (err) { console.error(`Finnhub/Yahoo init error ${asset.symbol}:`, err) }
     }
   }
 

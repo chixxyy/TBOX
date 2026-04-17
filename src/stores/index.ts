@@ -210,7 +210,7 @@ export const initialAssets = [
   { symbol: 'DOGEUSDT', name: 'Dogecoin', type: 'crypto', isIndex: false },
   { symbol: 'USDCUSDT', name: 'USDC/USDT', type: 'crypto', isIndex: false },
   // Stock
-  { symbol: 'FGI', name: 'Fear & Greed Index', type: 'stock', isIndex: true },
+  { symbol: '^TNX', name: '10Y Treasury Yield', type: 'stock', isIndex: true },
   { symbol: 'BDI', name: 'Baltic Dry Index', type: 'stock', isIndex: true },
   { symbol: '^VIX', name: 'Volatility Index', type: 'stock', isIndex: true },
   { symbol: '^DJI', name: 'Dow Jones Industrial', type: 'stock', isIndex: true },
