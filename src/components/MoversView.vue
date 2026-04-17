@@ -165,9 +165,36 @@ const categorizedPortfolio = computed(() => {
   }
 })
 
-const cryptoCount = computed(() => categorizedPortfolio.value.crypto.length)
-const stockCount = computed(() => categorizedPortfolio.value.stock.length)
-const totalAssets = computed(() => portfolio.value.length)
+const portfolioAllocation = computed(() => {
+  if (!chatSession.value || portfolio.value.length === 0) {
+    return { cryptoValue: 0, stockValue: 0, cryptoPercent: 0, stockPercent: 0, totalValue: 0 }
+  }
+
+  let cryptoValue = 0
+  let stockValue = 0
+
+  portfolio.value.forEach((item: any) => {
+    const info = initialAssets.find(a => a.symbol === item.symbol)
+    const market = marketPrices.value[item.symbol]
+    const currentPrice = market?.rawPrice || item.entryPrice
+    const itemValue = item.amount * currentPrice
+    
+    if (info?.type === 'crypto') {
+      cryptoValue += itemValue
+    } else {
+      stockValue += itemValue
+    }
+  })
+
+  const totalValue = cryptoValue + stockValue
+  return {
+    cryptoValue,
+    stockValue,
+    cryptoPercent: totalValue > 0 ? (cryptoValue / totalValue) * 100 : 0,
+    stockPercent: totalValue > 0 ? (stockValue / totalValue) * 100 : 0,
+    totalValue
+  }
+})
 
 const setTab = async (tag: string) => {
   isChangingTab.value = true
@@ -497,25 +524,62 @@ const confirmDeleteAction = async () => {
               </div>
 
               <!-- Asset Allocation Donut Chart -->
-              <div class="flex items-center gap-3 bg-slate-800/30 p-3 rounded-xl mb-6 border border-slate-700/50">
-                <div class="relative w-12 h-12">
-                  <!-- Background circle -->
-                  <svg viewBox="0 0 36 36" class="w-12 h-12 -rotate-90">
+              <!-- Asset Allocation Donut Chart -->
+              <div class="flex flex-col lg:flex-row items-center gap-8 bg-slate-900/40 p-6 md:p-8 rounded-3xl mb-8 border border-white/5 shadow-2xl backdrop-blur-sm relative overflow-hidden group">
+                <!-- Subtle background glow -->
+                <div class="absolute -top-24 -left-24 w-48 h-48 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+                <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+                <div class="relative w-32 h-32 shrink-0 group-hover:scale-105 transition-transform duration-500">
+                  <svg viewBox="0 0 36 36" class="w-32 h-32 -rotate-90 filter drop-shadow-[0_0_12px_rgba(0,0,0,0.5)]">
                     <path class="text-slate-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
-                    <!-- Crypto segment (Purple) -->
-                    <path class="text-[#7c3aed] transition-all duration-1000" :stroke-dasharray="totalAssets === 0 ? '0, 100' : `${(cryptoCount / totalAssets) * 100}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
-                    <!-- Stocks segment (Blue) -->
-                    <path class="text-[#1d4ed8] transition-all duration-1000" :stroke-dasharray="totalAssets === 0 ? '0, 100' : `${(stockCount / totalAssets) * 100}, 100`" :stroke-dashoffset="totalAssets === 0 ? '0' : `-${(cryptoCount / totalAssets) * 100}`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                    <!-- Crypto segment (Blue) -->
+                    <path class="text-blue-500 transition-all duration-1000 ease-out" :stroke-dasharray="`${portfolioAllocation.cryptoPercent}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" />
+                    <!-- Stocks segment (Green) -->
+                    <path class="text-emerald-500 transition-all duration-1000 ease-out" :stroke-dasharray="`${portfolioAllocation.stockPercent}, 100`" :stroke-dashoffset="`-${portfolioAllocation.cryptoPercent}`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" />
                   </svg>
-                  <div class="absolute inset-0 flex items-center justify-center">
-                    <span class="text-[10px] font-bold text-slate-300">{{ totalAssets }}</span>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">總資產</span>
+                    <span class="text-sm font-black text-white font-mono tracking-tighter">${{ portfolioAllocation.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</span>
                   </div>
                 </div>
-                <div>
-                  <div class="text-xs font-bold text-white mb-0.5">會員專屬：資產配置分析</div>
-                  <div class="flex items-center gap-2 text-[10px] text-slate-400">
-                    <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[#7c3aed]"></div> 加密貨幣 ({{ cryptoCount }})</div>
-                    <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[#1d4ed8]"></div> 美股/指數 ({{ stockCount }})</div>
+                
+                <div class="flex-1 w-full text-left">
+                  <div class="flex items-center justify-between mb-6">
+                    <div>
+                      <h4 class="text-lg font-black text-white tracking-tight leading-none">資產配置分析</h4>
+                      <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-2">Portfolio Allocation Analysis</p>
+                    </div>
+                  </div>
+                  
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-slate-950/40 rounded-2xl p-4 border border-white/5 hover:border-blue-500/30 transition-all duration-300 group/item">
+                      <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                          <div class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                          <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider">加密貨幣</span>
+                        </div>
+                        <div class="text-xs font-black text-blue-400 font-mono bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20">{{ portfolioAllocation.cryptoPercent.toFixed(1) }}%</div>
+                      </div>
+                      <div class="text-xl font-black text-white font-mono tracking-tight">${{ portfolioAllocation.cryptoValue.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</div>
+                      <div class="w-full bg-slate-800 h-1 mt-3 rounded-full overflow-hidden">
+                        <div class="bg-blue-500 h-full transition-all duration-1000" :style="{ width: portfolioAllocation.cryptoPercent + '%' }"></div>
+                      </div>
+                    </div>
+                    
+                    <div class="bg-slate-950/40 rounded-2xl p-4 border border-white/5 hover:border-emerald-500/30 transition-all duration-300 group/item">
+                      <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                          <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                          <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider">股票與指數</span>
+                        </div>
+                        <div class="text-xs font-black text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">{{ portfolioAllocation.stockPercent.toFixed(1) }}%</div>
+                      </div>
+                      <div class="text-xl font-black text-white font-mono tracking-tight">${{ portfolioAllocation.stockValue.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</div>
+                      <div class="w-full bg-slate-800 h-1 mt-3 rounded-full overflow-hidden">
+                        <div class="bg-emerald-500 h-full transition-all duration-1000" :style="{ width: portfolioAllocation.stockPercent + '%' }"></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
