@@ -518,14 +518,106 @@ const confirmDeleteAction = async () => {
                   </h3>
                   <p class="text-xs text-slate-500 mt-1">手動輸入代碼以追蹤目前資產即時盈虧狀況</p>
                 </div>
-                <button @click="showAddForm = !showAddForm" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-blue-600/20">
-                  {{ showAddForm ? '關閉表單' : '新增倉位' }}
+                <button @click="showAddForm = !showAddForm" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-blue-600/20 active:scale-95 z-10">
+                  {{ showAddForm ? '取消' : '新增資產' }}
                 </button>
               </div>
 
+              <!-- Form moved here: ABOVE the chart for better mobile UX -->
+              <transition enter-active-class="duration-300 ease-out" enter-from-class="transform opacity-0 -translate-y-4" enter-to-class="transform opacity-100 translate-y-0">
+                <form v-if="showAddForm" @submit.prevent="handleAdd" class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-950/50 rounded-2xl border border-blue-500/20 mb-8 items-start relative z-[210]">
+                  <div class="space-y-1.5 relative symbol-dropdown-container">
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">標的代碼 (Symbol)</span>
+                    <button 
+                      type="button"
+                      @click="showSymbolDropdown = !showSymbolDropdown"
+                      class="h-10 w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 flex items-center justify-between text-white text-sm outline-none focus:border-blue-500 transition-all hover:bg-slate-900/50"
+                      :class="{ 'border-blue-500 ring-1 ring-blue-500/20': showSymbolDropdown }"
+                    >
+                      <div class="flex items-center gap-2 truncate">
+                        <template v-if="selectedAssetInfo">
+                          <img :src="`https://ui-avatars.com/api/?name=${selectedAssetInfo.symbol.slice(0,2)}&background=${selectedAssetInfo.type === 'crypto' ? '3b82f6' : '10b981'}&color=fff&size=32&rounded=true`" class="w-4 h-4 rounded-full" />
+                          <span class="font-bold">{{ selectedAssetInfo.symbol }}</span>
+                          <span class="text-slate-500 text-[10px] truncate">{{ selectedAssetInfo.name }}</span>
+                        </template>
+                        <span v-else class="text-slate-600 text-xs">請選擇...</span>
+                      </div>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 transition-transform duration-300" :class="{ 'rotate-180': showSymbolDropdown }" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </button>
+
+                    <transition 
+                      enter-active-class="duration-200 ease-out" 
+                      enter-from-class="transform opacity-0 scale-95" 
+                      enter-to-class="transform opacity-100 scale-100"
+                      leave-active-class="duration-150 ease-in"
+                      leave-from-class="transform opacity-100 scale-100"
+                      leave-to-class="transform opacity-0 scale-95"
+                    >
+                      <div v-if="showSymbolDropdown" class="absolute top-[calc(100%+4px)] left-0 w-full min-w-[240px] bg-[#0a0f1c] border border-slate-700 shadow-2xl rounded-xl z-[220] overflow-hidden backdrop-blur-xl">
+                        <div class="p-2 border-b border-slate-800 bg-[#070b14]">
+                          <input v-model="symbolSearch" type="text" placeholder="搜索..." class="w-full bg-[#05080f] border border-slate-700 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 transition-colors" />
+                        </div>
+                        <div class="max-h-[200px] overflow-y-auto custom-scrollbar p-1">
+                          <div v-if="filteredAssets.crypto.length > 0">
+                            <div class="px-2 py-1 text-[9px] font-black text-blue-500 uppercase tracking-widest opacity-70">Crypto</div>
+                            <button v-for="asset in filteredAssets.crypto" :key="asset.symbol" @click="selectSymbol(asset.symbol)" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-blue-600/10 transition-colors group" :class="{ 'bg-blue-600/20': newSymbol === asset.symbol }">
+                              <div class="flex items-center gap-3">
+                                <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=3b82f6&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
+                                <div class="text-left">
+                                  <div class="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{{ formatSymbol(asset.symbol) }}</div>
+                                  <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
+                                </div>
+                              </div>
+                            </button>
+                          </div>
+                          <div v-if="filteredAssets.index.length > 0" class="mt-2">
+                            <div class="px-2 py-1 text-[9px] font-black text-purple-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Indices</div>
+                            <button v-for="asset in filteredAssets.index" :key="asset.symbol" @click="selectSymbol(asset.symbol)" :disabled="asset.symbol === 'BDI' || asset.symbol.startsWith('^')" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-purple-600/10 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" :class="{ 'bg-purple-600/20': newSymbol === asset.symbol }">
+                              <div class="flex items-center gap-3">
+                                <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=a855f7&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
+                                <div class="text-left">
+                                  <div class="text-xs font-bold text-white group-hover:text-purple-400 transition-colors">{{ formatSymbol(asset.symbol) }}</div>
+                                  <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
+                                </div>
+                              </div>
+                            </button>
+                          </div>
+                          <div v-if="filteredAssets.stock.length > 0" class="mt-2">
+                            <div class="px-2 py-1 text-[9px] font-black text-emerald-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Stocks</div>
+                            <button v-for="asset in filteredAssets.stock" :key="asset.symbol" @click="selectSymbol(asset.symbol)" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-emerald-600/10 transition-colors group" :class="{ 'bg-emerald-600/20': newSymbol === asset.symbol }">
+                              <div class="flex items-center gap-3">
+                                <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=10b981&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
+                                <div class="text-left">
+                                  <div class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{{ formatSymbol(asset.symbol) }}</div>
+                                  <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
+                                </div>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </transition>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">持倉數量</span>
+                    <input v-model="newAmount" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
+                  </div>
+                  <div class="space-y-1.5">
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">平均成本</span>
+                    <input v-model="newPrice" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
+                  </div>
+                  <div class="space-y-1.5">
+                    <span class="text-[10px] opacity-0 select-none block tracking-wider">Btn</span>
+                    <button type="submit" class="h-10 w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-lg transition-all shadow-lg active:scale-95">確認加入</button>
+                  </div>
+                </form>
+              </transition>
+
               <!-- Asset Allocation Donut Chart -->
-              <!-- Asset Allocation Donut Chart -->
-              <div class="flex flex-col lg:flex-row items-center gap-8 bg-slate-900/40 p-6 md:p-8 rounded-3xl mb-8 border border-white/5 shadow-2xl backdrop-blur-sm relative overflow-hidden group">
+              <div class="flex flex-col lg:flex-row items-center gap-4 lg:gap-8 bg-slate-900/40 p-4 md:p-8 rounded-3xl mb-8 border border-white/5 shadow-2xl backdrop-blur-sm relative overflow-visible group">
                 <!-- Subtle background glow -->
                 <div class="absolute -top-24 -left-24 w-48 h-48 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
                 <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
@@ -584,99 +676,7 @@ const confirmDeleteAction = async () => {
                 </div>
               </div>
 
-              <transition enter-active-class="duration-300 ease-out" enter-from-class="transform opacity-0 -translate-y-4" enter-to-class="transform opacity-100 translate-y-0">
-                <form v-if="showAddForm" @submit.prevent="handleAdd" class="grid grid-cols-1 md:grid-cols-4 gap-4 pb-6 border-b border-white/5 mb-6 items-start">
-                  <div class="space-y-1.5 relative symbol-dropdown-container">
-                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">代碼 (Symbol)</span>
-                    <button 
-                      type="button"
-                      @click="showSymbolDropdown = !showSymbolDropdown"
-                      class="h-10 w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 flex items-center justify-between text-white text-sm outline-none focus:border-blue-500 transition-all hover:bg-slate-900/50"
-                      :class="{ 'border-blue-500 ring-1 ring-blue-500/20': showSymbolDropdown }"
-                    >
-                      <div class="flex items-center gap-2 truncate">
-                        <template v-if="selectedAssetInfo">
-                          <img :src="`https://ui-avatars.com/api/?name=${selectedAssetInfo.symbol.slice(0,2)}&background=${selectedAssetInfo.type === 'crypto' ? '3b82f6' : '10b981'}&color=fff&size=32&rounded=true`" class="w-4 h-4 rounded-full" />
-                          <span class="font-bold">{{ selectedAssetInfo.symbol }}</span>
-                          <span class="text-slate-500 text-[10px] truncate">{{ selectedAssetInfo.name }}</span>
-                        </template>
-                        <span v-else class="text-slate-600">請選擇標的</span>
-                      </div>
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 transition-transform duration-300" :class="{ 'rotate-180': showSymbolDropdown }" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                      </svg>
-                    </button>
 
-                    <transition 
-                      enter-active-class="duration-200 ease-out" 
-                      enter-from-class="transform opacity-0 scale-95" 
-                      enter-to-class="transform opacity-100 scale-100"
-                      leave-active-class="duration-150 ease-in"
-                      leave-from-class="transform opacity-100 scale-100"
-                      leave-to-class="transform opacity-0 scale-95"
-                    >
-                      <div v-if="showSymbolDropdown" class="absolute top-[calc(100%+4px)] left-0 w-full min-w-[200px] bg-[#0a0f1c] border border-slate-700 shadow-2xl rounded-xl z-[200] overflow-hidden backdrop-blur-xl">
-                        <div class="p-2 border-b border-slate-800 bg-[#070b14]">
-                          <input v-model="symbolSearch" type="text" placeholder="搜索..." class="w-full bg-[#05080f] border border-slate-700 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 transition-colors" auto-focus />
-                        </div>
-                        <div class="max-h-[240px] overflow-y-auto custom-scrollbar p-1">
-                          <div v-if="filteredAssets.crypto.length > 0">
-                            <div class="px-2 py-1 text-[9px] font-black text-blue-500 uppercase tracking-widest opacity-70">Crypto</div>
-                            <button v-for="asset in filteredAssets.crypto" :key="asset.symbol" @click="selectSymbol(asset.symbol)" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-blue-600/10 transition-colors group" :class="{ 'bg-blue-600/20': newSymbol === asset.symbol }">
-                              <div class="flex items-center gap-3">
-                                <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=3b82f6&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
-                                <div class="text-left">
-                                  <div class="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{{ formatSymbol(asset.symbol) }}</div>
-                                  <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
-                                </div>
-                              </div>
-                            </button>
-                          </div>
-                          
-                          <div v-if="filteredAssets.index.length > 0" class="mt-2">
-                            <div class="px-2 py-1 text-[9px] font-black text-purple-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Indices</div>
-                            <button v-for="asset in filteredAssets.index" :key="asset.symbol" @click="selectSymbol(asset.symbol)" :disabled="asset.symbol === 'BDI' || asset.symbol.startsWith('^')" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-purple-600/10 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" :class="{ 'bg-purple-600/20': newSymbol === asset.symbol }">
-                              <div class="flex items-center gap-3">
-                                <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=a855f7&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
-                                <div class="text-left">
-                                  <div class="text-xs font-bold text-white group-hover:text-purple-400 transition-colors">{{ formatSymbol(asset.symbol) }}</div>
-                                  <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
-                                </div>
-                              </div>
-                            </button>
-                          </div>
-
-                          <div v-if="filteredAssets.stock.length > 0" class="mt-2">
-                            <div class="px-2 py-1 text-[9px] font-black text-emerald-500 uppercase tracking-widest opacity-70 border-t border-slate-800 pt-2 mt-1">Stocks</div>
-                            <button v-for="asset in filteredAssets.stock" :key="asset.symbol" @click="selectSymbol(asset.symbol)" class="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-emerald-600/10 transition-colors group" :class="{ 'bg-emerald-600/20': newSymbol === asset.symbol }">
-                              <div class="flex items-center gap-3">
-                                <img :src="`https://ui-avatars.com/api/?name=${asset.symbol.slice(0,2)}&background=10b981&color=fff&size=32&rounded=true`" class="w-5 h-5 rounded-full" />
-                                <div class="text-left">
-                                  <div class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{{ formatSymbol(asset.symbol) }}</div>
-                                  <div class="text-[9px] text-slate-500">{{ asset.name }}</div>
-                                </div>
-                              </div>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </transition>
-                  </div>
-
-                  <div class="space-y-1.5">
-                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">數量 (Amount)</span>
-                    <input v-model="newAmount" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
-                  </div>
-                  <div class="space-y-1.5">
-                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">平均單價 (Price)</span>
-                    <input v-model="newPrice" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
-                  </div>
-                  <div class="space-y-1.5">
-                    <span class="text-[10px] opacity-0 select-none block tracking-wider">Btn</span>
-                    <button type="submit" class="h-10 w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-lg transition-all shadow-lg active:scale-95">確認加入</button>
-                  </div>
-                </form>
-              </transition>
 
               <!-- Holding Cards -->
               <div class="space-y-8">
