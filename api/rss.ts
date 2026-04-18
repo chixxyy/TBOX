@@ -65,9 +65,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       if (items.length >= 50) break; // 提高抓取數量至50，以確保前端有足夠的新聞數量（至少200則）
     }
+    
+    // 去重邏輯：確保同一則新聞（標題或連結相同）不會重複出現
+    const seen = new Set();
+    const uniqueItems = items.filter(item => {
+      const key = `${item.title}-${item.link}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
-    res.status(200).json({ status: 'ok', items });
+    res.status(200).json({ status: 'ok', items: uniqueItems });
     
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message });
