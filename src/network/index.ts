@@ -145,6 +145,10 @@ export const api = {
     return apiFetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}`);
   },
 
+  async getFinnhubMetric(symbol: string, metric: string = 'all') {
+    return apiFetch(`https://finnhub.io/api/v1/stock/metric?symbol=${symbol}&metric=${metric}`);
+  },
+
   // The Odds API (Proxied for prod, Direct for local dev)
   async getMLBOdds() {
     if (import.meta.env.DEV) {

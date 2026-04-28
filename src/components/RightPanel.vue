@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { activeSymbol, priceAlerts, addPriceAlert, removePriceAlert, chatSession, goToLogin } from '../stores'
+import { api } from '../network'
 import NewsFeed from './NewsFeed.vue'
 import EconomicCalendar from './EconomicCalendar.vue'
 
 const currentView = ref('FEED')
 const isCrypto = computed(() => activeSymbol.value.toLowerCase().endsWith('usdt'))
+
+const stockInfo = ref<any>(null)
+const isStockInfoLoading = ref(false)
 
 // Alerts State
 const newAlertPrice = ref<number | ''>('')
@@ -109,11 +113,38 @@ watch(activeSymbol, () => {
   // Clear orderbook immediately when switching
   asks.value = []
   bids.value = []
-  connectOrderbook()
+  stockInfo.value = null
+  
+  if (isCrypto.value) {
+    connectOrderbook()
+  } else {
+    if (ws) ws.close()
+    fetchStockInfo()
+  }
 })
 
+const fetchStockInfo = async () => {
+  const symbol = activeSymbol.value
+  if (!symbol || symbol.startsWith('^') || symbol === 'FGI' || symbol === 'BDI') return
+  isStockInfoLoading.value = true
+  try {
+    const data = await api.getFinnhubMetric(symbol)
+    if (data && data.metric) {
+      stockInfo.value = data.metric
+    }
+  } catch (e) {
+    console.error('Failed to fetch stock info:', e)
+  } finally {
+    isStockInfoLoading.value = false
+  }
+}
+
 onMounted(() => {
-  connectOrderbook()
+  if (isCrypto.value) {
+    connectOrderbook()
+  } else {
+    fetchStockInfo()
+  }
 })
 
 onUnmounted(() => {
@@ -156,16 +187,63 @@ onUnmounted(() => {
     <!-- Order Book Section -->
     <div v-show="currentView === 'ORDERBOOK'" class="h-[300px] md:h-auto md:flex-1 flex flex-col min-h-0 p-1 md:p-2 pb-12 md:pb-2 relative overflow-y-auto">
       
-      <!-- Unavailable Overlay for Stocks -->
-      <div v-if="!isCrypto" class="absolute inset-0 z-50 bg-[#070b14]/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 md:p-6 text-center border-t border-slate-800">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8 text-slate-600 mb-2 md:mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span class="text-slate-400 text-[10px] md:text-xs font-bold font-mono tracking-widest leading-tight">ORDER BOOK UNAVAILABLE</span>
-        <span class="text-slate-500 text-[9px] md:text-[10px] mt-1 md:mt-2 leading-relaxed">股票市場資料受到限制。</span>
+      <!-- Stock Data Display for Stocks -->
+      <div v-if="!isCrypto" class="absolute inset-0 z-50 bg-[#070b14] flex flex-col p-1 md:p-2 border-t border-slate-800 overflow-y-auto custom-scrollbar">
+        <div class="flex items-center justify-between mb-2 md:mb-4 px-1 md:px-2">
+          <h3 class="text-xs font-bold text-slate-300 tracking-widest uppercase">基本面資料</h3>
+          <span v-if="isStockInfoLoading" class="text-[10px] text-slate-500 font-mono animate-pulse">載入中...</span>
+        </div>
+        
+        <template v-if="stockInfo">
+          <div class="grid grid-cols-2 gap-2 md:gap-3">
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">本益比 (PE TTM)</div>
+              <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.peTTM ? stockInfo.peTTM.toFixed(2) : '---' }}</div>
+            </div>
+            
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">每股盈餘 (EPS TTM)</div>
+              <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.epsTTM ? stockInfo.epsTTM.toFixed(2) : '---' }}</div>
+            </div>
+
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">市值 (Market Cap)</div>
+              <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.marketCapitalization ? (stockInfo.marketCapitalization > 1000 ? (stockInfo.marketCapitalization / 1000).toFixed(2) + 'B' : stockInfo.marketCapitalization.toFixed(2) + 'M') : '---' }}</div>
+            </div>
+
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">Beta值</div>
+              <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.beta ? stockInfo.beta.toFixed(2) : '---' }}</div>
+            </div>
+
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">52週最高</div>
+              <div class="text-xs md:text-sm font-bold text-green-400 font-mono">{{ stockInfo['52WeekHigh'] ? stockInfo['52WeekHigh'].toFixed(2) : '---' }}</div>
+            </div>
+
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">52週最低</div>
+              <div class="text-xs md:text-sm font-bold text-red-400 font-mono">{{ stockInfo['52WeekLow'] ? stockInfo['52WeekLow'].toFixed(2) : '---' }}</div>
+            </div>
+            
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50 col-span-2">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">股息殖利率 (TTM)</div>
+              <div class="text-xs md:text-sm font-bold text-blue-400 font-mono">{{ stockInfo.currentDividendYieldTTM ? stockInfo.currentDividendYieldTTM.toFixed(2) + '%' : '---' }}</div>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="!isStockInfoLoading">
+          <div class="flex-1 flex flex-col items-center justify-center text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8 text-slate-600 mb-2 md:mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-slate-400 text-[10px] md:text-xs font-bold font-mono tracking-widest leading-tight">目前無可用基本面資料</span>
+            <span class="text-slate-500 text-[9px] md:text-[10px] mt-1 md:mt-2 leading-relaxed">此資產可能為指數或暫不提供資料。</span>
+          </div>
+        </template>
       </div>
-      <div class="flex items-center justify-between mb-1 md:mb-2 px-1 md:px-2">
-        <h3 class="text-[10px] md:text-xs font-bold text-slate-300">訂單</h3>
+      <div class="flex items-center justify-between mb-2 md:mb-4 px-1 md:px-2">
+        <h3 class="text-xs font-bold text-slate-300 tracking-widest uppercase">訂單</h3>
         <div class="flex space-x-1">
           <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></button>
           <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></button>
@@ -302,5 +380,19 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #05080f;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }
 </style>
