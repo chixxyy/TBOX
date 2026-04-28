@@ -190,7 +190,7 @@ onUnmounted(() => {
       <!-- Stock Data Display for Stocks -->
       <div v-if="!isCrypto" class="absolute inset-0 z-50 bg-[#070b14] flex flex-col p-1 md:p-2 border-t border-slate-800 overflow-y-auto custom-scrollbar">
         <div class="flex items-center justify-between mb-2 md:mb-4 px-1 md:px-2">
-          <h3 class="text-xs font-bold text-slate-300 tracking-widest uppercase">基本面資料</h3>
+          <h3 class="text-xs font-bold text-slate-300 tracking-widest uppercase">基本面</h3>
           <span v-if="isStockInfoLoading" class="text-[10px] text-slate-500 font-mono animate-pulse">載入中...</span>
         </div>
         
@@ -224,6 +224,26 @@ onUnmounted(() => {
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
               <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">52週最低</div>
               <div class="text-xs md:text-sm font-bold text-red-400 font-mono">{{ stockInfo['52WeekLow'] ? stockInfo['52WeekLow'].toFixed(2) : '---' }}</div>
+            </div>
+
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">市銷率 (PS TTM)</div>
+              <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.psTTM ? stockInfo.psTTM.toFixed(2) : '---' }}</div>
+            </div>
+
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">市淨率 (PB TTM)</div>
+              <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.pbTTM ? stockInfo.pbTTM.toFixed(2) : '---' }}</div>
+            </div>
+
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">ROE (TTM)</div>
+              <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.roeTTM ? stockInfo.roeTTM.toFixed(2) + '%' : '---' }}</div>
+            </div>
+
+            <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">營收成長 (YoY)</div>
+              <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.revenueGrowthTTMYoy ? stockInfo.revenueGrowthTTMYoy.toFixed(2) + '%' : '---' }}</div>
             </div>
             
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50 col-span-2">
