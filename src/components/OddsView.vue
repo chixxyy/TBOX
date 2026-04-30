@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { api } from '../network'
-import { showToast, trackedPlayers, setScrollProgress } from '../stores'
+import { showToast, trackedPlayers, initTrackedPlayers, setScrollProgress } from '../stores'
 
 interface Outcome { name: string; price: number }
 interface Market { key: string; outcomes: Outcome[] }
@@ -129,6 +129,25 @@ const nbaStandings = ref<any[]>([])
 // ── Player Sub-filter ──
 const currentYear = new Date().getFullYear()
 const playerTypeFilter = ref<'all' | 'hitting' | 'pitching'>('all')
+const teamFilter = ref('ALL')
+const isTeamMenuOpen = ref(false)
+const teamSearchQuery = ref('')
+
+const filteredAvailableTeams = computed(() => {
+  const query = teamSearchQuery.value.toUpperCase()
+  if (!query) return availableTeams.value
+  return availableTeams.value.filter(t => t.includes(query))
+})
+
+// Close menu when clicking outside
+onMounted(() => {
+  window.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement
+    if (!target.closest('.team-dropdown-container')) {
+      isTeamMenuOpen.value = false
+    }
+  })
+})
 
 let rafId: number | null = null
 const handleScroll = (e: Event) => {
@@ -159,6 +178,8 @@ const groupedPlayers = computed(() => {
   const groups: Record<string, any[]> = {}
   filteredTrackedPlayers.value.forEach(player => {
     const team = player.team || 'Unknown'
+    if (teamFilter.value !== 'ALL' && team !== teamFilter.value) return
+    
     if (!groups[team]) {
       groups[team] = []
     }
@@ -174,6 +195,15 @@ const groupedPlayers = computed(() => {
   return acc
 })
 
+// Unique teams for filter
+const availableTeams = computed(() => {
+  const teams = new Set<string>()
+  trackedPlayers.value.forEach(p => {
+    if (p.team) teams.add(p.team)
+  })
+  return ['ALL', ...Array.from(teams).sort()]
+})
+
 const lastRefreshTime = ref(0)
 const fetchPlayerStats = async (isManual = false) => {
   if (isManual) {
@@ -186,53 +216,68 @@ const fetchPlayerStats = async (isManual = false) => {
     lastRefreshTime.value = now
   }
 
-  for (const p of trackedPlayers.value) {
-    p.loading = true
-    p.error = ''
-    try {
-      // 1. Try to fetch Current Season Stats dynamically
-      const resLive = await fetch(`https://statsapi.mlb.com/api/v1/people/${p.id}/stats?stats=season&season=${currentYear}&group=hitting,pitching`)
-      const dataLive = await resLive.json()
-      
-      let foundCurrent = false
-      if (dataLive.stats && dataLive.stats.length > 0) {
-        const hitting = dataLive.stats.find((s:any) => s.group.displayName === 'hitting')?.splits?.[0]
-        const pitching = dataLive.stats.find((s:any) => s.group.displayName === 'pitching')?.splits?.[0]
+  // 1. Process players in chunks to speed up loading while staying safe
+  const chunkSize = 10
+  const players = trackedPlayers.value
+  
+  for (let i = 0; i < players.length; i += chunkSize) {
+    const chunk = players.slice(i, i + chunkSize)
+    
+    // Process this chunk in parallel
+    await Promise.all(chunk.map(async (p) => {
+      p.loading = true
+      p.error = ''
+      try {
+        // 1. Try to fetch Current Season Stats dynamically
+        const resLive = await fetch(`https://statsapi.mlb.com/api/v1/people/${p.id}/stats?stats=season&season=${currentYear}&group=hitting,pitching`)
+        const dataLive = await resLive.json()
         
-        if (hitting || pitching) {
-          if (hitting) p.hitting = { ...hitting.stat, year: String(currentYear) }
-          if (pitching) p.pitching = { ...pitching.stat, year: String(currentYear) }
-          foundCurrent = true
+        let foundCurrent = false
+        if (dataLive.stats && dataLive.stats.length > 0) {
+          const hitting = dataLive.stats.find((s:any) => s.group.displayName === 'hitting')?.splits?.[0]
+          const pitching = dataLive.stats.find((s:any) => s.group.displayName === 'pitching')?.splits?.[0]
+          
+          if (hitting || pitching) {
+            if (hitting) p.hitting = { ...hitting.stat, year: String(currentYear) }
+            if (pitching) p.pitching = { ...pitching.stat, year: String(currentYear) }
+            foundCurrent = true
+          }
         }
-      }
 
-      // 2. Fallback to YearByYear if current season data is completely missing
-      if (!foundCurrent) {
-        const resHistory = await fetch(`https://statsapi.mlb.com/api/v1/people/${p.id}/stats?stats=yearByYear&group=hitting,pitching`)
-        const dataHistory = await resHistory.json()
-        if (dataHistory.stats) {
-          const hittingGroup = dataHistory.stats.find((s:any) => s.group.displayName === 'hitting')
-          const pitchingGroup = dataHistory.stats.find((s:any) => s.group.displayName === 'pitching')
-          if (hittingGroup?.splits?.length) {
-            const last = hittingGroup.splits[hittingGroup.splits.length - 1]
-            p.hitting = { ...last.stat, year: last.year }
-          }
-          if (pitchingGroup?.splits?.length) {
-            const last = pitchingGroup.splits[pitchingGroup.splits.length - 1]
-            p.pitching = { ...last.stat, year: last.year }
+        // 2. Fallback to YearByYear if current season data is completely missing
+        if (!foundCurrent) {
+          const resHistory = await fetch(`https://statsapi.mlb.com/api/v1/people/${p.id}/stats?stats=yearByYear&group=hitting,pitching`)
+          const dataHistory = await resHistory.json()
+          if (dataHistory.stats) {
+            const hittingGroup = dataHistory.stats.find((s:any) => s.group.displayName === 'hitting')
+            const pitchingGroup = dataHistory.stats.find((s:any) => s.group.displayName === 'pitching')
+            if (hittingGroup?.splits?.length) {
+              const last = hittingGroup.splits[hittingGroup.splits.length - 1]
+              p.hitting = { ...last.stat, year: last.year }
+            }
+            if (pitchingGroup?.splits?.length) {
+              const last = pitchingGroup.splits[pitchingGroup.splits.length - 1]
+              p.pitching = { ...last.stat, year: last.year }
+            }
           }
         }
+        
+        // Auto-select based on what data is available if not strictly dual
+        if (!p.hitting && p.pitching) p.activeStatType = 'pitching'
+        if (p.hitting && !p.pitching) p.activeStatType = 'hitting'
+      } catch (err) {
+        p.error = '無法取得即時成績'
+      } finally {
+        p.loading = false
       }
-      
-      // Auto-select based on what data is available if not strictly dual
-      if (!p.hitting && p.pitching) p.activeStatType = 'pitching'
-      if (p.hitting && !p.pitching) p.activeStatType = 'hitting'
-    } catch (err) {
-      p.error = '無法取得即時成績'
-    } finally {
-      p.loading = false
-    }
+    }))
   }
+
+  // Save fully hydrated players to cache
+  localStorage.setItem('mlb_players_with_stats', JSON.stringify({
+    timestamp: Date.now(),
+    data: trackedPlayers.value
+  }))
 }
 
 type SortMode = 'time' | 'prob_desc' | 'alpha'
@@ -504,9 +549,12 @@ const getSeasonProgress = (league: 'MLB' | 'NBA') => {
 let oddsTimer: ReturnType<typeof setInterval> | null = null
 let scoreTimer: ReturnType<typeof setTimeout> | null = null
 
-onMounted(() => {
+onMounted(async () => {
   fetchAll()
-  fetchPlayerStats()
+  const loadedFromCache = await initTrackedPlayers()
+  if (!loadedFromCache) {
+    fetchPlayerStats()
+  }
   
   // Odds Timer: 30 Minutes (to save API quota)
   oddsTimer = setInterval(() => {
@@ -590,7 +638,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Scrollable Body -->
     <div @scroll="handleScroll" class="flex-1 overflow-y-auto px-4 pb-20 scrollbar-hide">
 
       <!-- ===== Players Tab ===== -->
@@ -601,19 +648,70 @@ onUnmounted(() => {
             <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">MLB 關注球員</h2>
           </div>
           
-          <div class="flex-1 h-px bg-slate-800 ml-1 mr-2"></div>
-
-          <!-- Player Sub-Filter -->
-          <div class="flex items-center bg-[#0a0f1c] border border-slate-800 p-0.5 rounded-lg shrink-0">
+          <div class="hidden md:block w-4"></div>
+ 
+          <!-- Player Sub-Filter & Team Dropdown - Grid for equal proportions -->
+          <div class="flex-1 grid grid-cols-4 bg-[#0a0f1c] border border-slate-800 p-0.5 rounded-lg">
             <button 
               v-for="f in ([{k:'all', l:'全部'}, {k:'hitting', l:'打者'}, {k:'pitching', l:'投手'}] as const)"
               :key="f.k"
               @click="playerTypeFilter = f.k"
-              class="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all whitespace-nowrap"
+              class="py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all whitespace-nowrap text-center"
               :class="playerTypeFilter === f.k ? 'bg-blue-500/10 text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'"
             >
               {{ f.l }}
             </button>
+            
+            <!-- Custom Optimized Dropdown in the 4th column -->
+            <div class="relative team-dropdown-container border-l border-slate-800/50 flex items-center justify-center">
+              <button 
+                @click.stop="isTeamMenuOpen = !isTeamMenuOpen"
+                class="w-full flex items-center justify-center px-1 py-1 text-[10px] font-black uppercase tracking-tight text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <span class="truncate">{{ teamFilter }}</span>
+                <span class="ml-1 text-[7px] transition-transform duration-200 shrink-0" :class="{ 'rotate-180': isTeamMenuOpen }">▼</span>
+              </button>
+
+              <!-- Dropdown Menu -->
+              <transition
+                enter-active-class="transition duration-100 ease-out"
+                enter-from-class="transform scale-95 opacity-0"
+                enter-to-class="transform scale-100 opacity-100"
+                leave-active-class="transition duration-75 ease-in"
+                leave-from-class="transform scale-100 opacity-100"
+                leave-to-class="transform scale-95 opacity-0"
+              >
+                <div 
+                  v-if="isTeamMenuOpen"
+                  class="absolute top-full right-0 mt-1 w-32 max-h-60 overflow-y-auto bg-[#0a0f1c] border border-slate-800 rounded-lg shadow-2xl z-50 scrollbar-hide flex flex-col animate-in fade-in zoom-in duration-200"
+                >
+                  <!-- Search Input -->
+                  <div class="sticky top-0 p-1 bg-[#0a0f1c] border-b border-slate-800 z-10">
+                    <input 
+                      v-model="teamSearchQuery"
+                      placeholder="搜尋..."
+                      class="w-full bg-slate-900/50 border border-slate-800 rounded px-2 py-1 text-[9px] text-slate-300 focus:outline-none focus:border-blue-500/50"
+                      @click.stop
+                    />
+                  </div>
+                  
+                  <div class="flex-1 overflow-y-auto scrollbar-hide py-1">
+                    <button
+                      v-for="team in filteredAvailableTeams"
+                      :key="team"
+                      @click="teamFilter = team; isTeamMenuOpen = false; teamSearchQuery = ''"
+                      class="w-full text-left px-3 py-2 text-[10px] font-bold uppercase transition-colors"
+                      :class="teamFilter === team ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'"
+                    >
+                      {{ team }}
+                    </button>
+                    <div v-if="filteredAvailableTeams.length === 0" class="px-3 py-4 text-[9px] text-slate-600 text-center uppercase">
+                      查無球隊
+                    </div>
+                  </div>
+                </div>
+              </transition>
+            </div>
           </div>
         </div>
 

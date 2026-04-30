@@ -95,26 +95,101 @@ interface PlayerStats {
   roles: ('hitting' | 'pitching')[]
 }
 
-export const trackedPlayers = ref<PlayerStats[]>([
-  // --- Two-way Hero ---
-  { id: '660271', name: 'Shohei Ohtani', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting', 'pitching'] },
+export const trackedPlayers = ref<PlayerStats[]>([])
+
+export const initTrackedPlayers = async (): Promise<boolean> => {
+  if (trackedPlayers.value.length > 0) return true;
   
-  // --- Star Pitchers ---
-  { id: '808967', name: 'Yoshinobu Yamamoto', team: 'LAD', teamId: '119', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  { id: '694973', name: 'Paul Skenes', team: 'PIT', teamId: '134', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  { id: '669373', name: 'Tarik Skubal', team: 'DET', teamId: '116', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  { id: '676979', name: 'Garrett Crochet', team: 'BOS', teamId: '111', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  { id: '657277', name: 'Logan Webb', team: 'SF', teamId: '137', loading: false, activeStatType: 'pitching', roles: ['pitching'] },
-  
-  // --- Elite Hitters ---
-  { id: '605141', name: 'Mookie Betts', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '518692', name: 'Freddie Freeman', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '592450', name: 'Aaron Judge', team: 'NYY', teamId: '147', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '665742', name: 'Juan Soto', team: 'NYM', teamId: '121', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '677951', name: 'Bobby Witt Jr.', team: 'KC', teamId: '118', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '681624', name: 'Andy Pages', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] },
-  { id: '663656', name: 'Kyle Tucker', team: 'LAD', teamId: '119', loading: false, activeStatType: 'hitting', roles: ['hitting'] }
-])
+  try {
+    const CACHE_KEY = 'mlb_players_with_stats';
+    const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
+    const cachedStr = localStorage.getItem(CACHE_KEY);
+    
+    if (cachedStr) {
+      const { data, timestamp } = JSON.parse(cachedStr);
+      if (Date.now() - timestamp < CACHE_TTL && data && data.length > 0) {
+        trackedPlayers.value = data;
+        return true; // Loaded from cache
+      }
+    }
+
+    const currentYear = new Date().getFullYear();
+    // Fetch top 100 players from multiple key categories
+    const res = await fetch(`https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=homeRuns,battingAverage,runsBattedIn,onBasePlusSlugging,earnedRunAverage,strikeOuts,wins,saves&statGroup=hitting,pitching&season=${currentYear}&limit=100`);
+    const data = await res.json();
+    
+    const playersMap = new Map<string, PlayerStats>();
+    
+    // Process all leader categories
+    for (const category of data.leagueLeaders || []) {
+      const isPitching = category.statGroup === 'pitching';
+      const role = isPitching ? 'pitching' : 'hitting';
+      
+      for (const leader of category.leaders || []) {
+        const pId = String(leader.person.id);
+        const teamId = String(leader.team?.id || '');
+        const teamName = leader.team?.name || 'Unknown';
+        // Map common long names to shorter ones or standard abbreviations if needed
+        const shortTeamMap: Record<string, string> = {
+          "Los Angeles Dodgers": "LAD", "New York Yankees": "NYY", "Philadelphia Phillies": "PHI",
+          "Baltimore Orioles": "BAL", "Atlanta Braves": "ATL", "Houston Astros": "HOU",
+          "Cleveland Guardians": "CLE", "Milwaukee Brewers": "MIL", "San Diego Padres": "SD",
+          "Minnesota Twins": "MIN", "Kansas City Royals": "KC", "Boston Red Sox": "BOS",
+          "Arizona Diamondbacks": "ARI", "Seattle Mariners": "SEA", "New York Mets": "NYM",
+          "Texas Rangers": "TEX", "Tampa Bay Rays": "TB", "Cincinnati Reds": "CIN",
+          "St. Louis Cardinals": "STL", "Chicago Cubs": "CHC", "San Francisco Giants": "SF",
+          "Detroit Tigers": "DET", "Pittsburgh Pirates": "PIT", "Washington Nationals": "WSH",
+          "Toronto Blue Jays": "TOR", "Los Angeles Angels": "LAA", "Oakland Athletics": "OAK", "Athletics": "OAK",
+          "Miami Marlins": "MIA", "Colorado Rockies": "COL", "Chicago White Sox": "CHW"
+        };
+        const displayTeam = shortTeamMap[teamName] || teamName;
+
+        if (!playersMap.has(pId)) {
+          playersMap.set(pId, {
+            id: pId,
+            name: leader.person.fullName,
+            team: displayTeam,
+            teamId: teamId,
+            loading: false,
+            activeStatType: role,
+            roles: [role]
+          });
+        } else {
+          const existing = playersMap.get(pId)!;
+          if (!existing.roles.includes(role)) {
+            existing.roles.push(role);
+            // Two-way players like Ohtani prefer hitting view by default
+            if (existing.roles.includes('hitting') && existing.roles.includes('pitching')) {
+              existing.activeStatType = 'hitting';
+            }
+          }
+        }
+      }
+    }
+    
+    // Group by team and take top 5 (based on how often they appear or just first come)
+    const teamGroups: Record<string, PlayerStats[]> = {};
+    for (const player of playersMap.values()) {
+      if (!teamGroups[player.teamId]) {
+        teamGroups[player.teamId] = [];
+      }
+      teamGroups[player.teamId]!.push(player);
+    }
+    
+    const finalPlayers: PlayerStats[] = [];
+    for (const tId in teamGroups) {
+      // Sort by some logic if needed, currently they are ordered by how early they appeared in leaderboards
+      // Just take top 5
+      finalPlayers.push(...(teamGroups[tId] || []).slice(0, 5));
+    }
+    
+    trackedPlayers.value = finalPlayers;
+    return false; // Indicates stats need to be fetched
+  } catch (error) {
+    console.error('Failed to init tracked players:', error);
+    return false;
+  }
+}
 
 // --- Session Management ---
 // Fallback for crypto.randomUUID() which breaks on Safari < 15.4
