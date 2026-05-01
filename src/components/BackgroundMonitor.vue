@@ -177,8 +177,9 @@ async function fetchMlbTransactions(): Promise<any[]> {
       
       // Boost timestamp: If it's a transaction from today/yesterday, give it a high hour weight
       // so it clusters with recent news rather than sinking to 00:00:00
+      // Reduced boost: use baseTs + 8h to 16h instead of 12h to 24h
       const baseTs = new Date(t.date).getTime()
-      const displayTs = baseTs + (12 * 3600 * 1000) + (isTracked ? 12 * 3600 * 1000 : 0)
+      const displayTs = baseTs + (8 * 3600 * 1000) + (isTracked ? 4 * 3600 * 1000 : 0)
 
       return {
         uid: `mlb-trans-${t.id}`,
@@ -263,9 +264,9 @@ async function syncNews(skipNotifications = false) {
     // Sort all by timestamp descending first
     const allSorted = Array.from(masterNewsPool.values()).sort((a, b) => b.ts - a.ts)
     
-    // Apply 40% Finance (general), 40% Crypto, 20% Sports distribution (Max 200 items total)
+    // Apply distribution (Max 200 items total)
     const MAX_TOTAL = 200
-    const quotas = { general: 80, crypto: 80, sports: 40 }
+    const quotas = { general: 70, crypto: 70, sports: 60 }
     
     const generalPool = allSorted.filter(i => i.cat === 'general')
     const cryptoPool = allSorted.filter(i => i.cat === 'crypto')

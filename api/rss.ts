@@ -17,6 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       'espn.com',
       'yahoo.com',
       'bbci.co.uk',
+      'mlb.com',
       'coindesk.com',
       'cointelegraph.com',
       'reuters.com',
@@ -50,15 +51,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     while ((match = itemRegex.exec(xml)) !== null) {
       const content = match[1];
       const getTag = (tag: string) => {
-        // 支援 <tag> 或 <dc:tag> 等格式
-        const m = content.match(new RegExp(`<(${tag}|dc:${tag})[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/\\1>`, 'i'));
-        return m ? m[2] : '';
+        // 支援 <tag> 或 <dc:tag> 等格式，並使用 [\s\S] 支援跨行匹配
+        const m = content.match(new RegExp(`<(${tag}|dc:${tag})[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/\\1>`, 'i'));
+        return m ? m[2].trim() : '';
       };
       
       items.push({
         guid: getTag('guid') || getTag('link'),
         link: getTag('link'),
-        title: getTag('title').replace(/&amp;/g, '&').replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1'),
+        title: getTag('title').replace(/&amp;/g, '&').replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/<[^>]*>?/gm, ''),
         description: getTag('description').replace(/<[^>]*>?/gm, '').replace(/&amp;/g, '&').replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1'),
         pubDate: getTag('pubDate') || getTag('date')
       });
