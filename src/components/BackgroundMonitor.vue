@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { 
-  globalMovers, globalNews, 
-  isMoversLoading, isNewsLoading, 
+  globalMovers, globalNews,
+  isMoversLoading, isNewsLoading,
   lastMoversUpdate, lastNewsUpdate,
   priceAlerts,
   showToast,
@@ -426,7 +426,6 @@ function mapEventToMover(ev: any, index: number): Mover {
     sparklineData: generateSparklineData(detected, currentPrice)
   }
 }
-
 async function syncMovers() {
   try {
     const data = await api.getPolyEvents('closed=false&limit=50&active=true')

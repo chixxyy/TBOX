@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import Sparkline from './Sparkline.vue'
+import api from '../network'
 import { 
   globalMovers as movers, 
   isMoversLoading as isLoading, 
@@ -19,6 +20,7 @@ import {
   openAIDrawer,
   showToast
 } from '../stores'
+
 
 let rafId: number | null = null
 const handleScroll = (e: Event) => {
@@ -58,6 +60,59 @@ async function translateText(text: string): Promise<string> {
   } catch (err) { 
     console.error('[TRANSLATE] Error fetching translation:', err)
     return text 
+  }
+}
+
+// ---------- Earnings Search ----------
+const earningsSearchQuery = ref('')
+const isEarningsSearching = ref(false)
+const earningsSearchResult = ref<any>(null)
+
+const searchEarnings = async () => {
+  if (!earningsSearchQuery.value) return
+  isEarningsSearching.value = true
+  earningsSearchResult.value = null
+  
+  const symbol = earningsSearchQuery.value.toUpperCase().trim()
+  
+  try {
+    const today = new Date();
+    const pastDate = new Date(); pastDate.setDate(today.getDate() - 365);
+    const futureDate = new Date(); futureDate.setDate(today.getDate() + 365);
+    const fromStr = pastDate.toISOString().split('T')[0];
+    const toStr = futureDate.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split('T')[0];
+    
+    const calData = await api.getFinnhubEarningsCalendar(fromStr, toStr, symbol)
+    let latest = null
+    let next = null
+    
+    if (calData && calData.earningsCalendar) {
+      calData.earningsCalendar.forEach((e: any) => {
+        if (e.date < todayStr) {
+          if (!latest || e.date > latest.date) latest = e;
+        } else {
+          if (!next || e.date < next.date) next = e;
+        }
+      });
+    }
+
+    const surpData = await api.getFinnhubEarningsSurprises(symbol)
+    let surprises = []
+    if (surpData && Array.isArray(surpData)) {
+      surprises = surpData.sort((a: any, b: any) => new Date(b.period).getTime() - new Date(a.period).getTime())
+    }
+
+    earningsSearchResult.value = {
+      symbol,
+      latest,
+      next,
+      surprises
+    }
+  } catch (e) {
+    console.error('Failed to search earnings', e)
+  } finally {
+    isEarningsSearching.value = false
   }
 }
 
@@ -148,6 +203,7 @@ const filterTabs = [
   { label: '全部異動', tag: 'all' },
   { label: '快速上漲', tag: 'gainers' },
   { label: '極速下跌', tag: 'losers' },
+  { label: '財報公布', tag: 'earnings' },
   { label: '我的資產', tag: 'portfolio' },
 ]
 const activeFilter = ref('all')
@@ -196,6 +252,8 @@ const portfolioAllocation = computed(() => {
   }
 })
 
+
+
 const setTab = async (tag: string) => {
   isChangingTab.value = true
   activeFilter.value = tag
@@ -241,6 +299,9 @@ const newAmount = ref<number | null>(null)
 const newPrice = ref<number | null>(null)
 const showAddForm = ref(false)
 
+const handleCardClick = (symbol: string) => {
+  quickAddToWatchlist(symbol)
+}
 // Dropdown logic for Symbol Select
 const showSymbolDropdown = ref(false)
 const symbolSearch = ref('')
@@ -408,7 +469,7 @@ const confirmDeleteAction = async () => {
 
     <!-- Stats Header (Adaptive) -->
     <div class="h-16 md:h-20 border-b border-slate-800 flex items-center px-2 md:px-6 space-x-2 md:space-x-3 shrink-0 bg-[#0a0f1c] w-full overflow-hidden">
-      <template v-if="activeFilter !== 'portfolio'">
+      <template v-if="activeFilter !== 'portfolio' && activeFilter !== 'earnings'">
         <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
           <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center text-blue-400 shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -429,7 +490,33 @@ const confirmDeleteAction = async () => {
             <div class="text-white font-bold text-xs md:text-lg leading-none">{{ activeFilter === 'losers' ? stats.down : stats.up }}</div>
           </div>
         </div>
+        <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
+            :class="activeFilter === 'losers' ? 'bg-red-900/30 border border-red-800/50 text-red-500' : 'bg-green-900/30 border border-green-800/50 text-green-500'">
+            <template v-if="activeFilter === 'losers'">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+            </template>
+            <template v-else>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+            </template>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">
+              {{ activeFilter === 'losers' ? '最大跌幅' : '最高漲幅' }}
+            </div>
+            <div class="text-white font-bold text-xs md:text-lg leading-none truncate">
+              {{ activeFilter === 'losers' ? stats.maxDrop : stats.maxMove }}
+            </div>
+          </div>
+        </div>
       </template>
+
+      <template v-else-if="activeFilter === 'earnings'">
+        <div class="flex-1 flex items-center justify-center">
+          <span class="text-[10px] text-slate-600 font-mono tracking-[0.3em] uppercase opacity-50">Earnings Intelligence Report</span>
+        </div>
+      </template>
+
       <template v-else>
         <!-- Portfolio Stats -->
         <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
@@ -452,30 +539,16 @@ const confirmDeleteAction = async () => {
             </div>
           </div>
         </div>
-      </template>
-
-      <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
-        <div class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
-          :class="activeFilter === 'portfolio' ? 'bg-indigo-900/30 border border-indigo-800/50 text-indigo-400' : (activeFilter === 'losers' ? 'bg-red-900/30 border border-red-800/50 text-red-500' : 'bg-green-900/30 border border-green-800/50 text-green-500')">
-          <template v-if="activeFilter === 'portfolio'">
+        <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-indigo-900/30 border border-indigo-800/50 flex items-center justify-center text-indigo-400 shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </template>
-          <template v-else-if="activeFilter === 'losers'">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
-          </template>
-          <template v-else>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-          </template>
-        </div>
-        <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">
-            {{ activeFilter === 'portfolio' ? '預估盈虧 (USD)' : (activeFilter === 'losers' ? '最大跌幅' : '最高漲幅') }}
           </div>
-          <div class="text-white font-bold text-xs md:text-lg leading-none truncate">
-            {{ activeFilter === 'portfolio' ? '$' + portfolioStats.pnl : (activeFilter === 'losers' ? stats.maxDrop : stats.maxMove) }}
+          <div class="min-w-0">
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">預估盈虧 (USD)</div>
+            <div class="text-white font-bold text-xs md:text-lg leading-none truncate">${{ portfolioStats.pnl }}</div>
           </div>
         </div>
-      </div>
+      </template>
 
       <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto">
         <div class="flex items-center space-x-2 bg-green-900/20 border border-green-800/50 rounded-full px-4 py-1.5 mb-1">
@@ -505,8 +578,154 @@ const confirmDeleteAction = async () => {
     <!-- Content List -->
     <div @scroll="handleScroll" class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 space-y-4 no-scrollbar">
       
+      <!-- 1.5 Earnings View -->
+      <!-- 1.5 Earnings Search View -->
+      <template v-if="activeFilter === 'earnings'">
+        <div class="max-w-4xl mx-auto space-y-6">
+          <div class="bg-[#111827] border border-blue-500/20 rounded-2xl p-4 md:p-6 shadow-xl">
+            <div class="text-center max-w-lg mx-auto mb-8 mt-4">
+              <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-2">財報深度解析</h3>
+              <p class="text-sm text-slate-400">輸入美股代碼，立即查看過去財報表現與未來預估數據</p>
+              
+              <div class="mt-6 relative">
+                <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input 
+                  v-model="earningsSearchQuery"
+                  @keyup.enter="searchEarnings"
+                  type="text" 
+                  placeholder="搜尋股票代碼 (例如: AAPL, NVDA)..." 
+                  class="w-full bg-[#0a0f1c] border border-slate-700 focus:border-blue-500 rounded-full py-4 pl-12 pr-24 text-white placeholder:text-slate-500 outline-none transition-all shadow-inner text-lg uppercase"
+                >
+                <button 
+                  @click="searchEarnings"
+                  class="absolute inset-y-1.5 right-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full px-6 font-bold text-sm transition-colors flex items-center gap-2"
+                  :disabled="isEarningsSearching"
+                >
+                  <span v-if="isEarningsSearching" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  搜尋
+                </button>
+              </div>
+            </div>
+
+            <!-- Loading State -->
+            <div v-if="isEarningsSearching" class="py-12 flex justify-center">
+              <div class="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+            </div>
+
+            <!-- Search Result -->
+            <div v-else-if="earningsSearchResult" class="space-y-6 animate-fade-in border-t border-slate-800 pt-8">
+              <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-900 to-[#0a0f1c] border border-blue-500/30 flex items-center justify-center font-black text-blue-400 text-2xl shadow-lg shadow-blue-500/10">
+                  {{ earningsSearchResult.symbol.slice(0, 2) }}
+                </div>
+                <div>
+                  <h2 class="text-3xl font-black text-white uppercase tracking-tight">{{ earningsSearchResult.symbol }}</h2>
+                  <p class="text-slate-400 text-sm mt-1">財報分析報告</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Last Earnings Card -->
+                <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 relative overflow-hidden group">
+                  <div class="absolute top-0 right-0 w-24 h-24 bg-slate-800/20 rounded-bl-full pointer-events-none"></div>
+                  <div class="flex items-center gap-2 mb-4 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 class="font-bold">上次發布財報</h3>
+                  </div>
+                  <div class="text-3xl font-mono text-white mb-1">
+                    {{ earningsSearchResult.latest ? earningsSearchResult.latest.date : '無紀錄' }}
+                  </div>
+                  <div v-if="earningsSearchResult.latest" class="text-xs text-slate-500 font-bold uppercase tracking-wider mt-2">
+                    <span v-if="earningsSearchResult.latest.quarter">Q{{ earningsSearchResult.latest.quarter }} {{ earningsSearchResult.latest.year }}</span>
+                    <span v-if="earningsSearchResult.latest.hour" class="ml-2 px-1.5 py-0.5 rounded" :class="earningsSearchResult.latest.hour === 'bmo' ? 'bg-amber-900/30 text-amber-400' : 'bg-indigo-900/30 text-indigo-400'">{{ earningsSearchResult.latest.hour === 'bmo' ? '盤前' : '盤後' }}</span>
+                  </div>
+                </div>
+
+                <!-- Next Earnings Card -->
+                <div class="bg-gradient-to-br from-blue-900/20 to-[#0f172a] border border-blue-500/30 rounded-xl p-5 relative overflow-hidden group shadow-lg shadow-blue-500/5">
+                  <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-bl-full pointer-events-none"></div>
+                  <div class="flex items-center gap-2 mb-4 text-blue-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <h3 class="font-bold">下次發布預估</h3>
+                  </div>
+                  <div class="text-3xl font-mono font-black text-blue-400 mb-1 drop-shadow-md">
+                    {{ earningsSearchResult.next ? earningsSearchResult.next.date : '尚未公佈' }}
+                  </div>
+                  <div v-if="earningsSearchResult.next" class="text-xs text-blue-300/60 font-bold uppercase tracking-wider mt-2">
+                    <span v-if="earningsSearchResult.next.quarter">Q{{ earningsSearchResult.next.quarter }} {{ earningsSearchResult.next.year }}</span>
+                    <span v-if="earningsSearchResult.next.hour" class="ml-2 px-1.5 py-0.5 rounded" :class="earningsSearchResult.next.hour === 'bmo' ? 'bg-amber-900/30 text-amber-400' : 'bg-indigo-900/30 text-indigo-400'">{{ earningsSearchResult.next.hour === 'bmo' ? '盤前' : '盤後' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Earnings Surprises / Highlights -->
+              <div v-if="earningsSearchResult.surprises && earningsSearchResult.surprises.length > 0" class="mt-8">
+                <div class="flex items-center gap-2 mb-4 border-b border-slate-800 pb-2">
+                  <div class="w-1 h-5 bg-green-500 rounded-full"></div>
+                  <h3 class="text-lg font-bold text-white">過去四季 EPS 表現</h3>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div v-for="(surp, idx) in earningsSearchResult.surprises" :key="idx" 
+                    class="bg-[#0a0f1c] border rounded-xl p-4 transition-all"
+                    :class="surp.surprisePercent > 0 ? 'border-green-500/30 hover:border-green-500/60' : (surp.surprisePercent < 0 ? 'border-red-500/30 hover:border-red-500/60' : 'border-slate-700')">
+                    
+                    <div class="flex justify-between items-center mb-3">
+                      <span class="text-xs font-bold text-slate-400">{{ surp.period }}</span>
+                      <span class="text-xs font-black px-1.5 py-0.5 rounded-full" 
+                        :class="surp.surprisePercent > 0 ? 'bg-green-500/20 text-green-400' : (surp.surprisePercent < 0 ? 'bg-red-500/20 text-red-400' : 'bg-slate-800 text-slate-400')">
+                        {{ surp.surprisePercent > 0 ? 'Beat' : (surp.surprisePercent < 0 ? 'Miss' : 'Meet') }}
+                      </span>
+                    </div>
+
+                    <div class="flex justify-between items-end">
+                      <div>
+                        <p class="text-[10px] text-slate-500 mb-0.5">實際 EPS</p>
+                        <p class="font-mono text-lg font-bold" :class="surp.surprisePercent > 0 ? 'text-green-400' : (surp.surprisePercent < 0 ? 'text-red-400' : 'text-slate-300')">
+                          ${{ surp.actual !== null ? surp.actual.toFixed(2) : '--' }}
+                        </p>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-[10px] text-slate-500 mb-0.5">預估 EPS</p>
+                        <p class="font-mono text-sm text-slate-400">
+                          ${{ surp.estimate !== null ? surp.estimate.toFixed(2) : '--' }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div v-if="surp.surprisePercent !== null" class="mt-3 pt-3 border-t border-slate-800/50 flex justify-between items-center text-[10px]">
+                      <span class="text-slate-500">超乎預期幅度</span>
+                      <span class="font-mono font-bold" :class="surp.surprisePercent > 0 ? 'text-green-400' : (surp.surprisePercent < 0 ? 'text-red-400' : 'text-slate-400')">
+                        {{ surp.surprisePercent > 0 ? '+' : '' }}{{ surp.surprisePercent.toFixed(2) }}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-else class="text-center py-8 text-slate-500 text-sm">
+                無法獲取該公司的歷史 EPS 表現數據
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
       <!-- 1. Portfolio View - Restricted -->
-      <template v-if="activeFilter === 'portfolio'">
+      <template v-else-if="activeFilter === 'portfolio'">
         <template v-if="chatSession">
           <div class="max-w-4xl mx-auto space-y-6">
             <div class="bg-[#111827] border border-blue-500/20 rounded-2xl p-4 md:p-6 shadow-xl">

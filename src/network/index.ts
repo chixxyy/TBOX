@@ -126,7 +126,7 @@ async function apiFetch(url: string, options: RequestInit = {}) {
 /**
  * Specific helpers for common endpoints
  */
-export const api = {
+const api = {
   // Polymarket Gamma API (via Vercel Rewrites or Vite Proxy)
   async getPolyEvents(params: string = 'closed=false&limit=50&active=true') {
     return apiFetch(`/polymarket/events?${params}`);
@@ -147,6 +147,16 @@ export const api = {
 
   async getFinnhubMetric(symbol: string, metric: string = 'all') {
     return apiFetch(`https://finnhub.io/api/v1/stock/metric?symbol=${symbol}&metric=${metric}`);
+  },
+
+  async getFinnhubEarningsCalendar(from: string, to: string, symbol?: string) {
+    let url = `https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}`;
+    if (symbol) url += `&symbol=${symbol}`;
+    return apiFetch(url);
+  },
+
+  async getFinnhubEarningsSurprises(symbol: string) {
+    return apiFetch(`https://finnhub.io/api/v1/stock/earnings?symbol=${symbol}&limit=4`);
   },
 
   // The Odds API (Proxied for prod, Direct for local dev)
@@ -213,3 +223,6 @@ export const api = {
     return data;
   }
 };
+
+export { api };
+export default api;
