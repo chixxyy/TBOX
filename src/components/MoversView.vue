@@ -755,8 +755,8 @@ const confirmDeleteAction = async () => {
               <div class="absolute inset-0 rounded-full border-2 border-blue-500/10 border-t-blue-500/50 animate-spin"></div>
               <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 md:h-12 md:w-12 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </div>
-            <h3 class="text-slate-400 font-black text-lg md:text-xl tracking-tighter text-center px-4">準備好進行深度分析了嗎？</h3>
-            <p class="text-slate-600 text-[10px] md:text-xs mt-2 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-center px-4">Enter a Ticker to generate Intel Report</p>
+            <h3 class="text-slate-400 font-black text-lg md:text-xl tracking-tighter text-center px-4">輸入代碼立即分析！</h3>
+            <p class="text-slate-600 text-[10px] md:text-xs mt-2 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-center px-4">Enter a Ticker to generate Report</p>
           </div>
         </div>
       </template>
