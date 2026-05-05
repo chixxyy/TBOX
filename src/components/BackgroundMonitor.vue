@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { 
   globalMovers, globalNews,
   isMoversLoading, isNewsLoading,

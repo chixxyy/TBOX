@@ -64,28 +64,38 @@ async function translateText(text: string): Promise<string> {
 }
 
 // ---------- Earnings Search ----------
+const earningsCache = new Map<string, { data: any, ts: number }>()
+const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+
 const earningsSearchQuery = ref('')
 const isEarningsSearching = ref(false)
 const earningsSearchResult = ref<any>(null)
 
 const searchEarnings = async () => {
   if (!earningsSearchQuery.value) return
+  const symbol = earningsSearchQuery.value.toUpperCase().trim()
+  
+  // 1. Check Cache
+  const cached = earningsCache.get(symbol)
+  if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
+    earningsSearchResult.value = cached.data
+    return
+  }
+
   isEarningsSearching.value = true
   earningsSearchResult.value = null
-  
-  const symbol = earningsSearchQuery.value.toUpperCase().trim()
   
   try {
     const today = new Date();
     const pastDate = new Date(); pastDate.setDate(today.getDate() - 365);
     const futureDate = new Date(); futureDate.setDate(today.getDate() + 365);
-    const fromStr = pastDate.toISOString().split('T')[0];
-    const toStr = futureDate.toISOString().split('T')[0];
-    const todayStr = today.toISOString().split('T')[0];
+    const fromStr = pastDate.toISOString().split('T')[0] as string;
+    const toStr = futureDate.toISOString().split('T')[0] as string;
+    const todayStr = today.toISOString().split('T')[0] as string;
     
     const calData = await api.getFinnhubEarningsCalendar(fromStr, toStr, symbol)
-    let latest = null
-    let next = null
+    let latest: any = null
+    let next: any = null
     
     if (calData && calData.earningsCalendar) {
       calData.earningsCalendar.forEach((e: any) => {
@@ -109,6 +119,9 @@ const searchEarnings = async () => {
       next,
       surprises
     }
+    
+    // 2. Save to Cache
+    earningsCache.set(symbol, { data: earningsSearchResult.value, ts: Date.now() })
   } catch (e) {
     console.error('Failed to search earnings', e)
   } finally {
@@ -299,9 +312,7 @@ const newAmount = ref<number | null>(null)
 const newPrice = ref<number | null>(null)
 const showAddForm = ref(false)
 
-const handleCardClick = (symbol: string) => {
-  quickAddToWatchlist(symbol)
-}
+
 // Dropdown logic for Symbol Select
 const showSymbolDropdown = ref(false)
 const symbolSearch = ref('')
