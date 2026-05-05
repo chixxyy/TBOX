@@ -69,20 +69,27 @@ const CACHE_TTL = 60 * 60 * 1000 // 1 hour
 
 const earningsSearchQuery = ref('')
 const isEarningsSearching = ref(false)
+const isEarningsNotFound = ref(false)
 const earningsSearchResult = ref<any>(null)
 
 const searchEarnings = async () => {
   if (!earningsSearchQuery.value) return
   const symbol = earningsSearchQuery.value.toUpperCase().trim()
   
-  // 1. Check Cache
+  // 1. Check Cache (Including Negative Cache)
   const cached = earningsCache.get(symbol)
   if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
-    earningsSearchResult.value = cached.data
+    if (cached.data.notFound) {
+      isEarningsNotFound.value = true
+      earningsSearchResult.value = null
+    } else {
+      earningsSearchResult.value = cached.data
+    }
     return
   }
 
   isEarningsSearching.value = true
+  isEarningsNotFound.value = false
   earningsSearchResult.value = null
   
   try {
@@ -117,6 +124,15 @@ const searchEarnings = async () => {
     const metricData = await api.getFinnhubMetric(symbol, 'all')
     const m = metricData?.metric || {}
 
+    // 判定無效代碼：日曆無資料 且 基本面指標全空
+    if (!latest && !next && Object.keys(m).length === 0) {
+      isEarningsNotFound.value = true
+      // Negative Cache: 存入查無資料的狀態
+      earningsCache.set(symbol, { data: { notFound: true }, ts: Date.now() })
+      isEarningsSearching.value = false
+      return
+    }
+
     earningsSearchResult.value = {
       symbol,
       latest,
@@ -138,6 +154,7 @@ const searchEarnings = async () => {
     earningsCache.set(symbol, { data: earningsSearchResult.value, ts: Date.now() })
   } catch (e) {
     console.error('Failed to search earnings', e)
+    isEarningsNotFound.value = true
   } finally {
     isEarningsSearching.value = false
   }
@@ -634,8 +651,22 @@ const confirmDeleteAction = async () => {
             </div>
           </div>
 
+          <!-- Error State: Not Found -->
+          <div v-if="isEarningsNotFound" class="flex-1 flex flex-col items-center justify-center py-20 bg-red-500/5 border border-dashed border-red-500/20 rounded-3xl animate-in fade-in zoom-in duration-300">
+            <div class="w-20 h-20 bg-red-950/30 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 class="text-red-400 font-black text-xl tracking-tighter uppercase">Ticker Not Found</h3>
+            <p class="text-red-500/60 text-[10px] mt-2 font-bold uppercase tracking-[0.3em]">查無此代碼或數據不足</p>
+            <button @click="isEarningsNotFound = false; earningsSearchQuery = ''" class="mt-8 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-full text-red-500 text-[10px] font-black uppercase tracking-widest transition-all">
+              重新搜尋
+            </button>
+          </div>
+
           <!-- Result UI - Parallel 1:1 Grid -->
-          <div v-if="earningsSearchResult" class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div v-else-if="earningsSearchResult" class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <!-- Left: Core Report -->
             <div class="space-y-4 md:space-y-6">
               <div class="bg-slate-900/40 border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-8 backdrop-blur-xl relative overflow-hidden flex flex-col h-full">
