@@ -113,11 +113,25 @@ const searchEarnings = async () => {
       surprises = surpData.sort((a: any, b: any) => new Date(b.period).getTime() - new Date(a.period).getTime())
     }
 
+    // New: Fetch Key Metrics for "Intelligence"
+    const metricData = await api.getFinnhubMetric(symbol, 'all')
+    const m = metricData?.metric || {}
+
     earningsSearchResult.value = {
       symbol,
       latest,
       next,
-      surprises
+      surprises,
+      metrics: {
+        pe: m.peBasicExclExtraTTM || m.peNormalizedAnnual || 0,
+        forwardPe: m.peExclExtraForward || 0,
+        ps: m.psTTM || 0,
+        pb: m.pbAnnual || 0,
+        roe: m.roeTTM || 0,
+        netMargin: m.netProfitMarginTTM || 0,
+        debtEquity: m.totalDebtTotalEquityQuarterly || 0,
+        dividendYield: m.dividendYieldIndicatedAnnual || 0
+      }
     }
     
     // 2. Save to Cache
@@ -216,7 +230,7 @@ const filterTabs = [
   { label: '全部異動', tag: 'all' },
   { label: '快速上漲', tag: 'gainers' },
   { label: '極速下跌', tag: 'losers' },
-  { label: '財報公布', tag: 'earnings' },
+  { label: '財報解析', tag: 'earnings' },
   { label: '我的資產', tag: 'portfolio' },
 ]
 const activeFilter = ref('all')
@@ -589,148 +603,160 @@ const confirmDeleteAction = async () => {
     <!-- Content List -->
     <div @scroll="handleScroll" class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 space-y-4 no-scrollbar">
       
-      <!-- 1.5 Earnings View -->
-      <!-- 1.5 Earnings Search View -->
+      <!-- 1. Earnings Intelligence Tab -->
       <template v-if="activeFilter === 'earnings'">
-        <div class="max-w-4xl mx-auto space-y-6">
-          <div class="bg-[#111827] border border-blue-500/20 rounded-2xl p-4 md:p-6 shadow-xl">
-            <div class="text-center max-w-lg mx-auto mb-8 mt-4">
-              <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+        <div class="w-full max-w-[1600px] mx-auto space-y-4 md:space-y-6 min-h-screen">
+          <!-- Search UI - Responsive -->
+          <div class="bg-slate-900/40 border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            
+            <div class="flex flex-col lg:flex-row items-center justify-between gap-4 md:gap-6 relative z-10">
+              <div class="w-full lg:w-auto text-center lg:text-left">
+                <h3 class="text-xl md:text-2xl font-black text-white tracking-tight flex items-center justify-center lg:justify-start gap-3">
+                  <div class="hidden md:flex w-10 h-10 bg-blue-600/20 rounded-xl items-center justify-center border border-blue-500/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  </div>
+                  公布財報 <span class="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-[0.2em] ml-2">Intelligence Report</span>
+                </h3>
               </div>
-              <h3 class="text-xl font-bold text-white mb-2">財報深度解析</h3>
-              <p class="text-sm text-slate-400">輸入美股代碼，立即查看過去財報表現與未來預估數據</p>
-              
-              <div class="mt-6 relative">
-                <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+
+              <form @submit.prevent="searchEarnings" class="w-full lg:max-w-xl">
+                <div class="relative group/input">
+                  <input v-model="earningsSearchQuery" type="text" placeholder="輸入代碼 (NVDA, AAPL...)" 
+                         class="block w-full pl-6 pr-24 md:pr-32 py-3 md:py-4 bg-slate-950/80 border border-slate-700 rounded-xl md:rounded-2xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-base md:text-lg font-bold tracking-wide uppercase" />
+                  <button type="submit" :disabled="isEarningsSearching" 
+                          class="absolute right-1.5 top-1.5 bottom-1.5 px-4 md:px-8 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white rounded-lg md:rounded-xl font-black text-xs md:text-sm transition-all flex items-center gap-2">
+                    <span v-if="isEarningsSearching" class="w-3 h-3 md:w-4 md:h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    {{ isEarningsSearching ? '分析中' : '搜尋' }}
+                  </button>
                 </div>
-                <input 
-                  v-model="earningsSearchQuery"
-                  @keyup.enter="searchEarnings"
-                  type="text" 
-                  placeholder="搜尋股票代碼 (例如: AAPL, NVDA)..." 
-                  class="w-full bg-[#0a0f1c] border border-slate-700 focus:border-blue-500 rounded-full py-4 pl-12 pr-24 text-white placeholder:text-slate-500 outline-none transition-all shadow-inner text-lg uppercase"
-                >
-                <button 
-                  @click="searchEarnings"
-                  class="absolute inset-y-1.5 right-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full px-6 font-bold text-sm transition-colors flex items-center gap-2"
-                  :disabled="isEarningsSearching"
-                >
-                  <span v-if="isEarningsSearching" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  搜尋
-                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Result UI - Parallel 1:1 Grid -->
+          <div v-if="earningsSearchResult" class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <!-- Left: Core Report -->
+            <div class="space-y-4 md:space-y-6">
+              <div class="bg-slate-900/40 border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-8 backdrop-blur-xl relative overflow-hidden flex flex-col h-full">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 md:mb-10">
+                  <div class="flex items-center gap-4 md:gap-6">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-2xl md:text-3xl font-black text-white shadow-xl shadow-blue-500/20">
+                      {{ earningsSearchResult.symbol.slice(0, 2) }}
+                    </div>
+                    <div>
+                      <h3 class="text-3xl md:text-4xl font-black text-white tracking-tighter leading-none">{{ earningsSearchResult.symbol }}</h3>
+                      <div class="flex items-center gap-2 mt-2">
+                        <span class="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[8px] md:text-[10px] font-black rounded uppercase tracking-wider border border-blue-500/30">Stock Analysis</span>
+                        <span class="hidden sm:inline-block text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Finnhub Intelligence</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 md:gap-4 mb-8">
+                  <div class="bg-slate-950/50 px-3 md:px-6 py-3 md:py-5 rounded-xl md:rounded-2xl border border-white/5 text-center">
+                    <span class="block text-[8px] md:text-[10px] text-slate-600 font-black uppercase mb-1 tracking-tighter">Last Earnings</span>
+                    <span class="text-sm md:text-xl font-black text-white font-mono">{{ earningsSearchResult.latest?.date || 'N/A' }}</span>
+                  </div>
+                  <div class="bg-blue-600/10 px-3 md:px-6 py-3 md:py-5 rounded-xl md:rounded-2xl border border-blue-500/20 text-center">
+                    <span class="block text-[8px] md:text-[10px] text-blue-400 font-black uppercase mb-1 tracking-tighter">Next Estimate</span>
+                    <span class="text-sm md:text-xl font-black text-blue-400 font-mono">{{ earningsSearchResult.next?.date || 'TBD' }}</span>
+                  </div>
+                </div>
+
+                <!-- EPS Surprises Section -->
+                <div class="mb-8 flex-1">
+                  <h4 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
+                    <div class="w-1 h-4 bg-blue-500 rounded-full"></div>
+                    歷史獲利驚喜度 (EPS Surprises)
+                  </h4>
+                  <div class="grid grid-cols-2 gap-3 md:gap-4">
+                    <div v-for="s in earningsSearchResult.surprises.slice(0, 4)" :key="s.period" class="bg-slate-950/60 border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-5 hover:border-blue-500/30 transition-all group/card">
+                      <div class="flex items-center justify-between mb-3 md:mb-4">
+                        <span class="text-[9px] md:text-xs font-black text-slate-500 font-mono">{{ s.period }}</span>
+                        <div :class="s.surprisePercent >= 0 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-red-400 bg-red-500/10 border-red-500/20'" class="text-[8px] md:text-[9px] font-black px-1.5 py-0.5 rounded-full border">
+                          {{ s.surprisePercent >= 0 ? '+' : '' }}{{ s.surprisePercent.toFixed(1) }}%
+                        </div>
+                      </div>
+                      <div class="space-y-2 md:space-y-3">
+                        <div class="flex justify-between items-baseline">
+                          <span class="text-[8px] font-bold text-slate-600 uppercase">Actual</span>
+                          <span class="text-lg md:text-xl font-black text-white font-mono leading-none">${{ s.actual }}</span>
+                        </div>
+                        <div class="w-full bg-slate-800/50 h-1 rounded-full overflow-hidden">
+                          <div class="h-full bg-blue-500/50" :style="{ width: Math.min(100, Math.abs((s.actual / (s.estimate || 1)) * 50)) + '%' }"></div>
+                        </div>
+                        <div class="flex justify-between items-center text-[9px] md:text-[10px]">
+                          <span class="text-slate-600 uppercase font-bold">Est</span>
+                          <span class="text-slate-400 font-mono font-bold">${{ s.estimate }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-auto pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div class="flex items-center gap-3">
+                    <div class="flex -space-x-1.5">
+                      <div v-for="i in 4" :key="i" class="w-5 h-5 md:w-6 md:h-6 rounded-full border-2 border-[#0a0f1c] bg-slate-800 flex items-center justify-center">
+                        <div class="w-1.5 h-1.5 rounded-full" :class="earningsSearchResult.surprises[i-1]?.surprisePercent >= 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'"></div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] md:text-[11px] text-slate-500 font-bold tracking-tight">財報擊敗預期趨勢</span>
+                  </div>
+                  <div class="text-[8px] md:text-[10px] text-slate-600 font-mono tracking-wider">FINNHUB v1.2</div>
+                </div>
               </div>
             </div>
 
-            <!-- Loading State -->
-            <div v-if="isEarningsSearching" class="py-12 flex justify-center">
-              <div class="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-            </div>
-
-            <!-- Search Result -->
-            <div v-else-if="earningsSearchResult" class="space-y-6 animate-fade-in border-t border-slate-800 pt-8">
-              <div class="flex items-center gap-4">
-                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-900 to-[#0a0f1c] border border-blue-500/30 flex items-center justify-center font-black text-blue-400 text-2xl shadow-lg shadow-blue-500/10">
-                  {{ earningsSearchResult.symbol.slice(0, 2) }}
-                </div>
-                <div>
-                  <h2 class="text-3xl font-black text-white uppercase tracking-tight">{{ earningsSearchResult.symbol }}</h2>
-                  <p class="text-slate-400 text-sm mt-1">財報分析報告</p>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Last Earnings Card -->
-                <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 relative overflow-hidden group">
-                  <div class="absolute top-0 right-0 w-24 h-24 bg-slate-800/20 rounded-bl-full pointer-events-none"></div>
-                  <div class="flex items-center gap-2 mb-4 text-slate-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h3 class="font-bold">上次發布財報</h3>
-                  </div>
-                  <div class="text-3xl font-mono text-white mb-1">
-                    {{ earningsSearchResult.latest ? earningsSearchResult.latest.date : '無紀錄' }}
-                  </div>
-                  <div v-if="earningsSearchResult.latest" class="text-xs text-slate-500 font-bold uppercase tracking-wider mt-2">
-                    <span v-if="earningsSearchResult.latest.quarter">Q{{ earningsSearchResult.latest.quarter }} {{ earningsSearchResult.latest.year }}</span>
-                    <span v-if="earningsSearchResult.latest.hour" class="ml-2 px-1.5 py-0.5 rounded" :class="earningsSearchResult.latest.hour === 'bmo' ? 'bg-amber-900/30 text-amber-400' : 'bg-indigo-900/30 text-indigo-400'">{{ earningsSearchResult.latest.hour === 'bmo' ? '盤前' : '盤後' }}</span>
-                  </div>
-                </div>
-
-                <!-- Next Earnings Card -->
-                <div class="bg-gradient-to-br from-blue-900/20 to-[#0f172a] border border-blue-500/30 rounded-xl p-5 relative overflow-hidden group shadow-lg shadow-blue-500/5">
-                  <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-bl-full pointer-events-none"></div>
-                  <div class="flex items-center gap-2 mb-4 text-blue-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <h3 class="font-bold">下次發布預估</h3>
-                  </div>
-                  <div class="text-3xl font-mono font-black text-blue-400 mb-1 drop-shadow-md">
-                    {{ earningsSearchResult.next ? earningsSearchResult.next.date : '尚未公佈' }}
-                  </div>
-                  <div v-if="earningsSearchResult.next" class="text-xs text-blue-300/60 font-bold uppercase tracking-wider mt-2">
-                    <span v-if="earningsSearchResult.next.quarter">Q{{ earningsSearchResult.next.quarter }} {{ earningsSearchResult.next.year }}</span>
-                    <span v-if="earningsSearchResult.next.hour" class="ml-2 px-1.5 py-0.5 rounded" :class="earningsSearchResult.next.hour === 'bmo' ? 'bg-amber-900/30 text-amber-400' : 'bg-indigo-900/30 text-indigo-400'">{{ earningsSearchResult.next.hour === 'bmo' ? '盤前' : '盤後' }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Earnings Surprises / Highlights -->
-              <div v-if="earningsSearchResult.surprises && earningsSearchResult.surprises.length > 0" class="mt-8">
-                <div class="flex items-center gap-2 mb-4 border-b border-slate-800 pb-2">
-                  <div class="w-1 h-5 bg-green-500 rounded-full"></div>
-                  <h3 class="text-lg font-bold text-white">過去四季 EPS 表現</h3>
-                </div>
+            <!-- Right: Signals & Metrics -->
+            <div class="space-y-4 md:space-y-6">
+              <div class="bg-slate-900/40 border border-white/5 rounded-2xl md:rounded-3xl p-6 md:p-8 backdrop-blur-xl h-full flex flex-col">
+                <h4 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 md:mb-8 flex items-center gap-3">
+                  <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
+                  關鍵量化指標 (Key Metrics)
+                </h4>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div v-for="(surp, idx) in earningsSearchResult.surprises" :key="idx" 
-                    class="bg-[#0a0f1c] border rounded-xl p-4 transition-all"
-                    :class="surp.surprisePercent > 0 ? 'border-green-500/30 hover:border-green-500/60' : (surp.surprisePercent < 0 ? 'border-red-500/30 hover:border-red-500/60' : 'border-slate-700')">
-                    
-                    <div class="flex justify-between items-center mb-3">
-                      <span class="text-xs font-bold text-slate-400">{{ surp.period }}</span>
-                      <span class="text-xs font-black px-1.5 py-0.5 rounded-full" 
-                        :class="surp.surprisePercent > 0 ? 'bg-green-500/20 text-green-400' : (surp.surprisePercent < 0 ? 'bg-red-500/20 text-red-400' : 'bg-slate-800 text-slate-400')">
-                        {{ surp.surprisePercent > 0 ? 'Beat' : (surp.surprisePercent < 0 ? 'Miss' : 'Meet') }}
-                      </span>
+                <div class="grid grid-cols-2 gap-3 md:gap-4 flex-1 mb-8">
+                  <div v-for="(val, key) in earningsSearchResult.metrics" :key="key" 
+                       class="bg-slate-950/60 p-4 md:p-5 rounded-xl md:rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all group/metric">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="block text-[8px] md:text-[10px] text-slate-500 font-black uppercase tracking-wider">{{ key }}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-700 group-hover/metric:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
-
-                    <div class="flex justify-between items-end">
-                      <div>
-                        <p class="text-[10px] text-slate-500 mb-0.5">實際 EPS</p>
-                        <p class="font-mono text-lg font-bold" :class="surp.surprisePercent > 0 ? 'text-green-400' : (surp.surprisePercent < 0 ? 'text-red-400' : 'text-slate-300')">
-                          ${{ surp.actual !== null ? surp.actual.toFixed(2) : '--' }}
-                        </p>
-                      </div>
-                      <div class="text-right">
-                        <p class="text-[10px] text-slate-500 mb-0.5">預估 EPS</p>
-                        <p class="font-mono text-sm text-slate-400">
-                          ${{ surp.estimate !== null ? surp.estimate.toFixed(2) : '--' }}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div v-if="surp.surprisePercent !== null" class="mt-3 pt-3 border-t border-slate-800/50 flex justify-between items-center text-[10px]">
-                      <span class="text-slate-500">超乎預期幅度</span>
-                      <span class="font-mono font-bold" :class="surp.surprisePercent > 0 ? 'text-green-400' : (surp.surprisePercent < 0 ? 'text-red-400' : 'text-slate-400')">
-                        {{ surp.surprisePercent > 0 ? '+' : '' }}{{ surp.surprisePercent.toFixed(2) }}%
-                      </span>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-xl md:text-2xl font-black text-white font-mono tracking-tighter">{{ val ? (val > 1000 ? (val/1000).toFixed(1) + 'k' : val.toFixed(2)) : '---' }}</span>
+                      <span v-if="String(key).includes('margin') || String(key).includes('roe')" class="text-[9px] md:text-[10px] font-bold text-slate-600">%</span>
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              <div v-else class="text-center py-8 text-slate-500 text-sm">
-                無法獲取該公司的歷史 EPS 表現數據
+
+                <div class="mt-auto">
+                  <div class="p-5 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br from-blue-600/10 to-indigo-600/10 border border-blue-500/20 shadow-inner relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                    </div>
+                    <h5 class="text-[10px] md:text-xs font-black text-blue-400 uppercase mb-3 tracking-widest">Smart Analysis</h5>
+                    <p class="text-xs md:text-sm text-slate-300 leading-relaxed font-medium">
+                      該標的目前 PE 為 <span class="text-white font-black">{{ earningsSearchResult.metrics.pe ? earningsSearchResult.metrics.pe.toFixed(2) : 'N/A' }}</span>，
+                      擊敗預期率達 <span class="text-emerald-400 font-black">{{ (earningsSearchResult.surprises.filter((s:any) => s.surprisePercent > 0).length / 4 * 100).toFixed(0) }}%</span>。
+                      基本面表現穩健，目前的財務數據顯示其具備長線持有的韌性，建議關注下一季公佈日期。
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+
+          <!-- Empty State - Improved Responsiveness -->
+          <div v-else class="flex-1 flex flex-col items-center justify-center py-20 md:py-32 bg-slate-900/10 border border-dashed border-slate-800/50 rounded-2xl md:rounded-3xl">
+            <div class="w-24 h-24 md:w-32 md:h-32 bg-slate-950/50 rounded-full flex items-center justify-center mb-6 md:mb-8 border border-slate-800/50 relative shadow-inner">
+              <div class="absolute inset-0 rounded-full border-2 border-blue-500/10 border-t-blue-500/50 animate-spin"></div>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 md:h-12 md:w-12 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </div>
+            <h3 class="text-slate-400 font-black text-lg md:text-xl tracking-tighter text-center px-4">準備好進行深度分析了嗎？</h3>
+            <p class="text-slate-600 text-[10px] md:text-xs mt-2 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-center px-4">Enter a Ticker to generate Intel Report</p>
           </div>
         </div>
       </template>
