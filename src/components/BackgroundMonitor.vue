@@ -101,7 +101,10 @@ async function fetchFinnhub(): Promise<any[]> {
       summary: item.summary || '',
       url: item.url || '#',
       avatarBg: item.category === 'crypto' ? '3b82f6' : item.category === 'forex' ? 'f59e0b' : '10b981',
-      provider: 'finnhub'
+      provider: item.source.toLowerCase().includes('forexlive') ? 'forexlive' : 
+                item.source.toLowerCase().includes('reuters') ? 'reuters' : 
+                item.source.toLowerCase().includes('yahoo') ? 'yahoo' : 
+                item.source.toLowerCase().includes('cnbc') ? 'cnbc' : 'finnhub'
     }
   })
 }
@@ -201,13 +204,11 @@ const fetchYahooFinance = () => fetchRss('https://finance.yahoo.com/news/rss', '
 const fetchBBCSport = () => fetchRss('https://feeds.bbci.co.uk/sport/rss.xml', 'BBC Sport', 'bbci', 'sports', 'ff0000');
 const fetchCoinDesk = () => fetchRss('https://www.coindesk.com/arc/outboundfeeds/rss/', 'CoinDesk', 'coindesk', 'crypto', 'fabd00');
 const fetchCNBC = () => fetchRss('https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664', 'CNBC', 'cnbc', 'general', '005594');
-const fetchReuters = () => fetchRss('https://www.reuters.com/arc/outboundfeeds/rss/v1/business', 'Reuters', 'reuters', 'finance', 'ff8000');
-const fetchForexLive = () => fetchRss('https://www.forexlive.com/feed/', 'ForexLive', 'forexlive', 'general', '00b3b3');
 
 
 async function syncNews(skipNotifications = false) {
   try {
-    const [fh, cc, sp, mt, yf, bbc, cd, cnbc, reuters, fl] = await Promise.allSettled([
+    const [fh, cc, sp, mt, yf, bbc, cd, cnbc] = await Promise.allSettled([
       fetchFinnhub(), 
       fetchCC(), 
       fetchSports(), 
@@ -215,11 +216,9 @@ async function syncNews(skipNotifications = false) {
       fetchYahooFinance(),
       fetchBBCSport(),
       fetchCoinDesk(),
-      fetchCNBC(),
-      fetchReuters(),
-      fetchForexLive()
+      fetchCNBC()
     ])
-    const all = [
+    const rawAll = [
       ...(fh.status === 'fulfilled' ? fh.value : []),
       ...(cc.status === 'fulfilled' ? cc.value : []),
       ...(sp.status === 'fulfilled' ? sp.value : []),
@@ -227,10 +226,18 @@ async function syncNews(skipNotifications = false) {
       ...(yf.status === 'fulfilled' ? yf.value : []),
       ...(bbc.status === 'fulfilled' ? bbc.value : []),
       ...(cd.status === 'fulfilled' ? cd.value : []),
-      ...(cnbc.status === 'fulfilled' ? cnbc.value : []),
-      ...(reuters.status === 'fulfilled' ? reuters.value : []),
-      ...(fl.status === 'fulfilled' ? fl.value : []),
+      ...(cnbc.status === 'fulfilled' ? cnbc.value : [])
     ]
+
+    // Global Deduplication by Headline
+    const seenHeadlines = new Set()
+    const all = rawAll.filter(item => {
+      if (!item || !item.headline) return false
+      const normalizedHeadline = item.headline.trim().toLowerCase()
+      if (seenHeadlines.has(normalizedHeadline)) return false
+      seenHeadlines.add(normalizedHeadline)
+      return true
+    })
     all.forEach(item => {
       // Ultimate defensive check before entering the store
       if (item && item.headline && item.uid) {
@@ -341,8 +348,8 @@ async function syncNews(skipNotifications = false) {
       bbci: 'ff0000',
       coindesk: 'fabd00',
       cnbc: '005594',
-      reuters: 'ff8000',
-      forexlive: '00b3b3'
+      reuters: 'ff4500',
+      forexlive: '00ff9f'
     }
     
     globalNews.value = distributedSorted.map(item => {

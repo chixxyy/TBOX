@@ -12,7 +12,7 @@ export async function initDesktopNotifications() {
 
 export function sendDesktopNotification(title: string, body: string, icon?: string) {
   if (isSupported.value && permissionGranted.value) {
-    show({ title, body, icon: icon || '/vite.svg' }) // 使用預設 icon
+    show({ title, body, icon: icon || '/pwa-icon.svg' }) // 使用預設 icon
   }
 }
 
