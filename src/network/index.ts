@@ -2,11 +2,14 @@ const FINNHUB_TOKENS = (import.meta.env.VITE_FINNHUB_TOKEN as string || '').spli
 const ODDS_API_KEY = import.meta.env.VITE_ODDS_API_KEY as string;
 
 /**
- * Returns a random Finnhub token from the available pool to balance quota usage.
+ * Returns a Finnhub token from the available pool.
+ * Supports random selection or deterministic rotation via index.
  */
-export function getFinnhubToken() {
+export function getFinnhubToken(index?: number) {
   if (FINNHUB_TOKENS.length === 0) return '';
-  const idx = Math.floor(Math.random() * FINNHUB_TOKENS.length);
+  const idx = index !== undefined 
+    ? (index % FINNHUB_TOKENS.length) 
+    : Math.floor(Math.random() * FINNHUB_TOKENS.length);
   return FINNHUB_TOKENS[idx];
 }
 

@@ -127,7 +127,7 @@ const connectFinnhub = () => {
     return
   }
 
-  const token = getFinnhubToken()
+  const token = getFinnhubToken(finnhubRetryCount)
   if (!token) return
 
   try {

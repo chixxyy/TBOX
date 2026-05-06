@@ -3,13 +3,12 @@ if (typeof window !== 'undefined') {
   const w = window as any;
   w.__TBOX_DEBUG__ = true;
 
-  // --- 偵錯工具：追蹤 Invalid environment 來源 ---
+  // --- 警告過濾器：靜音 Vercel Snowplow 的無用警告 ---
   const originalWarn = console.warn;
   console.warn = (...args) => {
+    // 攔截並丟棄特定的無效環境警告
     if (args[0] && typeof args[0] === 'string' && args[0].includes('Invalid environment')) {
-      console.group('🔍 偵測到環境警告來源');
-      console.trace('Stack Trace:');
-      console.groupEnd();
+      return; 
     }
     originalWarn(...args);
   };
