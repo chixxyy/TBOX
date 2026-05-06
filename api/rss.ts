@@ -34,12 +34,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const response = await fetch(rssUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'application/xml, text/xml, */*'
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9'
       }
     });
     
-    if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+    if (!response.ok) {
+      console.warn(`[RSS Proxy] Fetch failed for ${rssUrl}: ${response.status}`);
+      return res.status(200).json({ status: 'warning', items: [], message: `Fetch failed: ${response.status}` });
+    }
     
     const xml = await response.text();
     const items: any[] = [];

@@ -201,7 +201,7 @@ const fetchYahooFinance = () => fetchRss('https://finance.yahoo.com/news/rss', '
 const fetchBBCSport = () => fetchRss('https://feeds.bbci.co.uk/sport/rss.xml', 'BBC Sport', 'bbci', 'sports', 'ff0000');
 const fetchCoinDesk = () => fetchRss('https://www.coindesk.com/arc/outboundfeeds/rss/', 'CoinDesk', 'coindesk', 'crypto', 'fabd00');
 const fetchCNBC = () => fetchRss('https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664', 'CNBC', 'cnbc', 'general', '005594');
-const fetchReuters = () => fetchRss('https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best', 'Reuters', 'reuters', 'general', 'ff8000');
+const fetchReuters = () => fetchRss('https://www.reuters.com/arc/outboundfeeds/rss/v1/business', 'Reuters', 'reuters', 'finance', 'ff8000');
 const fetchForexLive = () => fetchRss('https://www.forexlive.com/feed/', 'ForexLive', 'forexlive', 'general', '00b3b3');
 
 
