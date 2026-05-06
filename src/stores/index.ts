@@ -273,16 +273,16 @@ export const triggerShare = (news: any) => {
 
 // --- Global Asset List (Source of Truth) ---
 export const initialAssets = [
-  // Crypto
+  // Crypto (Top 9 Market Cap + USDC)
   { symbol: 'BTCUSDT', name: 'Bitcoin', type: 'crypto', isIndex: false },
   { symbol: 'ETHUSDT', name: 'Ethereum', type: 'crypto', isIndex: false },
-  { symbol: 'BNBUSDT', name: 'Binance Coin', type: 'crypto', isIndex: false },
   { symbol: 'SOLUSDT', name: 'Solana', type: 'crypto', isIndex: false },
-  { symbol: 'ADAUSDT', name: 'Cardano', type: 'crypto', isIndex: false },
+  { symbol: 'BNBUSDT', name: 'Binance Coin', type: 'crypto', isIndex: false },
   { symbol: 'XRPUSDT', name: 'Ripple', type: 'crypto', isIndex: false },
-  { symbol: 'DOTUSDT', name: 'Polkadot', type: 'crypto', isIndex: false },
-  { symbol: 'LINKUSDT', name: 'Chainlink', type: 'crypto', isIndex: false },
   { symbol: 'DOGEUSDT', name: 'Dogecoin', type: 'crypto', isIndex: false },
+  { symbol: 'ADAUSDT', name: 'Cardano', type: 'crypto', isIndex: false },
+  { symbol: 'TRXUSDT', name: 'Tron', type: 'crypto', isIndex: false },
+  { symbol: 'AVAXUSDT', name: 'Avalanche', type: 'crypto', isIndex: false },
   { symbol: 'USDCUSDT', name: 'USDC/USDT', type: 'crypto', isIndex: false },
   // Stock
   { symbol: '^TNX', name: '10Y Treasury Yield', type: 'stock', isIndex: true },
