@@ -364,7 +364,7 @@ onUnmounted(() => {
   if (reconnectTimerFinnhub) clearTimeout(reconnectTimerFinnhub)
 })
 
-const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').replace('^', '')
+const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').replace('^', '').replace('.B', '')
 </script>
 
 <template>

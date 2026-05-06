@@ -304,7 +304,12 @@ export const initialAssets = [
   { symbol: 'AMZN', name: 'Amazon', type: 'stock', isIndex: false },
   { symbol: 'TSLA', name: 'Tesla', type: 'stock', isIndex: false },
   { symbol: 'ORCL', name: 'Oracle', type: 'stock', isIndex: false },
-  { symbol: 'PLTR', name: 'Palantir', type: 'stock', isIndex: false }
+  { symbol: 'PLTR', name: 'Palantir', type: 'stock', isIndex: false },
+  { symbol: 'RKLB', name: 'Rocket Lab', type: 'stock', isIndex: false },
+  { symbol: 'MSFT', name: 'Microsoft', type: 'stock', isIndex: false },
+  { symbol: 'IBM', name: 'IBM Corp', type: 'stock', isIndex: false },
+  { symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', isIndex: false },
+  { symbol: 'NEE', name: 'NextEra Energy', type: 'stock', isIndex: false }
 ] as const
 
 // --- Global Market Prices (Shared across components) ---

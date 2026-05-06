@@ -71,6 +71,30 @@ const earningsSearchQuery = ref('')
 const isEarningsSearching = ref(false)
 const isEarningsNotFound = ref(false)
 const earningsSearchResult = ref<any>(null)
+const showSuggestions = ref(false)
+
+const localSuggestions = computed(() => {
+  if (!earningsSearchQuery.value || earningsSearchQuery.value.length < 1) return []
+  const q = earningsSearchQuery.value.toUpperCase().trim()
+  return initialAssets
+    .filter(item => item.type === 'stock' && !item.isIndex && item.symbol.toUpperCase().includes(q))
+    .slice(0, 8)
+})
+
+const selectSuggestion = (s: any) => {
+  earningsSearchQuery.value = s.symbol
+  showSuggestions.value = false
+  searchEarnings()
+}
+
+const handleBlur = () => {
+  // Delay hiding to allow click events on suggestions to fire first
+  setTimeout(() => {
+    showSuggestions.value = false
+  }, 200)
+}
+
+const formatSymbolDisplay = (symbol: string) => symbol.replace('.B', '').replace('^', '')
 
 const searchEarnings = async () => {
   if (!earningsSearchQuery.value) return
@@ -624,8 +648,8 @@ const confirmDeleteAction = async () => {
       <template v-if="activeFilter === 'earnings'">
         <div class="w-full max-w-[1600px] mx-auto space-y-4 md:space-y-6 min-h-screen">
           <!-- Search UI - Responsive -->
-          <div class="bg-slate-900/40 border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
-            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div class="bg-slate-900/40 border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-8 backdrop-blur-xl shadow-2xl relative group z-30">
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl md:rounded-3xl"></div>
             
             <div class="flex flex-col lg:flex-row items-center justify-between gap-4 md:gap-6 relative z-10">
               <div class="w-full lg:w-auto text-center lg:text-left">
@@ -637,9 +661,11 @@ const confirmDeleteAction = async () => {
                 </h3>
               </div>
 
-              <form @submit.prevent="searchEarnings" class="w-full lg:max-w-xl">
+              <form @submit.prevent="searchEarnings" class="w-full lg:max-w-xl relative">
                 <div class="relative group/input">
-                  <input v-model="earningsSearchQuery" type="text" placeholder="輸入代碼 (NVDA, AAPL...)" 
+                  <input v-model="earningsSearchQuery" type="text" placeholder="搜尋您的持股 (NVDA, TSLA...)" 
+                         @focus="showSuggestions = true"
+                         @blur="handleBlur"
                          class="block w-full pl-6 pr-24 md:pr-32 py-3 md:py-4 bg-slate-950/80 border border-slate-700 rounded-xl md:rounded-2xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-base md:text-lg font-bold tracking-wide uppercase" />
                   <button type="submit" :disabled="isEarningsSearching" 
                           class="absolute right-1.5 top-1.5 bottom-1.5 px-4 md:px-8 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white rounded-lg md:rounded-xl font-black text-xs md:text-sm transition-all flex items-center gap-2">
@@ -647,6 +673,35 @@ const confirmDeleteAction = async () => {
                     {{ isEarningsSearching ? '分析中' : '搜尋' }}
                   </button>
                 </div>
+
+                <!-- Local Suggestions Dropdown -->
+                <transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-in" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
+                  <div v-if="showSuggestions && localSuggestions.length > 0" 
+                       class="absolute z-50 left-0 right-0 mt-2 bg-slate-900/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-72">
+                    <div class="px-4 py-2 bg-blue-600/10 border-b border-white/5">
+                      <span class="text-[9px] font-black text-blue-400 uppercase tracking-[0.2em]">Portfolio Suggestions</span>
+                    </div>
+                    <div v-for="s in localSuggestions" :key="s.symbol" 
+                         @click="selectSuggestion(s)"
+                         class="px-5 py-3 hover:bg-blue-600/20 cursor-pointer flex items-center justify-between group/s border-b border-white/5 last:border-0 transition-colors">
+                      <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-slate-800 rounded flex items-center justify-center text-[10px] font-black text-slate-300 group-hover/s:bg-blue-600 group-hover/s:text-white transition-all">
+                          {{ s.symbol.slice(0, 2) }}
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="text-white font-black text-sm tracking-widest group-hover/s:text-blue-400 transition-colors">{{ formatSymbolDisplay(s.symbol) }}</span>
+                          <span class="text-slate-500 text-[10px] font-bold uppercase tracking-tighter truncate max-w-[200px]">{{ s.name || 'My Portfolio' }}</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                         <span class="text-[9px] font-bold text-slate-600 group-hover/s:text-blue-500/50">點擊分析</span>
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-700 group-hover/s:text-blue-500 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                         </svg>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
               </form>
             </div>
           </div>
@@ -676,7 +731,7 @@ const confirmDeleteAction = async () => {
                       {{ earningsSearchResult.symbol.slice(0, 2) }}
                     </div>
                     <div>
-                      <h3 class="text-3xl md:text-4xl font-black text-white tracking-tighter leading-none">{{ earningsSearchResult.symbol }}</h3>
+                      <h3 class="text-3xl md:text-4xl font-black text-white tracking-tighter leading-none">{{ formatSymbolDisplay(earningsSearchResult.symbol) }}</h3>
                       <div class="flex items-center gap-2 mt-2">
                         <span class="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[8px] md:text-[10px] font-black rounded uppercase tracking-wider border border-blue-500/30">Stock Analysis</span>
                         <span class="hidden sm:inline-block text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Finnhub Intelligence</span>
