@@ -528,6 +528,26 @@ const confirmDeleteAction = async () => {
     confirmDeleteSymbol.value = ''
   }
 }
+
+// Dynamic Earnings Season Logic
+const earningsSeasonInfo = computed(() => {
+  const month = new Date().getMonth() // 0-11
+  
+  // Seasons: Q4 (Jan-Feb), Q1 (Apr-May), Q2 (Jul-Aug), Q3 (Oct-Nov)
+  if (month === 0 || month === 1) {
+    return { current: 'Q4 Earnings', status: '高峰期 (Peak)', next: 'Q1 (4月開始)', iconColor: 'text-blue-400', iconBg: 'bg-blue-900/30' }
+  } else if (month === 3 || month === 4) {
+    return { current: 'Q1 Earnings', status: '高峰期 (Peak)', next: 'Q2 (7月開始)', iconColor: 'text-blue-400', iconBg: 'bg-blue-900/30' }
+  } else if (month === 6 || month === 7) {
+    return { current: 'Q2 Earnings', status: '高峰期 (Peak)', next: 'Q3 (10月開始)', iconColor: 'text-blue-400', iconBg: 'bg-blue-900/30' }
+  } else if (month === 9 || month === 10) {
+    return { current: 'Q3 Earnings', status: '高峰期 (Peak)', next: 'Q4 (1月開始)', iconColor: 'text-blue-400', iconBg: 'bg-blue-900/30' }
+  } else {
+    // Off-peak months (Mar, Jun, Sep, Dec)
+    const nextSeason = month < 3 ? 'Q1 (4月)' : month < 6 ? 'Q2 (7月)' : month < 9 ? 'Q3 (10月)' : 'Q4 (1月)'
+    return { current: '休賽期', status: '淡季 (Off-peak)', next: nextSeason, iconColor: 'text-slate-400', iconBg: 'bg-slate-800/30' }
+  }
+})
 </script>
 
 <template>
@@ -578,8 +598,33 @@ const confirmDeleteAction = async () => {
       </template>
 
       <template v-else-if="activeFilter === 'earnings'">
-        <div class="flex-1 flex items-center justify-center">
-          <span class="text-[10px] text-slate-600 font-mono tracking-[0.3em] uppercase opacity-50">Earnings Intelligence Report</span>
+        <!-- Earnings Stats Cards (Dynamic) -->
+        <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full border border-blue-800/50 flex items-center justify-center shrink-0" :class="[earningsSeasonInfo.iconBg, earningsSeasonInfo.iconColor]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">當前財報季</div>
+            <div class="text-white font-bold text-xs md:text-lg leading-none uppercase">{{ earningsSeasonInfo.current }}</div>
+          </div>
+        </div>
+        <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-emerald-900/30 border border-emerald-800/50 flex items-center justify-center text-emerald-400 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">發布密集度</div>
+            <div class="text-white font-bold text-xs md:text-lg leading-none">{{ earningsSeasonInfo.status }}</div>
+          </div>
+        </div>
+        <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
+          <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-indigo-900/30 border border-indigo-800/50 flex items-center justify-center text-indigo-400 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">下一季預告</div>
+            <div class="text-white font-bold text-xs md:text-lg leading-none">{{ earningsSeasonInfo.next }}</div>
+          </div>
         </div>
       </template>
 
