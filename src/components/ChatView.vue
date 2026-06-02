@@ -5,7 +5,7 @@ import {
   globalNews, chatUser, chatSession, chatLoading, 
   isAdmin, goToLogin, userProfile, isChatConnected, 
   openAIDrawer, triggerShare, newsToShare, showShareConfirm,
-  showToast, setScrollProgress
+  showToast, setScrollProgress, t, locale
 } from '../stores'
 
 const currentUser = chatUser
@@ -203,20 +203,20 @@ watch(showNewsSidebar, (val) => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
-          討論區
+          {{ t('liveDiscussion') }}
         </h2>
         <div class="ml-auto flex items-center gap-2">
-          <span class="hidden xs:block text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded font-mono">{{ chatMessages.length }} 留言</span>
+          <span class="hidden xs:block text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded font-mono">{{ chatMessages.length }} {{ locale === 'zh-TW' ? '留言' : 'messages' }}</span>
           
           <!-- Mobile Toggle Sidebar -->
           <button 
             @click="showNewsSidebar = !showNewsSidebar"
-            class="md:hidden flex items-center gap-1 px-2 py-1 rounded bg-blue-600/10 border border-blue-500/30 text-[10px] font-bold text-blue-400 active:scale-95 transition-all"
+            class="md:hidden flex items-center gap-1 px-2 py-1 rounded bg-blue-600/10 border border-blue-500/30 text-[10px] font-bold text-blue-400 active:scale-95 transition-all cursor-pointer"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
             </svg>
-            {{ showNewsSidebar ? '關閉新聞' : '開啟新聞' }}
+            {{ showNewsSidebar ? (locale === 'zh-TW' ? '關閉新聞' : 'Hide News') : (locale === 'zh-TW' ? '開啟新聞' : 'Show News') }}
           </button>
         </div>
       </div>
@@ -229,7 +229,7 @@ watch(showNewsSidebar, (val) => {
       >
         <div v-if="chatLoading" class="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
           <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-          載入對話紀錄中...
+          {{ t('loading') }}
         </div>
 
         <!-- Connection Failure Warning -->
@@ -239,21 +239,21 @@ watch(showNewsSidebar, (val) => {
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
             <div class="flex flex-col">
-              <div class="text-[10px] md:text-sm text-red-200 font-bold">討論區連線中斷</div>
-              <div class="text-[8px] md:text-xs text-red-400 opacity-80">無法接收即時更新，請嘗試手動重新整理</div>
+              <div class="text-[10px] md:text-sm text-red-200 font-bold">{{ t('chatDisconnected') }}</div>
+              <div class="text-[8px] md:text-xs text-red-400 opacity-80">{{ t('chatConnecting') }}</div>
             </div>
           </div>
-          <button @click="handleRefresh" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-[10px] md:text-xs font-black rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95 whitespace-nowrap ml-2">重新整理</button>
+          <button @click="handleRefresh" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-[10px] md:text-xs font-black rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95 whitespace-nowrap ml-2 cursor-pointer">{{ t('resetConnection') }}</button>
         </div>
 
         <div v-else-if="chatMessages.length === 0" class="flex flex-col items-center justify-center h-full text-slate-500 space-y-2 p-8 text-center">
           <div class="text-[10px] md:text-xs font-black tracking-[0.2em] uppercase opacity-40">[ Communication_Channel_Established ]</div>
-          <div class="text-xs md:text-sm text-slate-400 font-medium">當前頻道暫無通訊紀錄</div>
-          <div class="text-[9px] md:text-[10px] text-slate-600 tracking-tight">若訊息同步發生延遲，請點擊右上角「重置連線」重新校準。</div>
+          <div class="text-xs md:text-sm text-slate-400 font-medium">{{ t('noMessages') }}</div>
+          <div class="text-[9px] md:text-[10px] text-slate-600 tracking-tight">{{ locale === 'zh-TW' ? '若訊息同步發生延遲，請點擊右上角「重置連線」重新校準。' : 'If messages sync is delayed, click "Reset Link" at top right to recalibrate.' }}</div>
         </div>
         
         <div v-if="!chatLoading && visibleCount < chatMessages.length" class="text-center text-[10px] text-slate-500 font-mono py-2">
-          ↑ 向上滑動載入較早紀錄
+          {{ locale === 'zh-TW' ? '↑ 向上滑動載入較早紀錄' : '↑ Scroll up to load older messages' }}
         </div>
 
         <div v-for="msg in visibleMessages" :key="msg.id" class="flex gap-3 group animate-fade-in-up">
@@ -265,11 +265,11 @@ watch(showNewsSidebar, (val) => {
               <button 
                 v-if="msg.userId === chatSession?.user?.id || isAdmin"
                 @click.stop="confirmDeleteId = msg.id"
-                class="ml-auto flex items-center gap-1 text-[10px] transition-colors px-2 py-0.5 rounded bg-slate-800/30 hover:bg-slate-800"
+                class="ml-auto flex items-center gap-1 text-[10px] transition-colors px-2 py-0.5 rounded bg-slate-800/30 hover:bg-slate-800 cursor-pointer"
                 :class="isAdmin && msg.user !== chatUser ? 'text-amber-500 hover:text-amber-400' : 'text-slate-500 hover:text-red-500'"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                刪除
+                {{ t('delete') }}
               </button>
             </div>
             
@@ -370,13 +370,13 @@ watch(showNewsSidebar, (val) => {
           <input 
             v-model="inputText"
             type="text" 
-            placeholder="與大家分享您的看法..." 
+            :placeholder="t('chatPlaceholder')" 
             class="flex-1 bg-[#05080f] border border-slate-700 rounded-lg px-4 py-2 text-[16px] md:text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
             @keyup.enter="sendMessage"
           >
           <button 
             @click="sendMessage"
-            class="ml-3 p-2 text-blue-400 hover:text-blue-300 transition-colors"
+            class="ml-3 p-2 text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -385,8 +385,8 @@ watch(showNewsSidebar, (val) => {
         </template>
         <template v-else>
           <div @click="goToLogin" class="flex-1 flex items-center justify-center gap-2 cursor-pointer bg-[#0a0f1c] hover:bg-slate-800 rounded-lg border border-slate-800 py-2 transition-all">
-            <span class="text-xs md:text-sm text-slate-400">登入後即可參與討論</span>
-            <span class="text-xs md:text-sm font-bold text-blue-400 hover:underline">去登入</span>
+            <span class="text-xs md:text-sm text-slate-400">{{ t('loginToChat') }}</span>
+            <span class="text-xs md:text-sm font-bold text-blue-400 hover:underline">{{ t('login') }}</span>
           </div>
         </template>
       </div>
@@ -397,16 +397,16 @@ watch(showNewsSidebar, (val) => {
       <div class="h-12 border-b border-slate-800 flex items-center px-4 shrink-0 bg-[#070b14]/50">
         <h3 class="font-bold text-slate-300 text-xs md:text-sm flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd" /></svg>
-          新聞分享
+          {{ t('newsSharing') }}
         </h3>
-        <button @click="showNewsSidebar = false" class="md:hidden ml-auto p-1.5 text-slate-500 hover:text-white bg-slate-800/50 rounded-lg">
+        <button @click="showNewsSidebar = false" class="md:hidden ml-auto p-1.5 text-slate-500 hover:text-white bg-slate-800/50 rounded-lg cursor-pointer">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
       
       <div @scroll="handleNewsScroll" class="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-700">
         <div v-if="hotNews.length === 0" class="text-center text-slate-500 text-xs py-8">
-          目前沒有新聞可分享
+          {{ t('noNewsAvailable') }}
         </div>
         
         <div v-for="news in hotNews" :key="news.id" class="mb-2 p-3 bg-[#111827] rounded-lg border border-slate-800 hover:border-slate-700 transition-colors group/item">
@@ -424,20 +424,20 @@ watch(showNewsSidebar, (val) => {
           <div class="flex justify-between items-center border-t border-slate-800/80 pt-2 mt-1">
             <button 
               @click="translateNews(news)"
-              class="flex items-center gap-1.5 text-[10px] md:text-xs transition-colors px-2 py-1.5 rounded font-bold"
+              class="flex items-center gap-1.5 text-[10px] md:text-xs transition-colors px-2 py-1.5 rounded font-bold cursor-pointer"
               :class="translatedNews[news.id] ? 'text-blue-400 bg-blue-900/20' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'"
               :disabled="translatingIds.has(news.id)"
             >
               <svg v-if="translatingIds.has(news.id)" class="animate-spin h-3.5 w-3.5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
               <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 11.37 9.198 15.297 5 18" /></svg>
-              {{ translatingIds.has(news.id) ? '翻譯中...' : (translatedNews[news.id] ? '原文' : '翻譯') }}
+              {{ translatingIds.has(news.id) ? (locale === 'zh-TW' ? '翻譯中...' : 'Translating...') : (translatedNews[news.id] ? t('originalNews') : t('translate')) }}
             </button>
             <button 
               @click="triggerShare(news)" 
-              class="flex items-center gap-1.5 text-[10px] md:text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 px-2 py-1.5 rounded transition-colors font-bold"
+              class="flex items-center gap-1.5 text-[10px] md:text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 px-2 py-1.5 rounded transition-colors font-bold cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-              分享至討論
+              {{ t('shareToDiscussion') }}
             </button>
           </div>
         </div>
@@ -449,7 +449,7 @@ watch(showNewsSidebar, (val) => {
       <div v-if="showShareConfirm" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
         <div class="bg-[#111827] border border-blue-900/50 rounded-xl p-6 w-full max-w-sm shadow-2xl relative">
           <!-- Close button -->
-          <button @click="showShareConfirm = false" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
+          <button @click="showShareConfirm = false" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
@@ -461,14 +461,14 @@ watch(showNewsSidebar, (val) => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
             </div>
-            <h3 class="text-lg font-bold text-white text-center mb-2">確定要分享到討論區嗎？</h3>
+            <h3 class="text-lg font-bold text-white text-center mb-2">{{ t('shareToChatConfirm') }}</h3>
             <p class="text-xs text-slate-400 text-center mb-6 line-clamp-2">「{{ newsToShare?.headline }}」</p>
             <div class="flex gap-3">
-              <button @click="showShareConfirm = false" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
-                取消
+              <button @click="showShareConfirm = false" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold cursor-pointer">
+                {{ t('cancel') }}
               </button>
-              <button @click="executeShare" class="flex-1 py-2.5 rounded bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold">
-                確定分享
+              <button @click="executeShare" class="flex-1 py-2.5 rounded bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold cursor-pointer">
+                {{ t('share') }}
               </button>
             </div>
           </template>
@@ -479,16 +479,16 @@ watch(showNewsSidebar, (val) => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h3 class="text-lg font-bold text-white text-center mb-2">請先註冊或登入</h3>
+            <h3 class="text-lg font-bold text-white text-center mb-2">{{ locale === 'zh-TW' ? '請先註冊或登入' : 'Please log in' }}</h3>
             <p class="text-xs text-slate-400 text-center mb-6 leading-relaxed">
-              分析與分享功能僅限會員使用。<br>登入後即可與全球投資者參與討論！
+              {{ locale === 'zh-TW' ? '分析與分享功能僅限會員使用。登入後即可與全球投資者參與討論！' : 'Sharing news to discussion board requires a member account. Log in to join the community!' }}
             </p>
             <div class="flex gap-3">
-              <button @click="showShareConfirm = false" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
-                取消
+              <button @click="showShareConfirm = false" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold cursor-pointer">
+                {{ t('cancel') }}
               </button>
-              <button @click="goToLogin(); showShareConfirm = false" class="flex-1 py-2.5 rounded bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold shadow-lg shadow-blue-600/20">
-                前往登入
+              <button @click="goToLogin(); showShareConfirm = false" class="flex-1 py-2.5 rounded bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-bold shadow-lg shadow-blue-600/20 cursor-pointer">
+                {{ t('login') }}
               </button>
             </div>
           </template>
@@ -509,14 +509,14 @@ watch(showNewsSidebar, (val) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 class="text-lg font-bold text-white mb-2">確定要刪除這則留言嗎？</h3>
-          <p class="text-xs text-slate-400 mb-6">此動作無法復原，其他人將無法再看到此留言。</p>
+          <h3 class="text-lg font-bold text-white mb-2">{{ t('confirmDeleteMessage') }}</h3>
+          <p class="text-xs text-slate-400 mb-6">{{ locale === 'zh-TW' ? '此動作無法復原，其他人將無法再看到此留言。' : 'This action cannot be undone, others will no longer see this message.' }}</p>
           <div class="flex gap-3">
-            <button @click="confirmDeleteId = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
-              取消
+            <button @click="confirmDeleteId = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold cursor-pointer">
+              {{ t('cancel') }}
             </button>
-            <button @click="confirmDelete" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold">
-              確定刪除
+            <button @click="confirmDelete" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold cursor-pointer">
+              {{ t('confirmDelete') }}
             </button>
           </div>
         </div>

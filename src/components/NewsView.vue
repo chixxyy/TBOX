@@ -6,7 +6,9 @@ import {
   lastNewsUpdate as lastUpdateTime,
   setScrollProgress,
   isChangingTab,
-  showToast
+  showToast,
+  locale,
+  t
 } from '../stores'
 
 const openUrl = (url?: string) => {
@@ -32,13 +34,13 @@ const totalFetched = computed(() => newsItems.value.length)
 
 // 分類選單配置
 const filterTabs = [
-  { label: '全部', tag: '' },
-  { label: '加密貨幣', tag: 'crypto' },
-  { label: '金融', tag: 'general' },
-  { label: '運動', tag: 'sports' },
-]
+  { label: 'all', tag: '' },
+  { label: 'crypto', tag: 'crypto' },
+  { label: 'finance', tag: 'general' },
+  { label: 'tabSports', tag: 'sports' },
+] as const
 const severityFilters = ['Critical', 'High', 'Low']
-const activeFilter = ref({ label: '全部', tag: '' })
+const activeFilter = ref<{ label: string; tag: string }>({ label: 'all', tag: '' })
 const activeSeverity = ref<string[]>([])
 const searchQuery = ref('')
 
@@ -114,7 +116,10 @@ async function toggleTranslate(item: any) {
     ])
     
     if (headline === item.headline && (!item.summary || summary === item.summary)) {
-      showToast('翻譯未生效', 'API 目前暫時無法回應（可能已達每日限額）。')
+      showToast(
+        locale.value === 'zh-TW' ? '翻譯未生效' : 'Translation failed',
+        locale.value === 'zh-TW' ? 'API 目前暫時無法回應（可能已達每日限額）。' : 'API temporarily unavailable (limit reached).'
+      )
       return
     }
 
@@ -122,7 +127,10 @@ async function toggleTranslate(item: any) {
     translatedIds.value.add(item.id)
   } catch (err) {
     console.error('[NEWS_TRANSLATE] Toggle error:', err)
-    showToast('翻譯錯誤', '無法連接到翻譯伺服器')
+    showToast(
+      locale.value === 'zh-TW' ? '翻譯錯誤' : 'Translation Error',
+      locale.value === 'zh-TW' ? '無法連接到翻譯伺服器' : 'Failed to connect to translation server'
+    )
   } finally {
     translatingIds.value.delete(item.id)
   }
@@ -130,8 +138,8 @@ async function toggleTranslate(item: any) {
 
 function getDisplayItem(item: any) {
   if (translatedIds.value.has(item.id) && translationCache.has(item.id)) {
-    const t = translationCache.get(item.id)!
-    return { ...item, headline: t.headline, summary: t.summary, isTranslated: true }
+    const tVal = translationCache.get(item.id)!
+    return { ...item, headline: tVal.headline, summary: tVal.summary, isTranslated: true }
   }
   return { ...item, isTranslated: false }
 }
@@ -146,7 +154,7 @@ const getSentiment = (item: any) => {
 const getReadTime = (item: any) => {
   const content = item.headline + (item.summary || '')
   const mins = Math.max(1, Math.ceil(content.length / 500))
-  return `${mins} MIN READ`
+  return `${mins} ${locale.value === 'zh-TW' ? '分鐘閱讀' : 'MIN READ'}`
 }
 
 const getTagColor = (item: any) => {
@@ -178,7 +186,7 @@ onUnmounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </div>
         <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">今日新聞</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '今日新聞' : "Today's News" }}</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none">{{ totalFetched }}</div>
         </div>
       </div>
@@ -189,7 +197,7 @@ onUnmounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
         </div>
         <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">載入新聞</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '載入新聞' : 'Loaded News' }}</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none">{{ filteredNews.length }}</div>
         </div>
       </div>
@@ -201,9 +209,9 @@ onUnmounted(() => {
       >
         <div class="w-7 h-7 md:w-9 md:h-9 rounded-full bg-amber-900/30 border border-amber-800/50 flex items-center justify-center text-amber-400 shrink-0">⚡</div>
         <div class="min-w-0 flex-1">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">最新頭條</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '最新頭條' : 'Breaking News' }}</div>
           <div class="text-white font-bold text-[10px] md:text-sm leading-none truncate group-hover:text-blue-400 transition-colors">
-            {{ filteredNews[0]?.headline || '暫無資料' }}
+            {{ filteredNews[0]?.headline || (locale === 'zh-TW' ? '暫無資料' : 'No Data') }}
           </div>
         </div>
       </div>
@@ -213,7 +221,7 @@ onUnmounted(() => {
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
           <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">News Live</span>
         </div>
-        <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateTime }}</span>
+        <span class="text-[10px] text-slate-500 font-mono">{{ locale === 'zh-TW' ? '最後更新: ' : 'Last Update: ' }}{{ lastUpdateTime }}</span>
       </div>
     </div>
 
@@ -226,7 +234,7 @@ onUnmounted(() => {
           class="flex-1 h-11 md:h-12 px-1 md:px-4 border-b-2 transition-all text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center" 
           :class="activeFilter.tag === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
-          {{ tab.label }}
+          {{ t(tab.label) }}
         </button>
       </div>
       
@@ -249,7 +257,7 @@ onUnmounted(() => {
           </div>
       </div>
       <div class="flex items-center bg-[#05080f] border border-slate-700 rounded-md px-3 py-1.5 w-full md:w-64 md:ml-4 focus-within:border-blue-500 transition-all shrink-0">
-        <input v-model="searchQuery" type="text" placeholder="搜尋全站新聞..." class="bg-transparent outline-none text-[11px] md:text-xs text-slate-300 w-full" />
+        <input v-model="searchQuery" type="text" :placeholder="t('searchNewsPlaceholder')" class="bg-transparent outline-none text-[11px] md:text-xs text-slate-300 w-full" />
       </div>
     </div>
 
@@ -271,7 +279,7 @@ onUnmounted(() => {
       </div>
       <div v-else-if="filteredNews.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
-        <span class="text-sm font-medium tracking-wide">此分類目前各級別暫無即時新聞內容</span>
+        <span class="text-sm font-medium tracking-wide">{{ locale === 'zh-TW' ? '此分類目前各級別暫無即時新聞內容' : 'No news found for this category and severity' }}</span>
       </div>
       <div v-else class="max-w-5xl mx-auto space-y-3">
         <div v-for="item in filteredNews" :key="item.id" class="news-card glass-glow-hover bg-[#0f1523] border border-[#1e293b] rounded-lg p-3 md:p-4 group relative overflow-hidden flex items-start gap-4">
@@ -295,7 +303,7 @@ onUnmounted(() => {
                   <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
                   </svg>
-                  <span>{{ translatedIds.has(item.id) ? '原文' : '翻譯' }}</span>
+                  <span>{{ translatedIds.has(item.id) ? t('originalNews') : t('translate') }}</span>
                 </button>
               </div>
 

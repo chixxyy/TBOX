@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { showToast } from '../stores'
+import { showToast, locale, t } from '../stores'
 
 const props = defineProps<{
   eventData: any,
@@ -43,14 +43,20 @@ const toggleTranslate = async () => {
   try {
     const result = await translateText(props.eventData.question)
     if (result === props.eventData.question) {
-      showToast('翻譯未生效', 'API 目前暫時無法回應（可能已達每日限額）。')
+      showToast(
+        locale.value === 'zh-TW' ? '翻譯未生效' : 'Translation failed',
+        locale.value === 'zh-TW' ? 'API 目前暫時無法回應（可能已達每日限額）。' : 'API temporarily unavailable (limit reached).'
+      )
       return
     }
     translatedQuestion.value = result
     showTranslated.value = true
   } catch (error) {
     console.error('[MARKET_TRANSLATE] Error:', error)
-    showToast('翻譯錯誤', '無法連接到翻譯伺服器')
+    showToast(
+      locale.value === 'zh-TW' ? '翻譯錯誤' : 'Translation Error',
+      locale.value === 'zh-TW' ? '無法連接到翻譯伺服器' : 'Failed to connect to translation server'
+    )
   } finally {
     isTranslating.value = false
   }
@@ -75,14 +81,19 @@ const outcomes = computed(() => {
     let mappedOutcomes = labels.map((label: string, index: number) => {
       const priceStr = prices[index] || "0"
       const prob = parseFloat(priceStr) * 100
+      let displayLabel = label
+      if (locale.value === 'zh-TW') {
+        if (label === 'Yes') displayLabel = '是'
+        else if (label === 'No') displayLabel = '否'
+      }
       return {
-        label,
+        label: displayLabel,
         probability: prob,
         colorClass: getProbabilityColorClass(prob)
       }
     })
     
-    if (mappedOutcomes.length === 2 && mappedOutcomes[0]?.label === 'Yes' && mappedOutcomes[1]?.label === 'No') {
+    if (mappedOutcomes.length === 2 && (labels[0] === 'Yes' && labels[1] === 'No')) {
        // Keep order
     } else {
        mappedOutcomes.sort((a: any, b: any) => b.probability - a.probability)
@@ -168,7 +179,7 @@ const goToMarket = () => {
       <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
       </svg>
-      <span>{{ isTranslating ? '...' : (showTranslated ? '原文' : '翻譯') }}</span>
+      <span>{{ isTranslating ? '...' : (showTranslated ? t('originalNews') : t('translate')) }}</span>
     </button>
 
     <div class="flex-1 flex flex-col justify-end space-y-4 mb-5">

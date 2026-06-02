@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import MarketCard from './MarketCard.vue'
 import { api } from '../network'
-import { setScrollProgress, isChangingTab } from '../stores'
+import { setScrollProgress, isChangingTab, t } from '../stores'
 
 let rafId: number | null = null
 const handleScroll = (e: Event) => {
@@ -22,12 +22,12 @@ const handleScroll = (e: Event) => {
 type Category = { label: string; tag: string }
 
 const categories: Category[] = [
-  { label: '全部', tag: '' },
-  { label: '加密貨幣', tag: 'crypto' },
-  { label: '金融', tag: 'economics' },
-  { label: '政治', tag: 'politics' },
-  { label: '科技', tag: 'science' },
-  { label: '國際', tag: 'world' },
+  { label: 'all', tag: '' },
+  { label: 'crypto', tag: 'crypto' },
+  { label: 'finance', tag: 'economics' },
+  { label: 'politics', tag: 'politics' },
+  { label: 'science', tag: 'science' },
+  { label: 'world', tag: 'world' },
 ]
 
 const allEvents = ref<any[]>([])
@@ -173,7 +173,7 @@ onUnmounted(() => {
           </svg>
         </div>
         <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">今日訊號</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ t('allSignals') }}</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none">{{ allEvents.length }}</div>
         </div>
       </div>
@@ -186,7 +186,7 @@ onUnmounted(() => {
           </svg>
         </div>
         <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ activeCategory.label }}訊號</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ t(activeCategory.label) }}{{ t('catSignals') }}</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none">{{ events.length }}</div>
         </div>
       </div>
@@ -199,12 +199,10 @@ onUnmounted(() => {
           </svg>
         </div>
         <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">總體量</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ t('totalVolume') }}</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none">{{ totalVolumeFormatted }}</div>
         </div>
       </div>
-
-
 
       <!-- Update Info -->
       <div class="hidden lg:flex flex-col items-end shrink-0 ml-auto">
@@ -212,7 +210,7 @@ onUnmounted(() => {
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
           <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">Polymarket Live</span>
         </div>
-        <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateTime }}</span>
+        <span class="text-[10px] text-slate-500 font-mono">{{ t('lastUpdate') }}{{ lastUpdateTime }}</span>
       </div>
     </div>
 
@@ -225,11 +223,11 @@ onUnmounted(() => {
           class="flex-1 h-11 md:h-12 px-1 md:px-4 border-b-2 transition-colors relative text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center"
           :class="activeCategory.tag === cat.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
-          {{ cat.label }}
+          {{ t(cat.label) }}
         </button>
       </div>
-      <div class="hidden sm:flex items-center space-x-3 text-[10px] text-slate-500 ml-4 shrink-0">
-        <span>Probability:</span>
+      <div class="hidden sm:flex items-center space-x-3 text-[10px] text-slate-500 ml-4 shrink-0 font-mono">
+        <span>{{ t('winRateProb') }}</span>
         <div class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span><span>≥70%</span></div>
         <div class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span><span>≥40%</span></div>
         <div class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span><span>≥15%</span></div>
@@ -257,7 +255,7 @@ onUnmounted(() => {
       
       <div v-else-if="events.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
-        <span class="text-sm font-medium tracking-wide">此分類目前暫無活躍的市場數據</span>
+        <span class="text-sm font-medium tracking-wide">{{ t('noActiveMarkets') }}</span>
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

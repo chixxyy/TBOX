@@ -18,7 +18,9 @@ import {
   chatSession,
   goToLogin,
   openAIDrawer,
-  showToast
+  showToast,
+  locale,
+  t
 } from '../stores'
 
 
@@ -263,16 +265,16 @@ const UI_LABELS = {
 }
 
 function getLabel(key: keyof typeof UI_LABELS.en, isTranslated: boolean): string {
-  return isTranslated ? UI_LABELS.zh[key] : UI_LABELS.en[key]
+  return (locale.value === 'zh-TW' || isTranslated) ? UI_LABELS.zh[key] : UI_LABELS.en[key]
 }
 
 // ---------- Filtering & Portfolio ----------
 const filterTabs = [
-  { label: '全部異動', tag: 'all' },
-  { label: '快速上漲', tag: 'gainers' },
-  { label: '極速下跌', tag: 'losers' },
-  { label: '財報解析', tag: 'earnings' },
-  { label: '我的資產', tag: 'portfolio' },
+  { label: 'tabAllMovers', tag: 'all' },
+  { label: 'tabGainers', tag: 'gainers' },
+  { label: 'tabLosers', tag: 'losers' },
+  { label: 'tabEarnings', tag: 'earnings' },
+  { label: 'tabMyPortfolio', tag: 'portfolio' },
 ]
 const activeFilter = ref('all')
 
@@ -561,24 +563,24 @@ const earningsSeasonInfo = computed(() => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">監控中異動</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '監控中異動' : 'Active Movers' }}</div>
             <div class="text-white font-bold text-xs md:text-lg leading-none">{{ stats.total }}</div>
           </div>
         </div>
         <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
           <div class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
-               :class="activeFilter === 'losers' ? 'bg-red-900/30 border border-red-800/50 text-red-400' : 'bg-green-900/30 border border-green-800/50 text-green-400'">
+               :class="activeFilter === 'losers' ? 'bg-red-950/30 border border-red-900/50 text-red-400' : 'bg-green-950/30 border border-green-900/50 text-green-400'">
             <svg v-if="activeFilter === 'losers'" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
             <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ activeFilter === 'losers' ? '下跌信號' : '上漲信號' }}</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ activeFilter === 'losers' ? (locale === 'zh-TW' ? '下跌信號' : 'Down Signals') : (locale === 'zh-TW' ? '上漲信號' : 'Up Signals') }}</div>
             <div class="text-white font-bold text-xs md:text-lg leading-none">{{ activeFilter === 'losers' ? stats.down : stats.up }}</div>
           </div>
         </div>
         <div class="flex-1 flex items-center space-x-1.5 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-2 md:px-4 py-1.5 md:py-2.5 min-w-0">
           <div class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
-            :class="activeFilter === 'losers' ? 'bg-red-900/30 border border-red-800/50 text-red-500' : 'bg-green-900/30 border border-green-800/50 text-green-500'">
+            :class="activeFilter === 'losers' ? 'bg-red-950/30 border border-red-900/50 text-red-500' : 'bg-green-950/30 border border-green-900/50 text-green-500'">
             <template v-if="activeFilter === 'losers'">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
             </template>
@@ -588,7 +590,7 @@ const earningsSeasonInfo = computed(() => {
           </div>
           <div class="min-w-0">
             <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">
-              {{ activeFilter === 'losers' ? '最大跌幅' : '最高漲幅' }}
+              {{ activeFilter === 'losers' ? (locale === 'zh-TW' ? '最大跌幅' : 'Max Drop') : (locale === 'zh-TW' ? '最高漲幅' : 'Max Move') }}
             </div>
             <div class="text-white font-bold text-xs md:text-lg leading-none truncate">
               {{ activeFilter === 'losers' ? stats.maxDrop : stats.maxMove }}
@@ -604,7 +606,7 @@ const earningsSeasonInfo = computed(() => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">當前財報季</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '當前財報季' : 'Current Earnings Season' }}</div>
             <div class="text-white font-bold text-xs md:text-lg leading-none uppercase">{{ earningsSeasonInfo.current }}</div>
           </div>
         </div>
@@ -613,7 +615,7 @@ const earningsSeasonInfo = computed(() => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">發布密集度</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '發布密集度' : 'Release Density' }}</div>
             <div class="text-white font-bold text-xs md:text-lg leading-none">{{ earningsSeasonInfo.status }}</div>
           </div>
         </div>
@@ -622,7 +624,7 @@ const earningsSeasonInfo = computed(() => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">下一季預告</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '下一季預告' : 'Next Season Preview' }}</div>
             <div class="text-white font-bold text-xs md:text-lg leading-none">{{ earningsSeasonInfo.next }}</div>
           </div>
         </div>
@@ -635,7 +637,7 @@ const earningsSeasonInfo = computed(() => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">資產價值 (USD)</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '資產價值 (USD)' : 'Asset Value (USD)' }}</div>
             <div class="text-white font-bold text-xs md:text-lg leading-none">${{ portfolioStats.value }}</div>
           </div>
         </div>
@@ -644,7 +646,7 @@ const earningsSeasonInfo = computed(() => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">總回報率</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '總回報率' : 'Total Return Rate' }}</div>
             <div class="font-black text-xs md:text-lg leading-none" :class="parseFloat(portfolioStats.pnlPercent) >= 0 ? 'text-green-400' : 'text-red-400'">
               {{ portfolioStats.pnlPercent }}
             </div>
@@ -655,7 +657,7 @@ const earningsSeasonInfo = computed(() => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div class="min-w-0">
-            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">預估盈虧 (USD)</div>
+            <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '預估盈虧 (USD)' : 'Estimated PnL (USD)' }}</div>
             <div class="text-white font-bold text-xs md:text-lg leading-none truncate">${{ portfolioStats.pnl }}</div>
           </div>
         </div>
@@ -666,7 +668,7 @@ const earningsSeasonInfo = computed(() => {
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
           <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">Movers Live</span>
         </div>
-        <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateTime }}</span>
+        <span class="text-[10px] text-slate-500 font-mono">{{ locale === 'zh-TW' ? '最後更新: ' : 'Last Update: ' }}{{ lastUpdateTime }}</span>
       </div>
     </div>
 
@@ -681,7 +683,7 @@ const earningsSeasonInfo = computed(() => {
           :class="activeFilter === tab.tag ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
           <span v-if="tab.tag === 'portfolio'" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse md:mr-2 inline-block"></span>
-          {{ tab.label }}
+          {{ t(tab.label) }}
         </button>
       </div>
     </div>
@@ -702,20 +704,20 @@ const earningsSeasonInfo = computed(() => {
                   <div class="hidden md:flex w-10 h-10 bg-blue-600/20 rounded-xl items-center justify-center border border-blue-500/20">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                   </div>
-                  公布財報 <span class="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-[0.2em] ml-2">Intelligence Report</span>
+                  {{ locale === 'zh-TW' ? '公布財報' : 'Earnings Release' }} <span class="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-[0.2em] ml-2">Intelligence Report</span>
                 </h3>
               </div>
 
               <form @submit.prevent="searchEarnings" class="w-full lg:max-w-xl relative">
                 <div class="relative group/input">
-                  <input v-model="earningsSearchQuery" type="text" placeholder="搜尋您的持股 (NVDA, TSLA...)" 
+                  <input v-model="earningsSearchQuery" type="text" :placeholder="locale === 'zh-TW' ? '搜尋您的持股 (NVDA, TSLA...)' : 'Search your stocks (NVDA, TSLA...)'" 
                          @focus="showSuggestions = true"
                          @blur="handleBlur"
                          class="block w-full pl-6 pr-24 md:pr-32 py-3 md:py-4 bg-slate-950/80 border border-slate-700 rounded-xl md:rounded-2xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-base md:text-lg font-bold tracking-wide uppercase" />
                   <button type="submit" :disabled="isEarningsSearching" 
                           class="absolute right-1.5 top-1.5 bottom-1.5 px-4 md:px-8 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white rounded-lg md:rounded-xl font-black text-xs md:text-sm transition-all flex items-center gap-2">
                     <span v-if="isEarningsSearching" class="w-3 h-3 md:w-4 md:h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    {{ isEarningsSearching ? '分析中' : '搜尋' }}
+                    {{ isEarningsSearching ? (locale === 'zh-TW' ? '分析中' : 'Analyzing') : (locale === 'zh-TW' ? '搜尋' : 'Search') }}
                   </button>
                 </div>
 
@@ -739,7 +741,7 @@ const earningsSeasonInfo = computed(() => {
                         </div>
                       </div>
                       <div class="flex items-center gap-2">
-                         <span class="text-[9px] font-bold text-slate-600 group-hover/s:text-blue-500/50">點擊分析</span>
+                         <span class="text-[9px] font-bold text-slate-600 group-hover/s:text-blue-500/50">{{ locale === 'zh-TW' ? '點擊分析' : 'Analyze' }}</span>
                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-700 group-hover/s:text-blue-500 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                          </svg>
@@ -759,9 +761,9 @@ const earningsSeasonInfo = computed(() => {
               </svg>
             </div>
             <h3 class="text-red-400 font-black text-xl tracking-tighter uppercase">Ticker Not Found</h3>
-            <p class="text-red-500/60 text-[10px] mt-2 font-bold uppercase tracking-[0.3em]">查無此代碼或數據不足</p>
+            <p class="text-red-500/60 text-[10px] mt-2 font-bold uppercase tracking-[0.3em]">{{ locale === 'zh-TW' ? '查無此代碼或數據不足' : 'No data or ticker not found' }}</p>
             <button @click="isEarningsNotFound = false; earningsSearchQuery = ''" class="mt-8 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-full text-red-500 text-[10px] font-black uppercase tracking-widest transition-all">
-              重新搜尋
+              {{ locale === 'zh-TW' ? '重新搜尋' : 'Retry Search' }}
             </button>
           </div>
 
@@ -800,7 +802,7 @@ const earningsSeasonInfo = computed(() => {
                 <div class="mb-8 flex-1">
                   <h4 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
                     <div class="w-1 h-4 bg-blue-500 rounded-full"></div>
-                    歷史獲利驚喜度 (EPS Surprises)
+                    {{ locale === 'zh-TW' ? '歷史獲利驚喜度 (EPS Surprises)' : 'EPS Surprises' }}
                   </h4>
                   <div class="grid grid-cols-2 gap-3 md:gap-4">
                     <div v-for="s in earningsSearchResult.surprises.slice(0, 4)" :key="s.period" class="bg-slate-950/60 border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-5 hover:border-blue-500/30 transition-all group/card">
@@ -834,7 +836,7 @@ const earningsSeasonInfo = computed(() => {
                         <div class="w-1.5 h-1.5 rounded-full" :class="earningsSearchResult.surprises[i-1]?.surprisePercent >= 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'"></div>
                       </div>
                     </div>
-                    <span class="text-[10px] md:text-[11px] text-slate-500 font-bold tracking-tight">財報擊敗預期趨勢</span>
+                    <span class="text-[10px] md:text-[11px] text-slate-500 font-bold tracking-tight">{{ locale === 'zh-TW' ? '財報擊敗預期趨勢' : 'Earnings Beat Trend' }}</span>
                   </div>
                   <div class="text-[8px] md:text-[10px] text-slate-600 font-mono tracking-wider">FINNHUB v1.2</div>
                 </div>
@@ -846,7 +848,7 @@ const earningsSeasonInfo = computed(() => {
               <div class="bg-slate-900/40 border border-white/5 rounded-2xl md:rounded-3xl p-6 md:p-8 backdrop-blur-xl h-full flex flex-col">
                 <h4 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 md:mb-8 flex items-center gap-3">
                   <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
-                  關鍵量化指標 (Key Metrics)
+                  {{ locale === 'zh-TW' ? '關鍵量化指標 (Key Metrics)' : 'Key Metrics' }}
                 </h4>
                 
                 <div class="grid grid-cols-2 gap-3 md:gap-4 flex-1 mb-8">
@@ -870,9 +872,10 @@ const earningsSeasonInfo = computed(() => {
                     </div>
                     <h5 class="text-[10px] md:text-xs font-black text-blue-400 uppercase mb-3 tracking-widest">Smart Analysis</h5>
                     <p class="text-xs md:text-sm text-slate-300 leading-relaxed font-medium">
-                      該標的目前 PE 為 <span class="text-white font-black">{{ earningsSearchResult.metrics.pe ? earningsSearchResult.metrics.pe.toFixed(2) : 'N/A' }}</span>，
-                      擊敗預期率達 <span class="text-emerald-400 font-black">{{ (earningsSearchResult.surprises.filter((s:any) => s.surprisePercent > 0).length / 4 * 100).toFixed(0) }}%</span>。
-                      基本面表現穩健，目前的財務數據顯示其具備長線持有的韌性，建議關注下一季公佈日期。
+                      {{ locale === 'zh-TW' 
+                         ? `該標的目前 PE 為 ${earningsSearchResult.metrics.pe ? earningsSearchResult.metrics.pe.toFixed(2) : 'N/A'}，擊敗預期率達 ${(earningsSearchResult.surprises.filter((s:any) => s.surprisePercent > 0).length / 4 * 100).toFixed(0)}%。基本面表現穩健，目前的財務數據顯示其具備長線持有的韌性，建議關注下一季公佈日期。`
+                         : `The current PE for this ticker is ${earningsSearchResult.metrics.pe ? earningsSearchResult.metrics.pe.toFixed(2) : 'N/A'}, with a beat rate of ${(earningsSearchResult.surprises.filter((s:any) => s.surprisePercent > 0).length / 4 * 100).toFixed(0)}%. Fundamentals are stable. Current financial metrics show long-term holding resilience; keeping track of the next release date is recommended.`
+                      }}
                     </p>
                   </div>
                 </div>
@@ -886,7 +889,7 @@ const earningsSeasonInfo = computed(() => {
               <div class="absolute inset-0 rounded-full border-2 border-blue-500/10 border-t-blue-500/50 animate-spin"></div>
               <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 md:h-12 md:w-12 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </div>
-            <h3 class="text-slate-400 font-black text-lg md:text-xl tracking-tighter text-center px-4">輸入代碼立即分析！</h3>
+            <h3 class="text-slate-400 font-black text-lg md:text-xl tracking-tighter text-center px-4">{{ locale === 'zh-TW' ? '輸入代碼立即分析！' : 'Enter ticker to analyze!' }}</h3>
             <p class="text-slate-600 text-[10px] md:text-xs mt-2 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-center px-4">Enter a Ticker to generate Report</p>
           </div>
         </div>
@@ -901,12 +904,12 @@ const earningsSeasonInfo = computed(() => {
                 <div>
                   <h3 class="text-white font-bold flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg>
-                    資產管理
+                    {{ locale === 'zh-TW' ? '資產管理' : 'Asset Management' }}
                   </h3>
-                  <p class="text-xs text-slate-500 mt-1">手動輸入代碼以追蹤目前資產即時盈虧狀況</p>
+                  <p class="text-xs text-slate-500 mt-1">{{ locale === 'zh-TW' ? '手動輸入代碼以追蹤目前資產即時盈虧狀況' : 'Enter symbol manually to track real-time holdings PnL' }}</p>
                 </div>
                 <button @click="showAddForm = !showAddForm" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-blue-600/20 active:scale-95 z-10">
-                  {{ showAddForm ? '取消' : '新增資產' }}
+                  {{ showAddForm ? (locale === 'zh-TW' ? '取消' : 'Cancel') : (locale === 'zh-TW' ? '新增資產' : 'Add Asset') }}
                 </button>
               </div>
 
@@ -914,7 +917,7 @@ const earningsSeasonInfo = computed(() => {
               <transition enter-active-class="duration-300 ease-out" enter-from-class="transform opacity-0 -translate-y-4" enter-to-class="transform opacity-100 translate-y-0">
                 <form v-if="showAddForm" @submit.prevent="handleAdd" class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-950/50 rounded-2xl border border-blue-500/20 mb-8 items-start relative z-[210]">
                   <div class="space-y-1.5 relative symbol-dropdown-container">
-                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">標的代碼 (Symbol)</span>
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">{{ locale === 'zh-TW' ? '標的代碼 (Symbol)' : 'Symbol' }}</span>
                     <button 
                       type="button"
                       @click="showSymbolDropdown = !showSymbolDropdown"
@@ -927,7 +930,7 @@ const earningsSeasonInfo = computed(() => {
                           <span class="font-bold">{{ selectedAssetInfo.symbol }}</span>
                           <span class="text-slate-500 text-[10px] truncate">{{ selectedAssetInfo.name }}</span>
                         </template>
-                        <span v-else class="text-slate-600 text-xs">請選擇...</span>
+                        <span v-else class="text-slate-600 text-xs">{{ locale === 'zh-TW' ? '請選擇...' : 'Select...' }}</span>
                       </div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 transition-transform duration-300" :class="{ 'rotate-180': showSymbolDropdown }" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -944,7 +947,7 @@ const earningsSeasonInfo = computed(() => {
                     >
                       <div v-if="showSymbolDropdown" class="absolute top-[calc(100%+4px)] left-0 w-full min-w-[240px] bg-[#0a0f1c] border border-slate-700 shadow-2xl rounded-xl z-[220] overflow-hidden backdrop-blur-xl">
                         <div class="p-2 border-b border-slate-800 bg-[#070b14]">
-                          <input v-model="symbolSearch" type="text" placeholder="搜索..." class="w-full bg-[#05080f] border border-slate-700 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 transition-colors" />
+                          <input v-model="symbolSearch" type="text" :placeholder="locale === 'zh-TW' ? '搜索...' : 'Search...'" class="w-full bg-[#05080f] border border-slate-700 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 transition-colors" />
                         </div>
                         <div class="max-h-[200px] overflow-y-auto custom-scrollbar p-1">
                           <div v-if="filteredAssets.crypto.length > 0">
@@ -989,16 +992,16 @@ const earningsSeasonInfo = computed(() => {
                   </div>
 
                   <div class="space-y-1.5">
-                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">持倉數量</span>
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">{{ locale === 'zh-TW' ? '持倉數量' : 'Amount' }}</span>
                     <input v-model="newAmount" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
                   </div>
                   <div class="space-y-1.5">
-                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">平均成本</span>
+                    <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">{{ locale === 'zh-TW' ? '平均成本' : 'Entry Price' }}</span>
                     <input v-model="newPrice" type="number" step="any" placeholder="0.00" class="h-10 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
                   </div>
                   <div class="space-y-1.5">
                     <span class="text-[10px] opacity-0 select-none block tracking-wider">Btn</span>
-                    <button type="submit" class="h-10 w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-lg transition-all shadow-lg active:scale-95">確認加入</button>
+                    <button type="submit" class="h-10 w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-lg transition-all shadow-lg active:scale-95">{{ locale === 'zh-TW' ? '確認加入' : 'Confirm Add' }}</button>
                   </div>
                 </form>
               </transition>
@@ -1018,7 +1021,7 @@ const earningsSeasonInfo = computed(() => {
                     <path class="text-emerald-500 transition-all duration-1000 ease-out" :stroke-dasharray="`${portfolioAllocation.stockPercent}, 100`" :stroke-dashoffset="`-${portfolioAllocation.cryptoPercent}`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" />
                   </svg>
                   <div class="absolute inset-0 flex flex-col items-center justify-center">
-                    <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">總資產</span>
+                    <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">{{ locale === 'zh-TW' ? '總資產' : 'Total Portfolio' }}</span>
                     <span class="text-sm font-black text-white font-mono tracking-tighter">${{ portfolioAllocation.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</span>
                   </div>
                 </div>
@@ -1026,7 +1029,7 @@ const earningsSeasonInfo = computed(() => {
                 <div class="flex-1 w-full text-left">
                   <div class="flex items-center justify-between mb-6">
                     <div>
-                      <h4 class="text-lg font-black text-white tracking-tight leading-none">資產配置分析</h4>
+                      <h4 class="text-lg font-black text-white tracking-tight leading-none">{{ locale === 'zh-TW' ? '資產配置分析' : 'Allocation Analysis' }}</h4>
                       <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-2">Portfolio Allocation Analysis</p>
                     </div>
                   </div>
@@ -1036,7 +1039,7 @@ const earningsSeasonInfo = computed(() => {
                       <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
                           <div class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-                          <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider">加密貨幣</span>
+                          <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider">{{ locale === 'zh-TW' ? '加密貨幣' : 'Crypto' }}</span>
                         </div>
                         <div class="text-xs font-black text-blue-400 font-mono bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20">{{ portfolioAllocation.cryptoPercent.toFixed(1) }}%</div>
                       </div>
@@ -1050,7 +1053,7 @@ const earningsSeasonInfo = computed(() => {
                       <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
                           <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-                          <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider">股票與指數</span>
+                          <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider">{{ locale === 'zh-TW' ? '股票與指數' : 'Stocks & Indices' }}</span>
                         </div>
                         <div class="text-xs font-black text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">{{ portfolioAllocation.stockPercent.toFixed(1) }}%</div>
                       </div>
@@ -1072,7 +1075,7 @@ const earningsSeasonInfo = computed(() => {
                   <div v-if="categorizedPortfolio.crypto.length > 0">
                     <div class="flex items-center gap-2 mb-3 px-1">
                       <div class="w-1.5 h-4 bg-blue-500 rounded-full"></div>
-                      <span class="text-xs font-black text-blue-400 uppercase tracking-widest">加密貨幣 (Crypto)</span>
+                      <span class="text-xs font-black text-blue-400 uppercase tracking-widest">{{ locale === 'zh-TW' ? '加密貨幣' : 'Crypto' }}</span>
                     </div>
                     <div class="grid grid-cols-1 gap-3">
                       <div v-for="item in categorizedPortfolio.crypto" :key="item.id" 
@@ -1086,17 +1089,17 @@ const earningsSeasonInfo = computed(() => {
                               <h4 class="text-white font-bold uppercase">{{ formatSymbol(item.symbol) }}</h4>
                               <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Qty: {{ item.amount }}</span>
                             </div>
-                            <p class="text-[10px] text-slate-500 mt-1 font-mono">買入成本: ${{ item.entryPrice.toLocaleString() }}</p>
+                            <p class="text-[10px] text-slate-500 mt-1 font-mono">{{ locale === 'zh-TW' ? '買入成本: ' : 'Cost: ' }}${{ item.entryPrice.toLocaleString() }}</p>
                           </div>
                         </div>
 
                         <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 md:gap-16 mt-3 md:mt-0 pt-3 md:pt-0 border-t border-white/5 md:border-t-0">
                           <div class="text-right">
-                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">即時現價</p>
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">{{ locale === 'zh-TW' ? '即時現價' : 'Current Price' }}</p>
                             <p class="text-white font-mono font-bold">{{ marketPrices[item.symbol]?.price || '$' + item.entryPrice }}</p>
                           </div>
                           <div class="text-right min-w-[100px]">
-                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">估計盈虧</p>
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">{{ locale === 'zh-TW' ? '估計盈虧' : 'Estimated PnL' }}</p>
                             <p :class="((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? 'text-green-400' : 'text-red-400'" class="font-mono font-bold text-lg">
                               {{ ((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? '+' : '' }}
                               ${{ (((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toLocaleString('en-US', {maximumFractionDigits: 1}) }}
@@ -1104,10 +1107,10 @@ const earningsSeasonInfo = computed(() => {
                           </div>
 
                           <div class="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                            <button @click="openAdjust(item)" class="p-2 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-all" title="調整持倉">
+                            <button @click="openAdjust(item)" class="p-2 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-all" :title="locale === 'zh-TW' ? '調整持倉' : 'Adjust Holding'">
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
                             </button>
-                            <button @click="triggerDelete(item.id, item.symbol)" class="p-2 text-red-400 hover:text-white hover:bg-red-600/20 rounded-lg transition-all" title="刪除">
+                            <button @click="triggerDelete(item.id, item.symbol)" class="p-2 text-red-400 hover:text-white hover:bg-red-600/20 rounded-lg transition-all" :title="locale === 'zh-TW' ? '刪除' : 'Delete'">
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
@@ -1120,7 +1123,7 @@ const earningsSeasonInfo = computed(() => {
                   <div v-if="categorizedPortfolio.stock.length > 0">
                     <div class="flex items-center gap-2 mb-3 px-1">
                       <div class="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
-                      <span class="text-xs font-black text-emerald-400 uppercase tracking-widest">股票與指數 (Stocks & Indices)</span>
+                      <span class="text-xs font-black text-emerald-400 uppercase tracking-widest">{{ locale === 'zh-TW' ? '股票與指數 (Stocks & Indices)' : 'Stocks & Indices' }}</span>
                     </div>
                     <div class="grid grid-cols-1 gap-3">
                       <div v-for="item in categorizedPortfolio.stock" :key="item.id" 
@@ -1134,17 +1137,17 @@ const earningsSeasonInfo = computed(() => {
                               <h4 class="text-white font-bold uppercase">{{ formatSymbol(item.symbol) }}</h4>
                               <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Qty: {{ item.amount }}</span>
                             </div>
-                            <p class="text-[10px] text-slate-500 mt-1 font-mono">買入成本: ${{ item.entryPrice.toLocaleString() }}</p>
+                            <p class="text-[10px] text-slate-500 mt-1 font-mono">{{ locale === 'zh-TW' ? '買入成本: ' : 'Cost: ' }}${{ item.entryPrice.toLocaleString() }}</p>
                           </div>
                         </div>
 
                         <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 md:gap-16 mt-3 md:mt-0 pt-3 md:pt-0 border-t border-white/5 md:border-t-0">
                           <div class="text-right">
-                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">即時現價</p>
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">{{ locale === 'zh-TW' ? '即時現價' : 'Current Price' }}</p>
                             <p class="text-white font-mono font-bold">{{ marketPrices[item.symbol]?.price || '$' + item.entryPrice }}</p>
                           </div>
                           <div class="text-right min-w-[100px]">
-                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">估計盈虧</p>
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">{{ locale === 'zh-TW' ? '估計盈虧' : 'Estimated PnL' }}</p>
                             <p :class="((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? 'text-green-400' : 'text-red-400'" class="font-mono font-bold text-lg">
                               {{ ((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount >= 0 ? '+' : '' }}
                               ${{ (((marketPrices[item.symbol]?.rawPrice || item.entryPrice) - item.entryPrice) * item.amount).toLocaleString('en-US', {maximumFractionDigits: 1}) }}
@@ -1152,10 +1155,10 @@ const earningsSeasonInfo = computed(() => {
                           </div>
 
                           <div class="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                            <button @click="openAdjust(item)" class="p-2 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-all" title="調整持倉">
+                            <button @click="openAdjust(item)" class="p-2 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-all" :title="locale === 'zh-TW' ? '調整持倉' : 'Adjust Holding'">
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
                             </button>
-                            <button @click="triggerDelete(item.id, item.symbol)" class="p-2 text-red-400 hover:text-white hover:bg-red-600/20 rounded-lg transition-all" title="刪除">
+                            <button @click="triggerDelete(item.id, item.symbol)" class="p-2 text-red-400 hover:text-white hover:bg-red-600/20 rounded-lg transition-all" :title="locale === 'zh-TW' ? '刪除' : 'Delete'">
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
@@ -1166,7 +1169,7 @@ const earningsSeasonInfo = computed(() => {
                 </template>
                 <div v-else class="py-12 flex flex-col items-center text-slate-600">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                  <p class="text-xs">尚無倉位，點擊「新增倉位」開始追蹤。</p>
+                  <p class="text-xs">{{ locale === 'zh-TW' ? '尚無倉位，點擊「新增資產」開始追蹤。' : 'No holdings yet. Click "Add Asset" to start tracking.' }}</p>
                 </div>
               </div>
             </div>
@@ -1181,12 +1184,12 @@ const earningsSeasonInfo = computed(() => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
-            <h3 class="text-white text-xl font-black mb-3">登入以使用此功能</h3>
+            <h3 class="text-white text-xl font-black mb-3">{{ locale === 'zh-TW' ? '登入以使用此功能' : 'Login to use this feature' }}</h3>
             <p class="text-slate-400 text-sm md:text-base mb-8 leading-relaxed">
-              為保護個人資產隱私，持倉功能僅限會員使用。
+              {{ locale === 'zh-TW' ? '為保護個人資產隱私，持倉功能僅限會員使用。' : 'To protect personal assets privacy, portfolio feature requires a member account.' }}
             </p>
             <button @click="goToLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/30 active:scale-95">
-              立即登入 / 註冊
+              {{ locale === 'zh-TW' ? '立即登入 / 註冊' : 'Login / Register Now' }}
             </button>
           </div>
         </template>
@@ -1215,7 +1218,7 @@ const earningsSeasonInfo = computed(() => {
         </div>
         <div v-else-if="filteredMovers.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500 text-sm">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-          此類別暫無監控數據
+          {{ locale === 'zh-TW' ? '此類別暫無監控數據' : 'No active movers data for this category' }}
         </div>
         <div v-else class="max-w-5xl mx-auto space-y-4">
           <div 
@@ -1244,18 +1247,18 @@ const earningsSeasonInfo = computed(() => {
                   <h3 class="text-white font-bold text-[11px] md:text-sm leading-tight mb-1 truncate md:whitespace-normal">{{ getDisplayTitle(item) }}</h3>
                   <div class="flex items-center text-[9px] md:text-xs text-slate-500 space-x-2">
                     <a v-if="item.slug" :href="`https://polymarket.com/event/${item.slug}`" target="_blank" rel="noopener" class="px-2 py-0.5 rounded bg-blue-600/10 border border-blue-500/30 text-blue-400 hover:bg-blue-600 hover:text-white transition-all text-[9px] md:text-[10px] font-black flex items-center gap-1.5 active:scale-95 shadow-sm">
-                      <span>下注</span>
+                      <span>{{ locale === 'zh-TW' ? '下注' : 'Bet' }}</span>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                     </a>
                     <button 
                       @click.prevent="openAIDrawer(item.symbol || item.title, item.currentPrice, 'crypto')"
                       class="flex items-center space-x-1 text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-900/40 text-blue-400 bg-blue-950/20 hover:bg-blue-600 hover:text-white transition-all shadow-sm shrink-0"
-                      title="AI 智能速報"
+                      :title="locale === 'zh-TW' ? 'AI 智能速報' : 'AI Analysis'"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
-                      <span>AI 速報</span>
+                      <span>{{ locale === 'zh-TW' ? 'AI 速報' : 'AI Analysis' }}</span>
                     </button>
                     <button 
                       @click.prevent="toggleTranslateMover(item)" 
@@ -1270,7 +1273,7 @@ const earningsSeasonInfo = computed(() => {
                       <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
                       </svg>
-                      <span>{{ translatingIds.has(item.id) ? '翻譯中...' : (translatedIds.has(item.id) ? '原文' : '翻譯') }}</span>
+                      <span>{{ translatingIds.has(item.id) ? (locale === 'zh-TW' ? '翻譯中...' : 'Translating...') : (translatedIds.has(item.id) ? t('originalNews') : t('translate')) }}</span>
                     </button>
                   </div>
                 </div>
@@ -1319,7 +1322,7 @@ const earningsSeasonInfo = computed(() => {
           <div class="flex items-center justify-between mb-6">
             <h3 class="text-lg font-bold text-white flex items-center gap-2">
               <span class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center">⚙️</span>
-              調整 {{ adjustItem?.symbol }} 持倉
+              {{ locale === 'zh-TW' ? '調整' : 'Adjust' }} {{ adjustItem?.symbol }} {{ locale === 'zh-TW' ? '持倉' : 'Holding' }}
             </h3>
             <button @click="showAdjustModal = false" class="text-slate-500 hover:text-white transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -1333,25 +1336,25 @@ const earningsSeasonInfo = computed(() => {
               class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
               :class="adjustType === 'add' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'"
             >
-              加倉 ⊕
+              {{ locale === 'zh-TW' ? '加倉 ⊕' : 'Add ⊕' }}
             </button>
             <button 
               @click="adjustType = 'reduce'"
               class="flex-1 py-2 text-xs font-bold rounded-lg transition-all"
               :class="adjustType === 'reduce' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'"
             >
-              減倉 ⊖
+              {{ locale === 'zh-TW' ? '減倉 ⊖' : 'Reduce ⊖' }}
             </button>
           </div>
 
           <div class="space-y-5">
             <div class="grid grid-cols-2 gap-4">
               <div class="space-y-1.5">
-                <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">數量</span>
+                <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">{{ locale === 'zh-TW' ? '數量' : 'Amount' }}</span>
                 <input v-model="adjustAmount" type="number" step="any" placeholder="0.00" class="h-11 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-xl px-4 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
               </div>
               <div class="space-y-1.5">
-                <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">單價 (USD)</span>
+                <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">{{ locale === 'zh-TW' ? '單價 (USD)' : 'Price (USD)' }}</span>
                 <input v-model="adjustPrice" type="number" step="any" placeholder="0.00" class="h-11 hide-arrows w-full bg-[#05080f] border border-slate-700 rounded-xl px-4 text-white text-sm outline-none focus:border-blue-500 transition-colors" />
               </div>
             </div>
@@ -1359,17 +1362,17 @@ const earningsSeasonInfo = computed(() => {
             <!-- Projection Card -->
             <div v-if="projectedStats" class="bg-blue-600/5 border border-blue-500/20 rounded-xl p-4 space-y-3">
               <div class="flex justify-between items-center text-xs">
-                <span class="text-slate-400">當前持倉 / 成本</span>
+                <span class="text-slate-400">{{ locale === 'zh-TW' ? '當前持倉 / 成本' : 'Current Qty / Price' }}</span>
                 <span class="text-white font-bold">{{ adjustItem.amount }} / ${{ adjustItem.entryPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}</span>
               </div>
               <div class="flex justify-between items-center text-xs">
-                <span class="text-slate-400">調整後總量</span>
+                <span class="text-slate-400">{{ locale === 'zh-TW' ? '調整後總量' : 'Adjusted Qty' }}</span>
                 <span class="text-white font-bold" :class="projectedStats.totalQty > adjustItem.amount ? 'text-blue-400' : 'text-red-400'">
                   {{ Number(projectedStats.totalQty.toFixed(8)) }}
                 </span>
               </div>
               <div v-if="adjustType === 'add'" class="flex justify-between items-center text-xs pt-2 border-t border-white/5">
-                <span class="text-blue-400 font-bold">預計新平均成本 (DCA)</span>
+                <span class="text-blue-400 font-bold">{{ locale === 'zh-TW' ? '預計新平均成本 (DCA)' : 'New Avg Cost (DCA)' }}</span>
                 <span class="text-blue-400 font-black text-sm">${{ projectedStats.newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}</span>
               </div>
             </div>
@@ -1380,7 +1383,7 @@ const earningsSeasonInfo = computed(() => {
               class="w-full py-3.5 rounded-xl text-sm font-black tracking-widest transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-xl"
               :class="adjustType === 'add' ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20' : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/20'"
             >
-              {{ isAdjusting ? '同步中...' : (adjustType === 'add' ? '確認加倉並重新計算成本' : '確認執行減倉') }}
+              {{ isAdjusting ? (locale === 'zh-TW' ? '同步中...' : 'Syncing...') : (adjustType === 'add' ? (locale === 'zh-TW' ? '確認加倉並重新計算成本' : 'Confirm Add & Recalculate DCA') : (locale === 'zh-TW' ? '確認執行減倉' : 'Confirm Reduce')) }}
             </button>
           </div>
         </div>
@@ -1389,21 +1392,21 @@ const earningsSeasonInfo = computed(() => {
 
     <!-- Delete Confirmation Modal -->
     <transition name="fade">
-      <div v-if="confirmDeleteId !== null" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+      <div v-if="confirmDeleteId !== null" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/60 backdrop-blur-md">
         <div class="bg-[#111827] border border-red-900/50 rounded-xl p-6 w-full max-w-sm shadow-2xl text-center">
           <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 class="text-lg font-bold text-white mb-2">確定要刪除持倉嗎？</h3>
-          <p class="text-xs text-slate-400 mb-6">您即將移除 <span class="text-white font-bold">{{ confirmDeleteSymbol }}</span> 的持倉紀錄，此動作無法復原。</p>
+          <h3 class="text-lg font-bold text-white mb-2">{{ locale === 'zh-TW' ? '確定要刪除持倉嗎？' : 'Delete holding?' }}</h3>
+          <p class="text-xs text-slate-400 mb-6">{{ locale === 'zh-TW' ? `您即將移除 ${confirmDeleteSymbol} 的持倉紀錄，此動作無法復原。` : `You are about to remove the holding record for ${confirmDeleteSymbol}. This action cannot be undone.` }}</p>
           <div class="flex gap-3">
             <button @click="confirmDeleteId = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
-              取消
+              {{ t('cancel') }}
             </button>
             <button @click="confirmDeleteAction" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold">
-              確定刪除
+              {{ t('confirmDelete') }}
             </button>
           </div>
         </div>

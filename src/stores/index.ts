@@ -266,3 +266,10 @@ export const initSupabaseChat = () => useChatStore().initSupabaseChat()
 export const addChatMessage = (msg: { user: string; avatar: string; text: string; newsShare?: any }) => 
   useChatStore().addChatMessage(msg)
 export const removeChatMessage = (id: string) => useChatStore().removeChatMessage(id)
+
+export const locale = computed({
+  get: () => useAppStore().locale,
+  set: (val) => { useAppStore().locale = val }
+})
+export const t = (key: any) => useAppStore().t(key)
+

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
-import { activeSymbol, priceAlerts, addPriceAlert, removePriceAlert, chatSession, goToLogin } from '../stores'
+import { activeSymbol, priceAlerts, addPriceAlert, removePriceAlert, chatSession, goToLogin, t } from '../stores'
 import { api } from '../network'
 import NewsFeed from './NewsFeed.vue'
 import EconomicCalendar from './EconomicCalendar.vue'
@@ -158,25 +158,25 @@ onUnmounted(() => {
     <!-- View Switcher -->
     <div class="flex h-10 md:h-12 border-b border-slate-800 bg-[#070b14] shrink-0">
       <button 
-        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2"
+        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2 cursor-pointer"
         :class="currentView === 'FEED' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
         @click="currentView = 'FEED'"
-      >FEED NEWS</button>
+      >{{ t('feedNews') }}</button>
       <button 
-        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2"
+        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2 cursor-pointer"
         :class="currentView === 'ORDERBOOK' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
         @click="currentView = 'ORDERBOOK'"
-      >ORDER BOOK</button>
+      >{{ t('orderBook') }}</button>
       <button 
-        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2"
+        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2 cursor-pointer"
         :class="currentView === 'ALERTS' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
         @click="currentView = 'ALERTS'"
-      >ALERTS</button>
+      >{{ t('alerts') }}</button>
       <button 
-        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2"
+        class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2 cursor-pointer"
         :class="currentView === 'CALENDAR' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
         @click="currentView = 'CALENDAR'"
-      >CALENDAR</button>
+      >{{ t('calendar') }}</button>
     </div>
 
     <!-- News Feed Section -->
@@ -190,8 +190,8 @@ onUnmounted(() => {
       <!-- Stock Data Display for Stocks -->
       <div v-if="!isCrypto" class="absolute inset-0 z-50 bg-[#070b14] flex flex-col p-1 md:p-2 border-t border-slate-800 overflow-y-auto custom-scrollbar">
         <div class="flex items-center justify-between mb-2 md:mb-4 px-1 md:px-2">
-          <h3 class="text-xs font-bold text-slate-300 tracking-widest uppercase">基本面</h3>
-          <span v-if="isStockInfoLoading" class="text-[10px] text-slate-500 font-mono animate-pulse">載入中...</span>
+          <h3 class="text-xs font-bold text-slate-300 tracking-widest uppercase">{{ t('fundamentals') }}</h3>
+          <span v-if="isStockInfoLoading" class="text-[10px] text-slate-500 font-mono animate-pulse">{{ t('loading') }}</span>
         </div>
         
         <template v-if="stockInfo">
@@ -257,13 +257,13 @@ onUnmounted(() => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8 text-slate-600 mb-2 md:mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span class="text-slate-400 text-[10px] md:text-xs font-bold font-mono tracking-widest leading-tight">目前無可用基本面資料</span>
-            <span class="text-slate-500 text-[9px] md:text-[10px] mt-1 md:mt-2 leading-relaxed">此資產可能為指數或暫不提供資料。</span>
+            <span class="text-slate-400 text-[10px] md:text-xs font-bold font-mono tracking-widest leading-tight">{{ t('noFundamentals') }}</span>
+            <span class="text-slate-500 text-[9px] md:text-[10px] mt-1 md:mt-2 leading-relaxed">{{ t('noFundamentalsSub') }}</span>
           </div>
         </template>
       </div>
       <div class="flex items-center justify-between mb-2 md:mb-4 px-1 md:px-2">
-        <h3 class="text-xs font-bold text-slate-300 tracking-widest uppercase">訂單</h3>
+        <h3 class="text-xs font-bold text-slate-300 tracking-widest uppercase">{{ t('orders') }}</h3>
         <div class="flex space-x-1">
           <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></button>
           <button class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></button>
@@ -271,9 +271,9 @@ onUnmounted(() => {
       </div>
 
       <div class="flex text-[9px] md:text-[10px] text-slate-500 font-bold px-1 md:px-2 mb-1">
-        <span class="flex-1">價格(USDT)</span>
-        <span class="flex-1 text-right">數量(BTC)</span>
-        <span class="flex-1 text-right">總計</span>
+        <span class="flex-1">{{ t('priceUsdt') }}</span>
+        <span class="flex-1 text-right">{{ t('amountBtc') }}</span>
+        <span class="flex-1 text-right">{{ t('total') }}</span>
       </div>
 
       <!-- Asks (Sells) -->
@@ -312,28 +312,28 @@ onUnmounted(() => {
     <div v-show="currentView === 'ALERTS'" class="h-[300px] md:h-auto md:flex-1 flex flex-col min-h-0 p-2 md:p-3 relative overflow-y-auto">
       <template v-if="chatSession">
         <div class="mb-4 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-          <h4 class="text-xs font-bold text-slate-300 mb-2">新增 {{ activeSymbol }} 到價提醒</h4>
+          <h4 class="text-xs font-bold text-slate-300 mb-2">{{ t('addPriceAlertLabel') }} ({{ activeSymbol }})</h4>
           <div class="flex gap-2">
             <select v-model="newAlertCondition" class="bg-[#0a0f1c] text-white border border-slate-700 rounded p-1 text-xs">
-              <option value="above">≥ 大於</option>
-              <option value="below">≤ 小於</option>
+              <option value="above">{{ t('aboveLabel') }}</option>
+              <option value="below">{{ t('belowLabel') }}</option>
             </select>
-            <input type="number" v-model="newAlertPrice" placeholder="目標價格" class="flex-1 min-w-0 bg-[#0a0f1c] text-white border border-slate-700 rounded p-1 text-xs outline-none focus:border-blue-500">
-            <button @click="createAlert" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1 px-3 rounded text-xs transition-colors shrink-0">設定</button>
+            <input type="number" v-model="newAlertPrice" :placeholder="t('targetPrice')" class="flex-1 min-w-0 bg-[#0a0f1c] text-white border border-slate-700 rounded p-1 text-xs outline-none focus:border-blue-500 font-mono">
+            <button @click="createAlert" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1 px-3 rounded text-xs transition-colors shrink-0 cursor-pointer">{{ t('setAlert') }}</button>
           </div>
         </div>
 
         <div class="flex-1 overflow-y-auto">
-          <h4 class="text-xs font-bold text-slate-300 mb-2">現有提醒</h4>
-          <div v-if="priceAlerts.length === 0" class="text-slate-500 text-xs text-center py-4">目前無設定任何提醒</div>
+          <h4 class="text-xs font-bold text-slate-300 mb-2">{{ t('existingAlerts') }}</h4>
+          <div v-if="priceAlerts.length === 0" class="text-slate-500 text-xs text-center py-4">{{ t('noAlerts') }}</div>
           <div v-for="alert in priceAlerts" :key="alert.id" class="flex items-center justify-between p-2 mb-2 rounded bg-[#0a0f1c] border border-slate-800 transition-opacity" :class="{'opacity-50 grayscale': alert.triggered}">
             <div class="flex flex-col">
               <span class="text-white font-bold text-xs">{{ alert.symbol }}</span>
-              <span class="text-slate-400 text-[10px]">{{ alert.condition === 'above' ? '≥' : '≤' }} {{ alert.targetPrice }}</span>
+              <span class="text-slate-400 text-[10px] font-mono">{{ alert.condition === 'above' ? '≥' : '≤' }} {{ alert.targetPrice }}</span>
             </div>
             <div class="flex items-center gap-2">
-              <span v-if="alert.triggered" class="text-green-500 text-[10px] font-bold">已觸發</span>
-              <button @click="triggerDeleteAlert(alert)" class="text-red-400 hover:text-red-300 text-xs px-2 py-1 bg-red-900/20 rounded">刪除</button>
+              <span v-if="alert.triggered" class="text-green-500 text-[10px] font-bold">{{ t('triggered') }}</span>
+              <button @click="triggerDeleteAlert(alert)" class="text-red-400 hover:text-red-300 text-xs px-2 py-1 bg-red-900/20 rounded cursor-pointer">{{ t('delete') }}</button>
             </div>
           </div>
         </div>
@@ -343,10 +343,10 @@ onUnmounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-700 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
-          <h4 class="text-white font-bold mb-2">登入後即可設定提醒</h4>
-          <p class="text-slate-500 text-[10px] mb-6 leading-relaxed">為了確保您的到價提醒能精確儲存並在跨裝置同步，到價提醒功能僅限會員使用。</p>
-          <button @click="goToLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-lg transition-all text-xs shadow-lg shadow-blue-600/20">
-            去登入 / 註冊
+          <h4 class="text-white font-bold mb-2">{{ t('loginToSetAlert') }}</h4>
+          <p class="text-slate-500 text-[10px] mb-6 leading-relaxed">{{ t('loginToSetAlertSub') }}</p>
+          <button @click="goToLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-lg transition-all text-xs shadow-lg shadow-blue-600/20 cursor-pointer">
+            {{ t('goToLoginOrRegister') }}
           </button>
         </div>
       </template>
@@ -366,14 +366,14 @@ onUnmounted(() => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 class="text-lg font-bold text-white mb-2">確定要刪除此提醒嗎？</h3>
-          <p class="text-xs text-slate-400 mb-6">您即將移除 <span class="text-white font-bold">{{ alertToDelete.symbol }}</span> 在 <span class="text-white font-bold">${{ alertToDelete.price }}</span> 的提醒。</p>
+          <h3 class="text-lg font-bold text-white mb-2">{{ t('confirmDeleteAlertTitle') }}</h3>
+          <p class="text-xs text-slate-400 mb-6">{{ t('confirmDeleteAlertSub') }} <span class="text-white font-bold">{{ alertToDelete.symbol }}</span> @ <span class="text-white font-bold">${{ alertToDelete.price }}</span></p>
           <div class="flex gap-3">
-            <button @click="alertToDelete = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold">
-              取消
+            <button @click="alertToDelete = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold cursor-pointer">
+              {{ t('cancel') }}
             </button>
-            <button @click="confirmDeleteAlertAction" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold">
-              確定刪除
+            <button @click="confirmDeleteAlertAction" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold cursor-pointer">
+              {{ t('confirmDelete') }}
             </button>
           </div>
         </div>

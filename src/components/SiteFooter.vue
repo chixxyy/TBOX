@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { scrollProgress, isChangingTab } from '../stores'
+import { scrollProgress, isChangingTab, t } from '../stores'
 
 const uptime = ref('00:00:00')
 const startTime = Date.now()
@@ -32,7 +32,7 @@ onMounted(() => {
       <!-- Status Indicator -->
       <div class="flex items-center space-x-1.5 shrink-0">
         <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-        <span class="text-[9px] md:text-[10px] text-slate-500 font-bold tracking-tighter uppercase whitespace-nowrap">System Operational</span>
+        <span class="text-[9px] md:text-[10px] text-slate-500 font-bold tracking-tighter uppercase whitespace-nowrap">{{ t('systemOperational') }}</span>
       </div>
 
       <!-- Divider -->

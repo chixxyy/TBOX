@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useFetch } from '@vueuse/core'
-import { activeSymbol, setActiveSymbol, marketPrices, initialAssets, openAIDrawer } from '../stores'
+import { activeSymbol, setActiveSymbol, marketPrices, initialAssets, openAIDrawer, t } from '../stores'
 
 interface Asset {
   symbol: string
@@ -26,7 +26,7 @@ const assets = ref<Asset[]>(initialAssets.map(a => ({
 
 const filter = ref('')
 const activeFilterIndex = ref(0)
-const filters = ['全部', '加密貨幣', '股票', '指數']
+const filters = ['all', 'crypto', 'stock', 'indices'] as const
 
 const filteredAssets = computed(() => {
   // Separate assets by type
@@ -379,7 +379,7 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').
         <input 
           v-model="filter" 
           type="text" 
-          placeholder="搜尋股票、幣種或指數" 
+          :placeholder="t('searchPlaceholder')" 
           class="bg-transparent border-none text-xs text-slate-300 focus:outline-none w-full placeholder-slate-600 font-mono"
         />
       </div>
@@ -390,19 +390,19 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').
           v-for="(f, i) in filters" 
           :key="f"
           @click="activeFilterIndex = i"
-          class="flex-1 min-w-[64px] py-1.5 rounded-md text-[10px] md:text-xs font-bold font-mono transition-all uppercase tracking-wider text-center shrink-0"
+          class="flex-1 min-w-[64px] py-1.5 rounded-md text-[10px] md:text-xs font-bold font-mono transition-all uppercase tracking-wider text-center shrink-0 cursor-pointer"
           :class="activeFilterIndex === i ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.1)]' : 'bg-[#111827] text-slate-500 border border-slate-800 hover:text-slate-300 hover:bg-slate-800'"
         >
-          {{ f }}
+          {{ t(f) }}
         </button>
       </div>
     </div>
 
     <!-- List Headers -->
     <div class="flex items-center justify-between px-2 md:px-4 py-1 md:py-2 text-[9px] md:text-[10px] font-bold text-slate-500 border-b border-slate-800/50 bg-[#070b14]">
-      <span>資產 ({{ filteredAssets.length }})</span>
+      <span>{{ t('assetsLabel') }} ({{ filteredAssets.length }})</span>
       <div class="flex space-x-4 md:space-x-8 text-right pr-4 md:pr-10">
-        <span class="w-16 md:w-20">價格</span>
+        <span class="w-16 md:w-20">{{ t('price') }}</span>
         <span class="w-12 md:w-16">24H</span>
       </div>
     </div>
@@ -436,8 +436,8 @@ const formatSymbolDisplay = (symbol: string) => symbol.replace('USDT', '/USDT').
         <!-- Absolutely positioned AI Button -->
         <button 
           @click.stop="openAIDrawer(asset.symbol, asset.rawPrice, asset.type)" 
-          title="AI 智能速報" 
-          class="absolute right-1 md:right-3 w-8 h-8 flex items-center justify-center text-blue-500 hover:text-white hover:bg-blue-600 rounded transition-all shrink-0 z-10"
+          :title="t('aiAnalysis')" 
+          class="absolute right-1 md:right-3 w-8 h-8 flex items-center justify-center text-blue-500 hover:text-white hover:bg-blue-600 rounded transition-all shrink-0 z-10 cursor-pointer"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />

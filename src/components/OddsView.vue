@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { api } from '../network'
-import { showToast, trackedPlayers, initTrackedPlayers, setScrollProgress } from '../stores'
+import { showToast, trackedPlayers, initTrackedPlayers, setScrollProgress, locale } from '../stores'
 
 interface Outcome { name: string; price: number }
 interface Market { key: string; outcomes: Outcome[] }
@@ -63,13 +63,13 @@ const formatTime = (iso: string) => {
   const d = new Date(iso)
   const now = new Date()
   const diff = (d.getTime() - now.getTime()) / 3600000
-  if (diff < 0 && diff > -4) return '進行中 🔴'
-  if (diff <= -4) return '已結束'
+  if (diff < 0 && diff > -4) return locale.value === 'zh-TW' ? '進行中 🔴' : 'LIVE 🔴'
+  if (diff <= -4) return locale.value === 'zh-TW' ? '已結束' : 'Ended'
   
   const datePart = `${d.getMonth() + 1}/${d.getDate()}`
   const timePart = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
   
-  return `${datePart} ${timePart} 開打`
+  return locale.value === 'zh-TW' ? `${datePart} ${timePart} 開打` : `${datePart} ${timePart} Start`
 }
 
 const getOdds = (game: Game, team: string) => {
@@ -297,7 +297,16 @@ const sortModes: { key: SortMode; label: string; icon: string }[] = [
   { key: 'alpha',     label: '字母',   icon: '🔤' },
 ]
 
-const currentSort = computed(() => sortModes.find(s => s.key === sortMode.value)!)
+const currentSort = computed(() => {
+  const item = sortModes.find(s => s.key === sortMode.value)!
+  let label = item.label
+  if (locale.value !== 'zh-TW') {
+    if (item.key === 'time') label = 'Time'
+    else if (item.key === 'prob_desc') label = 'Prob'
+    else if (item.key === 'alpha') label = 'Alpha'
+  }
+  return { ...item, label }
+})
 
 const cycleSort = () => {
   const idx = sortModes.findIndex(s => s.key === sortMode.value)
@@ -359,15 +368,21 @@ const getLiveStatus = (game: Game, league: 'MLB' | 'NBA') => {
   if (league === 'MLB') {
     // Advanced MLB translation logic
     const isInning = detail.toLowerCase().includes('inning') || /\d/.test(detail)
-    detail = detail.replace(/Top/i, '↑').replace(/Bot/i, '↓').replace(/Mid/i, '中').replace(/End/i, '末')
-    detail = detail.replace(/1st/i, '1').replace(/2nd/i, '2').replace(/3rd/i, '3').replace(/(\d+)th/i, '$1')
-    detail = detail.replace(/Inning/i, '')
-    if (isInning && !detail.includes('局') && !detail.includes('末') && !detail.includes('中')) {
-      detail = detail.trim() + ' 局'
+    if (locale.value === 'zh-TW') {
+      detail = detail.replace(/Top/i, '↑').replace(/Bot/i, '↓').replace(/Mid/i, '中').replace(/End/i, '末')
+      detail = detail.replace(/1st/i, '1').replace(/2nd/i, '2').replace(/3rd/i, '3').replace(/(\d+)th/i, '$1')
+      detail = detail.replace(/Inning/i, '')
+      if (isInning && !detail.includes('局') && !detail.includes('末') && !detail.includes('中')) {
+        detail = detail.trim() + ' 局'
+      }
+    } else {
+      detail = detail.replace(/↑/g, 'Top ').replace(/↓/g, 'Bot ')
     }
   } else {
-    detail = detail.replace('1st', '1節').replace('2nd', '2節').replace('3rd', '3節').replace('4th', '4節')
-    detail = detail.replace('Quarter', '節').replace('Half', '半場')
+    if (locale.value === 'zh-TW') {
+      detail = detail.replace('1st', '1節').replace('2nd', '2節').replace('3rd', '3節').replace('4th', '4節')
+      detail = detail.replace('Quarter', '節').replace('Half', '半場')
+    }
   }
 
   return { 
@@ -591,32 +606,32 @@ onUnmounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
         </div>
         <div class="min-w-0">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">即時更新</div>
-          <div class="text-white font-bold text-xs md:text-lg leading-none">運彩賠率</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? '即時更新' : 'Live Update' }}</div>
+          <div class="text-white font-bold text-xs md:text-lg leading-none">{{ locale === 'zh-TW' ? '運彩賠率' : 'Sports Odds' }}</div>
         </div>
       </div>
 
       <!-- Box 2: MLB Stats -->
-      <div class="flex-1 flex items-center space-x-1 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-1.5 md:px-4 py-1.5 md:py-2.5 min-w-0" title="MLB 賽季進度">
+      <div class="flex-1 flex items-center space-x-1 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-1.5 md:px-4 py-1.5 md:py-2.5 min-w-0" :title="locale === 'zh-TW' ? 'MLB 賽季進度' : 'MLB Season Progress'">
         <div class="w-6 h-6 md:w-9 md:h-9 rounded-full bg-blue-900/30 border border-blue-800/50 flex items-center justify-center shrink-0">
           <span class="text-[12px] md:text-[16px] leading-none text-blue-400 opacity-80 backdrop-grayscale">⚾</span>
         </div>
         <div class="min-w-0 relative flex-1">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">MLB 賽季</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate">{{ locale === 'zh-TW' ? 'MLB 賽季' : 'MLB Season' }}</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none">{{ getSeasonProgress('MLB').played }} <span class="text-[8px] md:text-[10px] text-slate-500">/ 162</span></div>
           <span v-if="getSeasonProgress('MLB').status === '季後賽'" class="absolute -top-1 -right-0.5 md:-top-5 md:right-0 text-[6px] md:text-[8px] bg-blue-500/20 text-blue-500 px-1 py-0.5 rounded border border-blue-500/30 font-black animate-pulse whitespace-nowrap uppercase">Postseason</span>
         </div>
       </div>
 
       <!-- Box 3: NBA Stats -->
-      <div class="flex-1 flex items-center space-x-1 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-1.5 md:px-4 py-1.5 md:py-2.5 min-w-0 relative" title="NBA 賽季進度">
+      <div class="flex-1 flex items-center space-x-1 md:space-x-4 bg-[#111827] border border-slate-800 rounded-lg px-1.5 md:px-4 py-1.5 md:py-2.5 min-w-0 relative" :title="locale === 'zh-TW' ? 'NBA 賽季進度' : 'NBA Season Progress'">
         <div class="w-6 h-6 md:w-9 md:h-9 rounded-full bg-orange-900/30 border border-orange-800/50 flex items-center justify-center shrink-0">
           <span class="text-[12px] md:text-[16px] leading-none text-orange-400 opacity-80">🏀</span>
         </div>
         <div class="min-w-0 relative flex-1">
-          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate mb-0.5">NBA 賽季</div>
+          <div class="text-[8px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase truncate mb-0.5">{{ locale === 'zh-TW' ? 'NBA 賽季' : 'NBA Season' }}</div>
           <div class="text-white font-bold text-xs md:text-lg leading-none whitespace-nowrap">{{ getSeasonProgress('NBA').played }} <span class="text-[8px] md:text-[10px] text-slate-500 font-normal">/ 82</span></div>
-          <span v-if="getSeasonProgress('NBA').status.includes('季後賽')" class="absolute -top-1 -right-0.5 md:-top-5 md:right-0 text-[6px] md:text-[8px] bg-red-500/20 text-red-500 px-1 py-0.5 rounded border border-red-500/30 font-black animate-pulse whitespace-nowrap">季後賽</span>
+          <span v-if="getSeasonProgress('NBA').status.includes('季後賽')" class="absolute -top-1 -right-0.5 md:-top-5 md:right-0 text-[6px] md:text-[8px] bg-red-500/20 text-red-500 px-1 py-0.5 rounded border border-red-500/30 font-black animate-pulse whitespace-nowrap">{{ locale === 'zh-TW' ? '季後賽' : 'Postseason' }}</span>
         </div>
       </div>
 
@@ -626,7 +641,7 @@ onUnmounted(() => {
           <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
           <span class="text-green-400 font-bold text-[11px] tracking-wide uppercase">Sports Live</span>
         </div>
-        <span class="text-[10px] text-slate-500 font-mono">最後更新: {{ lastUpdateStr }}</span>
+        <span class="text-[10px] text-slate-500 font-mono">{{ locale === 'zh-TW' ? '最後更新' : 'Last Update' }}: {{ lastUpdateStr }}</span>
       </div>
     </div>
 
@@ -641,7 +656,7 @@ onUnmounted(() => {
           :class="activeLeague === league ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
           <span class="mr-1 md:mr-2 inline-block">{{ league === 'MLB' ? '⚾' : (league === 'NBA' ? '🏀' : '🌟') }}</span>
-          {{ league }}
+          {{ league === '球員' ? (locale === 'zh-TW' ? '球員' : 'Players') : league }}
         </button>
       </div>
     </div>
@@ -653,7 +668,7 @@ onUnmounted(() => {
         <div class="mt-4 mb-3 flex items-center gap-2">
           <div class="flex items-center gap-2 shrink-0">
             <span class="text-lg">🌟</span>
-            <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">MLB 關注球員</h2>
+            <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">{{ locale === 'zh-TW' ? 'MLB 關注球員' : 'MLB Watched Players' }}</h2>
           </div>
           
           <div class="hidden md:block w-4"></div>
@@ -661,7 +676,7 @@ onUnmounted(() => {
           <!-- Player Sub-Filter & Team Dropdown - Grid for equal proportions -->
           <div class="flex-1 grid grid-cols-4 bg-[#0a0f1c] border border-slate-800 p-0.5 rounded-lg">
             <button 
-              v-for="f in ([{k:'all', l:'全部'}, {k:'hitting', l:'打者'}, {k:'pitching', l:'投手'}] as const)"
+              v-for="f in ([{k:'all', l: locale === 'zh-TW' ? '全部' : 'All'}, {k:'hitting', l: locale === 'zh-TW' ? '打者' : 'Batters'}, {k:'pitching', l: locale === 'zh-TW' ? '投手' : 'Pitchers'}] as const)"
               :key="f.k"
               @click="playerTypeFilter = f.k"
               class="py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all whitespace-nowrap text-center"
@@ -697,7 +712,7 @@ onUnmounted(() => {
                   <div class="sticky top-0 p-1 bg-[#0a0f1c] border-b border-slate-800 z-10">
                     <input 
                       v-model="teamSearchQuery"
-                      placeholder="搜尋..."
+                      :placeholder="locale === 'zh-TW' ? '搜尋...' : 'Search...'"
                       class="w-full bg-slate-900/50 border border-slate-800 rounded px-2 py-1 text-[9px] text-slate-300 focus:outline-none focus:border-blue-500/50"
                       @click.stop
                     />
@@ -714,7 +729,7 @@ onUnmounted(() => {
                       {{ team }}
                     </button>
                     <div v-if="filteredAvailableTeams.length === 0" class="px-3 py-4 text-[9px] text-slate-600 text-center uppercase">
-                      查無球隊
+                      {{ locale === 'zh-TW' ? '查無球隊' : 'No Teams' }}
                     </div>
                   </div>
                 </div>
@@ -729,7 +744,7 @@ onUnmounted(() => {
             <div class="flex items-center gap-3">
               <div class="bg-blue-600 px-3 py-1 rounded-md text-[10px] font-black text-white shadow-lg shadow-blue-500/20">{{ team }}</div>
               <div class="flex-1 h-px bg-slate-800/50"></div>
-              <div class="text-[10px] text-slate-500 font-mono">{{ players.length }} 員</div>
+              <div class="text-[10px] text-slate-500 font-mono">{{ players.length }} {{ locale === 'zh-TW' ? '員' : 'Players' }}</div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -745,11 +760,11 @@ onUnmounted(() => {
                     </div>
                     <!-- Toggle Button -->
                     <div v-if="player.hitting && player.pitching" class="bg-black/40 p-0.5 rounded-lg flex items-center border border-slate-800 mt-2 sm:mt-0 w-max">
-                      <button @click="player.activeStatType = 'hitting'" :class="player.activeStatType === 'hitting' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">打擊</button>
-                      <button @click="player.activeStatType = 'pitching'" :class="player.activeStatType === 'pitching' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">投球</button>
+                      <button @click="player.activeStatType = 'hitting'" :class="player.activeStatType === 'hitting' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">{{ locale === 'zh-TW' ? '打擊' : 'Hitting' }}</button>
+                      <button @click="player.activeStatType = 'pitching'" :class="player.activeStatType === 'pitching' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'" class="px-2 py-1 text-[9px] font-bold uppercase rounded transition-all">{{ locale === 'zh-TW' ? '投球' : 'Pitching' }}</button>
                     </div>
                   </div>
-                  <button @click="fetchPlayerStats(true)" class="p-1.5 text-slate-500 hover:text-white rounded transition-colors self-start sm:self-auto" title="重新整理">
+                  <button @click="fetchPlayerStats(true)" class="p-1.5 text-slate-500 hover:text-white rounded transition-colors self-start sm:self-auto" :title="locale === 'zh-TW' ? '重新整理' : 'Refresh'">
                     <svg v-if="player.loading" class="animate-spin w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
                     <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                   </button>
@@ -757,7 +772,7 @@ onUnmounted(() => {
 
                 <div class="p-4 flex-1">
                   <div v-if="player.loading && !player.hitting && !player.pitching" class="flex justify-center items-center py-6">
-                    <span class="text-slate-500 text-xs text-center border border-slate-800/50 bg-slate-900/50 rounded w-full py-4 animate-pulse">載入數據中...</span>
+                    <span class="text-slate-500 text-xs text-center border border-slate-800/50 bg-slate-900/50 rounded w-full py-4 animate-pulse">{{ locale === 'zh-TW' ? '載入數據中...' : 'Loading Stats...' }}</span>
                   </div>
                   
                   <div v-else-if="player.error" class="flex justify-center items-center py-6 text-red-400 text-xs text-center border border-red-500/20 bg-red-500/5 rounded">
@@ -768,15 +783,15 @@ onUnmounted(() => {
                     <!-- Hitting Stats -->
                     <div v-if="player.hitting && player.activeStatType === 'hitting'">
                       <h4 class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1 flex justify-between">
-                        <span>打擊成績 (Hitting)</span>
-                        <span class="text-blue-400/80">{{ player.hitting.year }} 賽季</span>
+                        <span>{{ locale === 'zh-TW' ? '打擊成績' : 'Hitting Stats' }} (Hitting)</span>
+                        <span class="text-blue-400/80">{{ player.hitting.year }} {{ locale === 'zh-TW' ? '賽季' : 'Season' }}</span>
                       </h4>
                       <div class="grid grid-cols-3 gap-2 text-center">
                         <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">AVG</p><p class="text-sm font-black text-white">{{ player.hitting.avg || '.000' }}</p></div>
                         <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">HR</p><p class="text-sm font-black text-rose-400">{{ player.hitting.homeRuns || '0' }}</p></div>
                         <div class="bg-blue-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">RBI</p><p class="text-sm font-black text-emerald-400">{{ player.hitting.rbi || '0' }}</p></div>
-                        <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G (場次)</p><p class="text-xs font-black text-slate-300">{{ player.hitting.gamesPlayed || '0' }}</p></div>
-                        <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">AB (打數)</p><p class="text-xs font-black text-slate-300">{{ player.hitting.atBats || '0' }}</p></div>
+                        <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G ({{ locale === 'zh-TW' ? '場次' : 'GP' }})</p><p class="text-xs font-black text-slate-300">{{ player.hitting.gamesPlayed || '0' }}</p></div>
+                        <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">AB ({{ locale === 'zh-TW' ? '打數' : 'AB' }})</p><p class="text-xs font-black text-slate-300">{{ player.hitting.atBats || '0' }}</p></div>
                         <div class="bg-blue-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">OPS</p><p class="text-xs font-black text-sky-400">{{ player.hitting.ops || '.000' }}</p></div>
                       </div>
                     </div>
@@ -784,21 +799,21 @@ onUnmounted(() => {
                     <!-- Pitching Stats -->
                     <div v-if="player.pitching && player.activeStatType === 'pitching'">
                       <h4 class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 border-b border-slate-800 pb-1 flex justify-between">
-                        <span>投球成績 (Pitching)</span>
-                        <span class="text-indigo-400/80">{{ player.pitching.year }} 賽季</span>
+                        <span>{{ locale === 'zh-TW' ? '投球成績' : 'Pitching Stats' }} (Pitching)</span>
+                        <span class="text-indigo-400/80">{{ player.pitching.year }} {{ locale === 'zh-TW' ? '賽季' : 'Season' }}</span>
                       </h4>
                       <div class="grid grid-cols-3 gap-2 text-center">
                         <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">ERA</p><p class="text-sm font-black text-rose-400">{{ player.pitching.era || '0.00' }}</p></div>
                         <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">W-L</p><p class="text-sm font-black text-white">{{ player.pitching.wins || '0' }}-{{ player.pitching.losses || '0' }}</p></div>
                         <div class="bg-indigo-900/10 rounded-lg py-2"><p class="text-[9px] text-slate-500 font-bold uppercase">SO</p><p class="text-sm font-black text-emerald-400">{{ player.pitching.strikeOuts || '0' }}</p></div>
-                        <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G (場次)</p><p class="text-xs font-black text-slate-300">{{ player.pitching.gamesPlayed || '0' }}</p></div>
-                        <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">IP (局數)</p><p class="text-xs font-black text-slate-300">{{ player.pitching.inningsPitched || '0.0' }}</p></div>
+                        <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">G ({{ locale === 'zh-TW' ? '場次' : 'GP' }})</p><p class="text-xs font-black text-slate-300">{{ player.pitching.gamesPlayed || '0' }}</p></div>
+                        <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">IP ({{ locale === 'zh-TW' ? '局數' : 'IP' }})</p><p class="text-xs font-black text-slate-300">{{ player.pitching.inningsPitched || '0.0' }}</p></div>
                         <div class="bg-indigo-900/5 border border-slate-800/50 rounded-lg py-1.5"><p class="text-[8px] text-slate-600 font-bold uppercase">WHIP</p><p class="text-xs font-black text-sky-400">{{ player.pitching.whip || '0.00' }}</p></div>
                       </div>
                     </div>
 
                     <div v-if="!player.hitting && !player.pitching" class="text-center text-slate-500 text-xs py-4 border border-slate-800/40 rounded-lg bg-slate-900/20">
-                      尚未有本賽季數據
+                      {{ locale === 'zh-TW' ? '尚未有本賽季數據' : 'No stats for this season' }}
                     </div>
                   </div>
                 </div>
@@ -812,7 +827,7 @@ onUnmounted(() => {
       <template v-if="activeLeague === 'MLB'">
         <div class="mt-4 mb-3 flex items-center gap-2">
           <span class="text-lg">⚾</span>
-          <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">MLB 美國職棒</h2>
+          <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">{{ locale === 'zh-TW' ? 'MLB 美國職棒' : 'MLB Baseball' }}</h2>
           <div class="flex-1 h-px bg-slate-800 ml-1 mr-2"></div>
           
           <!-- Sort Toggle (MLB) -->
@@ -826,8 +841,8 @@ onUnmounted(() => {
         <div v-if="mlbStandings.length > 0" class="mb-6 space-y-3 px-0.5">
            <div class="flex items-center justify-between">
              <div class="flex items-center gap-2">
-               <h3 class="text-white font-black text-sm flex items-center gap-2">🏆 季後賽</h3>
-               <span class="text-[9px] font-black text-slate-600 tracking-widest uppercase">AL / NL Top 8</span>
+               <h3 class="text-white font-black text-sm flex items-center gap-2">🏆 {{ locale === 'zh-TW' ? '季後賽' : 'Playoffs' }}</h3>
+               <span class="text-[9px] font-black text-slate-600 tracking-widest uppercase">{{ locale === 'zh-TW' ? '聯盟前八強' : 'AL / NL Top 8' }}</span>
              </div>
              <span class="text-[8px] font-black text-slate-500 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-800 uppercase tracking-tighter">Daily Cached</span>
            </div>
@@ -890,9 +905,9 @@ onUnmounted(() => {
             <div class="text-3xl mb-3">⚠️</div>
             <p class="text-red-400 font-bold mb-1">{{ mlbError }}</p>
             <p class="text-slate-500 text-xs leading-relaxed" v-if="isQuotaExceeded">
-              免費版 API 的月度額度已用盡。<br/>數據將在下個月重置，或請更換 API KEY。
+              {{ locale === 'zh-TW' ? '免費版 API 的月度額度已用盡。數據將在下個月重置，或請更換 API KEY。' : 'Free API monthly quota exceeded. Data will reset next month, or please replace the API KEY.' }}
             </p>
-            <p class="text-slate-500 text-xs" v-else>連線發生問題，請稍後再試。</p>
+            <p class="text-slate-500 text-xs" v-else>{{ locale === 'zh-TW' ? '連線發生問題，請稍後再試。' : 'Connection problem, please try again later.' }}</p>
           </div>
         </div>
 
@@ -900,8 +915,8 @@ onUnmounted(() => {
         <div v-else-if="mlbGames.length === 0"
           class="py-8 flex flex-col items-center gap-2 bg-slate-900/40 rounded-2xl border border-slate-800 text-center">
           <span class="text-4xl">⚾</span>
-          <p class="text-slate-500 font-bold text-sm">目前無 MLB 賽事</p>
-          <p class="text-slate-600 text-xs">請稍後再查詢</p>
+          <p class="text-slate-500 font-bold text-sm">{{ locale === 'zh-TW' ? '目前無 MLB 賽事' : 'No MLB Games Scheduled' }}</p>
+          <p class="text-slate-600 text-xs">{{ locale === 'zh-TW' ? '請稍後再查詢' : 'Please check back later' }}</p>
         </div>
 
         <!-- MLB Games Grid -->
@@ -975,7 +990,7 @@ onUnmounted(() => {
                     class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
                 </div>
                 <div class="min-w-0">
-                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">客隊</div>
+                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">{{ locale === 'zh-TW' ? '客隊' : 'Away' }}</div>
                   <div class="text-[15px] font-black text-slate-100 truncate tracking-tight">{{ game.away_team }}</div>
                 </div>
               </div>
@@ -1006,7 +1021,7 @@ onUnmounted(() => {
                     class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
                 </div>
                 <div class="min-w-0">
-                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">主隊</div>
+                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">{{ locale === 'zh-TW' ? '主隊' : 'Home' }}</div>
                   <div class="text-[15px] font-black text-slate-100 truncate tracking-tight">{{ game.home_team }}</div>
                 </div>
               </div>
@@ -1030,7 +1045,7 @@ onUnmounted(() => {
               <span :class="getWinProb(game, game.away_team, game.home_team).away >= 50 ? 'text-green-400' : 'text-red-400'">
                 {{ game.away_team.split(' ').slice(-1)[0] }} {{ getWinProb(game, game.away_team, game.home_team).away }}%
               </span>
-              <span class="text-slate-600 tracking-widest">市場勝率</span>
+              <span class="text-slate-600 tracking-widest">{{ locale === 'zh-TW' ? '市場勝率' : 'Market Win Prob' }}</span>
               <span :class="getWinProb(game, game.away_team, game.home_team).home >= 50 ? 'text-green-400' : 'text-red-400'">
                 {{ getWinProb(game, game.away_team, game.home_team).home }}% {{ game.home_team.split(' ').slice(-1)[0] }}
               </span>
@@ -1055,7 +1070,7 @@ onUnmounted(() => {
       <template v-if="activeLeague === 'NBA'">
         <div class="mt-4 mb-3 flex items-center gap-2">
           <span class="text-lg">🏀</span>
-          <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">NBA 美國職籃</h2>
+          <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">{{ locale === 'zh-TW' ? 'NBA 美國職籃' : 'NBA Basketball' }}</h2>
           <div class="flex-1 h-px bg-slate-800 ml-1 mr-2"></div>
 
           <!-- Sort Toggle (NBA) -->
@@ -1069,8 +1084,8 @@ onUnmounted(() => {
         <div v-if="nbaStandings.length > 0" class="mb-6 space-y-3 px-0.5">
            <div class="flex items-center justify-between">
              <div class="flex items-center gap-2">
-               <h3 class="text-white font-black text-sm flex items-center gap-2">🏆 季後賽</h3>
-               <span class="text-[9px] font-black text-slate-600 tracking-widest uppercase">East / West Top 8</span>
+               <h3 class="text-white font-black text-sm flex items-center gap-2">🏆 {{ locale === 'zh-TW' ? '季後賽' : 'Playoffs' }}</h3>
+                <span class="text-[9px] font-black text-slate-600 tracking-widest uppercase">{{ locale === 'zh-TW' ? '分區前八強' : 'East / West Top 8' }}</span>
              </div>
              <span class="text-[8px] font-black text-slate-500 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-800 uppercase tracking-tighter">Daily Cached</span>
            </div>
@@ -1133,9 +1148,9 @@ onUnmounted(() => {
             <div class="text-3xl mb-3">⚠️</div>
             <p class="text-orange-400 font-bold mb-1">{{ nbaError }}</p>
             <p class="text-slate-500 text-xs leading-relaxed" v-if="isQuotaExceeded">
-              免費版 API 的月度額度已用盡。<br/>數據將在下個月重置，或請更換 API KEY。
+              {{ locale === 'zh-TW' ? '免費版 API 的月度額度已用盡。數據將在下個月重置，或請更換 API KEY。' : 'Free API monthly quota exceeded. Data will reset next month, or please replace the API KEY.' }}
             </p>
-            <p class="text-slate-500 text-xs" v-else>連線發生問題，請稍後再試。</p>
+            <p class="text-slate-500 text-xs" v-else>{{ locale === 'zh-TW' ? '連線發生問題，請稍後再試。' : 'Connection problem, please try again later.' }}</p>
           </div>
         </div>
 
@@ -1143,8 +1158,8 @@ onUnmounted(() => {
         <div v-else-if="nbaGames.length === 0"
           class="py-8 flex flex-col items-center gap-2 bg-slate-900/40 rounded-2xl border border-slate-800 text-center">
           <span class="text-4xl">🏀</span>
-          <p class="text-slate-500 font-bold text-sm">目前無 NBA 賽事</p>
-          <p class="text-slate-600 text-xs">請稍後再查詢</p>
+          <p class="text-slate-500 font-bold text-sm">{{ locale === 'zh-TW' ? '目前無 NBA 賽事' : 'No NBA Games Scheduled' }}</p>
+          <p class="text-slate-600 text-xs">{{ locale === 'zh-TW' ? '請稍後再查詢' : 'Please check back later' }}</p>
         </div>
 
         <!-- NBA Games Grid -->
@@ -1213,7 +1228,7 @@ onUnmounted(() => {
                 <img :src="getNbaLogo(game.away_team)" :alt="game.away_team"
                   class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
                 <div class="min-w-0">
-                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">客隊</div>
+                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">{{ locale === 'zh-TW' ? '客隊' : 'Away' }}</div>
                   <div class="text-[15px] font-black text-slate-100 truncate tracking-tight flex items-center gap-2">
                     {{ game.away_team }}
                     <!-- Possession Light -->
@@ -1247,7 +1262,7 @@ onUnmounted(() => {
                 <img :src="getNbaLogo(game.home_team)" :alt="game.home_team"
                   class="w-11 h-11 rounded-full bg-white object-contain p-1.5 ring-2 ring-black shrink-0 shadow-xl" />
                 <div class="min-w-0">
-                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">主隊</div>
+                  <div class="text-[9px] text-slate-500 font-black tracking-widest uppercase opacity-60">{{ locale === 'zh-TW' ? '主隊' : 'Home' }}</div>
                   <div class="text-[15px] font-black text-slate-100 truncate tracking-tight flex items-center gap-2">
                     {{ game.home_team }}
                     <!-- Possession Light -->
@@ -1276,7 +1291,7 @@ onUnmounted(() => {
               <span :class="getWinProb(game, game.away_team, game.home_team).away >= 50 ? 'text-green-400' : 'text-red-400'">
                 {{ game.away_team.split(' ').slice(-1)[0] }} {{ getWinProb(game, game.away_team, game.home_team).away }}%
               </span>
-              <span class="text-slate-600 tracking-widest">市場勝率</span>
+              <span class="text-slate-600 tracking-widest">{{ locale === 'zh-TW' ? '市場勝率' : 'Market Win Prob' }}</span>
               <span :class="getWinProb(game, game.away_team, game.home_team).home >= 50 ? 'text-green-400' : 'text-red-400'">
                 {{ getWinProb(game, game.away_team, game.home_team).home }}% {{ game.home_team.split(' ').slice(-1)[0] }}
               </span>

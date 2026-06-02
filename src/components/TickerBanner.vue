@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { globalNews } from '../stores'
+import { globalNews, locale } from '../stores'
 
 function getRelativeTime(timestamp: number) {
   if (!timestamp || isNaN(timestamp) || timestamp <= 0) return 'now'
@@ -62,7 +62,7 @@ const resetCache = () => {
                 'bg-blue-500 shadow-[0_0_5px_#3b82f6]': alert.type === 'INFO'
               }"></span>
             <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 tracking-wider"
-              :class="{
+               :class="{
                 'bg-orange-950/40 text-orange-400 border-orange-900/60': alert.type === 'HIGH',
                 'bg-red-950/40 text-red-400 border-red-900/60': alert.type === 'CRITICAL',
                 'bg-blue-950/40 text-blue-400 border-blue-900/60': alert.type === 'INFO'
@@ -100,11 +100,11 @@ const resetCache = () => {
     <div class="flex items-center space-x-2 md:space-x-4 text-slate-500 text-[9px] md:text-[10px] ml-2 md:ml-4 font-mono z-10 shrink-0 bg-[#070b14] pl-1 md:pl-2">
       <div class="text-right hidden sm:block">
         <div class="text-white font-bold text-[10px] md:text-xs">{{ alerts.length }}</div>
-        <div class="tracking-widest opacity-60">活躍訊號</div>
+        <div class="tracking-widest opacity-60">{{ locale === 'zh-TW' ? '活躍訊號' : 'Signals' }}</div>
       </div>
       <div class="text-right">
-        <div class="text-white font-bold text-[10px] md:text-xs">剛剛</div>
-        <div class="tracking-widest opacity-60">最後更新</div>
+        <div class="text-white font-bold text-[10px] md:text-xs">{{ locale === 'zh-TW' ? '剛剛' : 'Now' }}</div>
+        <div class="tracking-widest opacity-60">{{ locale === 'zh-TW' ? '最後更新' : 'Update' }}</div>
       </div>
       <button @click="resetCache" class="p-1 md:p-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded text-slate-400 transition-colors cursor-pointer z-20 relative">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-3.5 md:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

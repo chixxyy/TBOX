@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, hasClickedNotifications, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, resetPlatformNotice } from '../stores'
+import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, hasClickedNotifications, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, resetPlatformNotice, locale, t } from '../stores'
 import { initDesktopNotifications } from '../utils/notify'
 import { onClickOutside } from '@vueuse/core'
 
@@ -15,6 +15,18 @@ const toggleUserMenu = () => {
 }
 
 const tabs = ['交易', '新聞', '市場', '異動', '運動', '討論']
+
+const getTabKey = (tab: string) => {
+  const mapping: Record<string, any> = {
+    '交易': 'tabTrade',
+    '新聞': 'tabNews',
+    '市場': 'tabMarkets',
+    '異動': 'tabMovers',
+    '運動': 'tabSports',
+    '討論': 'tabChat'
+  }
+  return mapping[tab] || tab
+}
 
 const showNotifications = ref(false)
 const notificationDropdown = ref<HTMLElement | null>(null)
@@ -81,13 +93,21 @@ const handleLogout = () => {
           class="h-full flex items-center justify-center border-b-2 font-medium transition-all duration-200 text-[11px] md:text-sm"
           :class="activeTab === tab ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'"
         >
-          {{ tab }}
+          {{ t(getTabKey(tab)) }}
         </button>
       </nav>
     </div>
 
-    <!-- Right Side: Notifications Bell -->
+    <!-- Right Side: Notifications Bell & Language Switcher -->
     <div class="flex items-center shrink-0 ml-2 relative" ref="notificationDropdown">
+      <!-- Language Switcher -->
+      <button 
+        @click="locale = locale === 'zh-TW' ? 'en' : 'zh-TW'" 
+        class="px-2 py-1 mr-1.5 md:mr-2 rounded-lg bg-slate-800/40 border border-slate-700/60 hover:bg-slate-700/50 text-slate-300 hover:text-slate-100 transition-all font-mono font-bold text-[10px] md:text-xs select-none backdrop-blur-md cursor-pointer"
+      >
+        {{ locale === 'zh-TW' ? 'EN' : 'ZH' }}
+      </button>
+
       <button 
         @click.stop="toggleNotifications" 
         class="p-2 relative transition-all duration-300 cursor-pointer group"
@@ -116,12 +136,12 @@ const handleLogout = () => {
         <div v-show="showNotifications" class="fixed right-2 top-12 w-[calc(100vw-16px)] md:absolute md:right-0 md:top-full md:mt-2 md:w-80 border-slate-700 bg-slate-900 shadow-2xl z-[100] border border-slate-600 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex flex-col max-h-[400px]">
           <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800 rounded-t-lg">
             <div class="flex items-center gap-2">
-              <h3 class="font-bold text-white tracking-widest text-sm">通知中心</h3>
+              <h3 class="font-bold text-white tracking-widest text-sm">{{ t('notifications') }}</h3>
               <button 
                 @click.stop="isNotificationsEnabled = !isNotificationsEnabled" 
                 class="flex items-center gap-2 px-2 py-1 rounded-lg transition-all group/mute border" 
                 :class="isNotificationsEnabled ? 'bg-blue-600/10 border-blue-500/30 text-blue-400 hover:bg-blue-600/20' : 'bg-slate-700/30 border-slate-600 text-slate-500 hover:bg-slate-700/50 animate-pulse-subtle'"
-                :title="isNotificationsEnabled ? '點擊靜音通知與音效' : '點擊開啟通知與音效'"
+                :title="isNotificationsEnabled ? t('muteNotifications') : t('unmuteNotifications')"
               >
                 <div class="relative">
                   <svg v-if="isNotificationsEnabled" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -132,15 +152,15 @@ const handleLogout = () => {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
                   </svg>
                 </div>
-                <span class="text-[10px] font-black uppercase tracking-wider">{{ isNotificationsEnabled ? '已啟用' : '已關閉' }}</span>
+                <span class="text-[10px] font-black uppercase tracking-wider">{{ isNotificationsEnabled ? t('enabled') : t('disabled') }}</span>
               </button>
             </div>
-            <button v-if="notificationHistory.length > 0" @click="clearNotifications" class="text-xs text-slate-400 hover:text-blue-400 transition-colors border border-slate-700 px-2 py-0.5 rounded bg-slate-900/50">清除</button>
+            <button v-if="notificationHistory.length > 0" @click="clearNotifications" class="text-xs text-slate-400 hover:text-blue-400 transition-colors border border-slate-700 px-2 py-0.5 rounded bg-slate-900/50">{{ t('clear') }}</button>
           </div>
           
           <div class="flex-1 overflow-y-auto p-2">
             <div v-if="notificationHistory.length === 0" class="p-6 text-center text-slate-500 text-sm">
-              目前沒有任何通知
+              {{ t('noNotifications') }}
             </div>
             <div v-for="log in notificationHistory" :key="log.id" class="p-3 mb-2 bg-[#0a0f1c] rounded-md border border-slate-800/50 flex flex-col hover:border-slate-600 transition-colors group relative">
               <button @click.stop="removeNotificationLog(log.id)" class="absolute top-2 right-2 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1">
@@ -163,19 +183,19 @@ const handleLogout = () => {
       <button 
         v-if="!chatSession" 
         @click="goToLogin"
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-all text-[11px] md:text-sm font-bold whitespace-nowrap"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-all text-[11px] md:text-sm font-bold whitespace-nowrap cursor-pointer"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
         </svg>
-        登入
+        {{ t('login') }}
       </button>
 
       <!-- Logged In -->
       <div v-else class="relative">
         <button 
           @click.stop="toggleUserMenu"
-          class="flex items-center gap-2 p-1 rounded-full hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700"
+          class="flex items-center gap-2 p-1 rounded-full hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700 cursor-pointer"
         >
           <img 
             :src="userProfile?.avatar_url || `https://ui-avatars.com/api/?name=${chatUser || 'User'}&background=3b82f6&color=fff&rounded=true`" 
@@ -190,7 +210,7 @@ const handleLogout = () => {
         <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-2 scale-95" enter-to-class="opacity-100 translate-y-0 scale-100" leave-active-class="transition ease-in duration-100" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 translate-y-2 scale-95">
           <div v-if="showUserMenu" class="absolute right-0 top-full mt-2 w-56 md:w-64 bg-[#0d1425] border border-slate-800 rounded-2xl shadow-2xl py-2 z-50 overflow-hidden backdrop-blur-xl bg-opacity-95">
           <div class="px-4 py-3 border-b border-slate-800/50">
-            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">目前登入為</p>
+            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">{{ t('loggedInAs') }}</p>
             <p class="text-xs md:text-sm font-black text-white truncate">{{ chatUser }}</p>
             <p class="text-[9px] text-slate-500 font-mono truncate opacity-60 mt-0.5">{{ chatSession?.user.email }}</p>
           </div>
@@ -198,12 +218,12 @@ const handleLogout = () => {
           <div class="py-1">
             <button 
               @click="activeTab = '個人檔案'; showUserMenu = false"
-              class="w-full px-4 py-2.5 text-left text-xs md:text-sm text-slate-300 hover:bg-blue-600/10 hover:text-blue-400 flex items-center gap-3 transition-all"
+              class="w-full px-4 py-2.5 text-left text-xs md:text-sm text-slate-300 hover:bg-blue-600/10 hover:text-blue-400 flex items-center gap-3 transition-all cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              個人檔案
+              {{ t('profile') }}
             </button>
             <button 
               v-if="isAdmin"
@@ -212,16 +232,16 @@ const handleLogout = () => {
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              管理員權限已啟動
+              {{ t('admin') }}
             </button>
             <button 
               @click.stop="handleLogout"
-              class="w-full px-4 py-2.5 text-left text-xs md:text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-3 transition-all"
+              class="w-full px-4 py-2.5 text-left text-xs md:text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-3 transition-all cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              帳號登出
+              {{ t('logout') }}
             </button>
           </div>
         </div>
