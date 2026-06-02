@@ -238,8 +238,21 @@ onUnmounted(() => {
     </div>
 
     <div @scroll="handleScroll" class="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 scrollbar-dark">
-      <div v-if="isLoading" class="flex items-center justify-center h-full">
-        <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div v-for="n in 8" :key="n" class="skeleton-shimmer-container bg-[#0f1523]/50 border border-[#1e293b]/60 rounded-xl p-4 flex flex-col h-48 space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="w-10 h-10 rounded-lg skeleton-block"></div>
+            <div class="w-20 h-4 skeleton-block"></div>
+          </div>
+          <div class="space-y-2">
+            <div class="w-full h-4 skeleton-block"></div>
+            <div class="w-2/3 h-4 skeleton-block"></div>
+          </div>
+          <div class="pt-2 flex justify-between gap-2 mt-auto">
+            <div class="w-1/2 h-8 skeleton-block rounded-lg"></div>
+            <div class="w-1/2 h-8 skeleton-block rounded-lg"></div>
+          </div>
+        </div>
       </div>
       
       <div v-else-if="events.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500">

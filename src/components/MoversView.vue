@@ -1194,8 +1194,24 @@ const earningsSeasonInfo = computed(() => {
 
       <!-- 2. Movers View - Public -->
       <template v-else>
-        <div v-if="isLoading" class="flex justify-center items-center h-64">
-          <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div v-if="isLoading" class="max-w-5xl mx-auto space-y-4">
+          <div v-for="n in 3" :key="n" class="skeleton-shimmer-container bg-[#111827]/50 border border-slate-800/60 rounded-xl p-3 md:p-5 flex flex-col h-40 space-y-4">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-full skeleton-block"></div>
+                <div class="space-y-1.5">
+                  <div class="w-32 h-4 skeleton-block"></div>
+                  <div class="w-20 h-3 skeleton-block"></div>
+                </div>
+              </div>
+              <div class="w-16 h-6 skeleton-block rounded-lg"></div>
+            </div>
+            <div class="grid grid-cols-3 gap-4 pt-2">
+              <div class="h-10 skeleton-block"></div>
+              <div class="h-10 skeleton-block"></div>
+              <div class="h-10 skeleton-block"></div>
+            </div>
+          </div>
         </div>
         <div v-else-if="filteredMovers.length === 0" class="flex flex-col items-center justify-center h-64 text-slate-500 text-sm">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
@@ -1205,7 +1221,7 @@ const earningsSeasonInfo = computed(() => {
           <div 
             v-for="item in filteredMovers" 
             :key="item.id"
-            class="bg-[#111827] border border-slate-800/80 rounded-xl p-3 md:p-5 hover:border-slate-700 transition-colors flex flex-col"
+            class="glass-glow-hover bg-[#111827] border border-slate-800/80 rounded-xl p-3 md:p-5 flex flex-col"
           >
             <!-- Top Row: Icon, Title, Badge -->
             <div class="flex items-start justify-between mb-3 md:mb-6">

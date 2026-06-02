@@ -93,6 +93,14 @@ const getOddsStyle = (odds: string) => {
   return { bg: 'bg-red-500/20', text: 'text-red-400 border-red-500/50' }
 }
 
+const openBookmaker = (sport: 'MLB' | 'NBA') => {
+  const urls = {
+    'MLB': 'https://www.pinnacle.com/zh-tw/baseball/mlb/matchups/',
+    'NBA': 'https://www.pinnacle.com/zh-tw/basketball/nba/matchups/'
+  }
+  window.open(urls[sport], '_blank')
+}
+
 // Normalized implied win probability (removes bookmaker vig)
 const getWinProb = (game: Game, awayTeam: string, homeTeam: string): { away: number, home: number } => {
   const awayOddsStr = getOdds(game, awayTeam)
@@ -849,9 +857,31 @@ onUnmounted(() => {
         </div>
 
         <!-- MLB Loading -->
-        <div v-if="mlbLoading" class="flex items-center gap-3 py-8 justify-center text-slate-500">
-          <div class="w-5 h-5 rounded-full border-2 border-slate-700 border-t-blue-400 animate-spin"></div>
-          <span class="text-sm font-medium">載入中...</span>
+        <div v-if="mlbLoading" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div v-for="n in 4" :key="n" class="skeleton-shimmer-container bg-[#0a0f1c]/50 rounded-2xl border border-slate-800/60 p-4 h-48 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <div class="w-20 h-4 skeleton-block"></div>
+              <div class="w-16 h-4 skeleton-block"></div>
+            </div>
+            <div class="flex items-center justify-between gap-6 py-2">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full skeleton-block"></div>
+                <div class="w-24 h-4 skeleton-block"></div>
+              </div>
+              <div class="w-10 h-6 skeleton-block"></div>
+            </div>
+            <div class="flex items-center justify-between gap-6 py-2">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full skeleton-block"></div>
+                <div class="w-24 h-4 skeleton-block"></div>
+              </div>
+              <div class="w-10 h-6 skeleton-block"></div>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-slate-800/40">
+              <div class="w-24 h-4 skeleton-block"></div>
+              <div class="w-32 h-4 skeleton-block"></div>
+            </div>
+          </div>
         </div>
 
         <!-- MLB Error -->
@@ -877,7 +907,7 @@ onUnmounted(() => {
         <!-- MLB Games Grid -->
         <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div v-for="game in sortedMlbGames" :key="game.id"
-          class="bg-[#0a0f1c] rounded-2xl border border-slate-800/60 p-4 hover:border-slate-600 transition-colors shadow-lg relative overflow-hidden group">
+          class="glass-glow-hover bg-[#0a0f1c] rounded-2xl border border-slate-800/60 p-4 relative overflow-hidden group">
           <div class="absolute top-0 right-0 w-28 h-28 bg-blue-500/5 blur-3xl rounded-full translate-x-10 -translate-y-10 group-hover:bg-blue-500/8 pointer-events-none"></div>
 
           <!-- Time & Status -->
@@ -955,7 +985,7 @@ onUnmounted(() => {
                   :class="getLiveStatus(game, 'MLB').isLive ? 'text-white' : 'text-slate-500'">
                   {{ getLiveStatus(game, 'MLB').scores?.away }}
                 </div>
-                <div class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer"
+                <div @click.stop="openBookmaker('MLB')" class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer hover:scale-105 hover:bg-slate-800/80 hover:border-slate-500"
                   :class="[getOddsStyle(getOdds(game, game.away_team)).bg, getOddsStyle(getOdds(game, game.away_team)).text]">
                   {{ getOdds(game, game.away_team) }}
                 </div>
@@ -986,7 +1016,7 @@ onUnmounted(() => {
                   :class="getLiveStatus(game, 'MLB').isLive ? 'text-white' : 'text-slate-500'">
                   {{ getLiveStatus(game, 'MLB').scores?.home }}
                 </div>
-                <div class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer"
+                <div @click.stop="openBookmaker('MLB')" class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer hover:scale-105 hover:bg-slate-800/80 hover:border-slate-500"
                   :class="[getOddsStyle(getOdds(game, game.home_team)).bg, getOddsStyle(getOdds(game, game.home_team)).text]">
                   {{ getOdds(game, game.home_team) }}
                 </div>
@@ -1070,9 +1100,31 @@ onUnmounted(() => {
         </div>
 
         <!-- NBA Loading -->
-        <div v-if="nbaLoading" class="flex items-center gap-3 py-8 justify-center text-slate-500">
-          <div class="w-5 h-5 rounded-full border-2 border-slate-700 border-t-orange-400 animate-spin"></div>
-          <span class="text-sm font-medium">載入中...</span>
+        <div v-if="nbaLoading" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div v-for="n in 4" :key="n" class="skeleton-shimmer-container bg-[#0a0f1c]/50 rounded-2xl border border-slate-800/60 p-4 h-48 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <div class="w-20 h-4 skeleton-block"></div>
+              <div class="w-16 h-4 skeleton-block"></div>
+            </div>
+            <div class="flex items-center justify-between gap-6 py-2">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full skeleton-block"></div>
+                <div class="w-24 h-4 skeleton-block"></div>
+              </div>
+              <div class="w-10 h-6 skeleton-block"></div>
+            </div>
+            <div class="flex items-center justify-between gap-6 py-2">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full skeleton-block"></div>
+                <div class="w-24 h-4 skeleton-block"></div>
+              </div>
+              <div class="w-10 h-6 skeleton-block"></div>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-slate-800/40">
+              <div class="w-24 h-4 skeleton-block"></div>
+              <div class="w-32 h-4 skeleton-block"></div>
+            </div>
+          </div>
         </div>
 
         <!-- NBA Error -->
@@ -1098,7 +1150,7 @@ onUnmounted(() => {
         <!-- NBA Games Grid -->
         <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div v-for="game in sortedNbaGames" :key="game.id"
-          class="bg-[#0a0f1c] rounded-2xl border border-slate-800/60 p-4 hover:border-slate-600 transition-colors shadow-lg relative overflow-hidden group">
+          class="glass-glow-hover bg-[#0a0f1c] rounded-2xl border border-slate-800/60 p-4 relative overflow-hidden group">
           <div class="absolute top-0 right-0 w-28 h-28 bg-orange-500/5 blur-3xl rounded-full translate-x-10 -translate-y-10 group-hover:bg-orange-500/8 pointer-events-none"></div>
 
           <!-- Time & Status -->
@@ -1176,7 +1228,7 @@ onUnmounted(() => {
                   :class="getLiveStatus(game, 'NBA').isLive ? 'text-white' : 'text-slate-500'">
                   {{ getLiveStatus(game, 'NBA').scores?.away }}
                 </div>
-                <div class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer"
+                <div @click.stop="openBookmaker('NBA')" class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer hover:scale-105 hover:bg-slate-800/80 hover:border-slate-500"
                   :class="[getOddsStyle(getOdds(game, game.away_team)).bg, getOddsStyle(getOdds(game, game.away_team)).text]">
                   {{ getOdds(game, game.away_team) }}
                 </div>
@@ -1210,7 +1262,7 @@ onUnmounted(() => {
                   :class="getLiveStatus(game, 'NBA').isLive ? 'text-white' : 'text-slate-500'">
                   {{ getLiveStatus(game, 'NBA').scores?.home }}
                 </div>
-                <div class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer"
+                <div @click.stop="openBookmaker('NBA')" class="shrink-0 min-w-[66px] text-center px-2 py-1.5 rounded-lg border-2 font-black font-mono text-[13px] shadow-sm transition-all active:scale-95 cursor-pointer hover:scale-105 hover:bg-slate-800/80 hover:border-slate-500"
                   :class="[getOddsStyle(getOdds(game, game.home_team)).bg, getOddsStyle(getOdds(game, game.home_team)).text]">
                   {{ getOdds(game, game.home_team) }}
                 </div>
