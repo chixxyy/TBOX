@@ -197,57 +197,57 @@ onUnmounted(() => {
         <template v-if="stockInfo">
           <div class="grid grid-cols-2 gap-2 md:gap-3">
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">本益比 (PE TTM)</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('peRatio') }}</div>
               <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.peTTM ? stockInfo.peTTM.toFixed(2) : '---' }}</div>
             </div>
             
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">每股盈餘 (EPS TTM)</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('eps') }}</div>
               <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.epsTTM ? stockInfo.epsTTM.toFixed(2) : '---' }}</div>
             </div>
 
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">市值 (Market Cap)</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('marketCap') }}</div>
               <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.marketCapitalization ? (stockInfo.marketCapitalization > 1000 ? (stockInfo.marketCapitalization / 1000).toFixed(2) + 'B' : stockInfo.marketCapitalization.toFixed(2) + 'M') : '---' }}</div>
             </div>
 
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">Beta值</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('beta') }}</div>
               <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.beta ? stockInfo.beta.toFixed(2) : '---' }}</div>
             </div>
 
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">52週最高</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('high52w') }}</div>
               <div class="text-xs md:text-sm font-bold text-green-400 font-mono">{{ stockInfo['52WeekHigh'] ? stockInfo['52WeekHigh'].toFixed(2) : '---' }}</div>
             </div>
 
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">52週最低</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('low52w') }}</div>
               <div class="text-xs md:text-sm font-bold text-red-400 font-mono">{{ stockInfo['52WeekLow'] ? stockInfo['52WeekLow'].toFixed(2) : '---' }}</div>
             </div>
 
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">市銷率 (PS TTM)</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('psRatio') }}</div>
               <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.psTTM ? stockInfo.psTTM.toFixed(2) : '---' }}</div>
             </div>
 
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">市淨率 (PB TTM)</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('pbRatio') }}</div>
               <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.pbTTM ? stockInfo.pbTTM.toFixed(2) : '---' }}</div>
             </div>
 
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">ROE (TTM)</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('roe') }}</div>
               <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.roeTTM ? stockInfo.roeTTM.toFixed(2) + '%' : '---' }}</div>
             </div>
 
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">營收成長 (YoY)</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('revenueGrowth') }}</div>
               <div class="text-xs md:text-sm font-bold text-slate-200 font-mono">{{ stockInfo.revenueGrowthTTMYoy ? stockInfo.revenueGrowthTTMYoy.toFixed(2) + '%' : '---' }}</div>
             </div>
             
             <div class="bg-[#111827] p-2 md:p-3 rounded-md border border-slate-800/50 col-span-2">
-              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">股息殖利率 (TTM)</div>
+              <div class="text-[9px] md:text-[10px] text-slate-500 mb-1">{{ t('dividendYield') }}</div>
               <div class="text-xs md:text-sm font-bold text-blue-400 font-mono">{{ stockInfo.currentDividendYieldTTM ? stockInfo.currentDividendYieldTTM.toFixed(2) + '%' : '---' }}</div>
             </div>
           </div>
