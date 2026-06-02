@@ -19,9 +19,10 @@ export function getFinnhubToken(index?: number) {
 const requestCache = new Map<string, { data: any, timestamp: number }>();
 const activeRequests = new Map<string, Promise<any>>();
 
-// Cache TTLs (news has NO cache — always fetch fresh):
+// Cache TTLs:
 const QUOTE_CACHE_TTL = 10000;   // 10s — prevent hammering same symbol
 const ODDS_CACHE_TTL = 600000;   // 10 min — paid quota protection
+const NEWS_CACHE_TTL = 60000;    // 60s — cache news to prevent rate-limiting
 
 async function apiFetch(url: string, options: RequestInit = {}) {
   const isFinnhub = url.includes('finnhub.io');
@@ -29,35 +30,24 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   const isQuote = isFinnhub && url.includes('/quote');
   const isOddsApi = url.includes('the-odds-api.com') || url.includes('/api/odds');
 
-  let finalUrl = url;
   const headers: Record<string, string> = {
     'Accept': 'application/json',
     ...(options.headers as Record<string, string>),
   };
 
-  if (isFinnhub) {
-    const connector = finalUrl.includes('?') ? '&' : '?';
-    // Use token rotation for Finnhub to multiply quota
-    finalUrl = `${finalUrl}${connector}token=${getFinnhubToken()}`;
-  } else if (isOddsApi && !url.startsWith('/api')) {
-    // Only append key if calling external Odds API directly (for local dev)
-    const connector = finalUrl.includes('?') ? '&' : '?';
-    finalUrl = `${finalUrl}${connector}apiKey=${ODDS_API_KEY}`;
-  }
+  // Cache lookup using base url (agnostic of token rotations)
+  const cacheKey = url;
 
-  const cacheKey = finalUrl;
+  if (isQuote || isOddsApi || isNews) {
+    const ttl = isOddsApi ? ODDS_CACHE_TTL : (isNews ? NEWS_CACHE_TTL : QUOTE_CACHE_TTL);
 
-  // Cache only for quotes and odds — news always bypasses cache
-  if (!isNews && (isQuote || isOddsApi)) {
-    const ttl = isOddsApi ? ODDS_CACHE_TTL : QUOTE_CACHE_TTL;
-
-    // Memory cache (quotes only use memory — localStorage key collision bug with btoa truncation)
+    // Memory cache
     const memCached = requestCache.get(cacheKey);
     if (memCached && Date.now() - memCached.timestamp < ttl) {
       return memCached.data;
     }
 
-    // LocalStorage cache — Odds API only (long-lived, URL is distinct enough)
+    // LocalStorage cache — Odds API only
     if (isOddsApi) {
       const storageKey = `tbox_odds_${btoa(url).slice(-20)}`;
       try {
@@ -78,33 +68,70 @@ async function apiFetch(url: string, options: RequestInit = {}) {
     return activeRequests.get(cacheKey);
   }
 
-  const fetchPromise = (async () => {
-    const response = await fetch(finalUrl, { ...options, headers });
+  const maxRetries = 3;
 
-    if (response.status === 429) {
-      console.warn(`[TBOX] Rate limited (429): ${url}`);
-      const staleCached = requestCache.get(cacheKey);
-      if (staleCached) return staleCached.data;
-      throw new Error('Rate limited — please retry in a moment');
+  const performFetch = async (attempt: number): Promise<any> => {
+    let finalUrl = url;
+
+    if (isFinnhub) {
+      const connector = finalUrl.includes('?') ? '&' : '?';
+      // Use token rotation with attempt-based offset to try different keys on retry
+      finalUrl = `${finalUrl}${connector}token=${getFinnhubToken(attempt)}`;
+    } else if (isOddsApi && !url.startsWith('/api')) {
+      const connector = finalUrl.includes('?') ? '&' : '?';
+      finalUrl = `${finalUrl}${connector}apiKey=${ODDS_API_KEY}`;
     }
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error(`API Error [${response.status}]:`, errorData);
-      
-      // Specifically throw the error code if available (needed for Odds API quota check)
-      const errorMsg = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
-      const err: any = new Error(errorMsg);
-      if (errorData.error_code) err.code = errorData.error_code;
+    try {
+      const response = await fetch(finalUrl, { ...options, headers });
+
+      if (response.status === 429) {
+        throw { status: 429, message: 'Rate limited' };
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`API Error [${response.status}]:`, errorData);
+        
+        const errorMsg = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+        const err: any = new Error(errorMsg);
+        err.status = response.status;
+        if (errorData.error_code) err.code = errorData.error_code;
+        throw err;
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (err: any) {
+      const isNetworkError = err instanceof TypeError || err.message === 'Failed to fetch';
+      const isRateLimit = err.status === 429;
+
+      if ((isRateLimit || isNetworkError) && attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 500 + Math.random() * 200;
+        console.warn(`[TBOX] Fetch failed (${isRateLimit ? '429 Rate Limit' : 'Network Error'}). Retrying attempt ${attempt + 1}/${maxRetries} in ${Math.round(delay)}ms for URL: ${url}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return performFetch(attempt + 1);
+      }
+
+      // If we exhausted retries, try to fall back to expired cache (graceful degradation)
+      const staleCached = requestCache.get(cacheKey);
+      if (staleCached) {
+        console.warn(`[TBOX] Fetch failed after ${attempt} attempts. Falling back to stale cache for: ${url}`);
+        return staleCached.data;
+      }
+
       throw err;
     }
+  };
 
-    const data = await response.json();
+  const fetchPromise = (async () => {
+    const data = await performFetch(0);
 
-    // Save to memory cache for quotes and odds
-    if (!isNews && (isQuote || isOddsApi)) {
+    // Save to memory cache
+    if (isQuote || isOddsApi || isNews) {
       requestCache.set(cacheKey, { data, timestamp: Date.now() });
     }
+
     // Save to localStorage for odds only
     if (isOddsApi) {
       const storageKey = `tbox_odds_${btoa(url).slice(-20)}`;
