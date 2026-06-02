@@ -166,7 +166,7 @@ onUnmounted(() => {
         class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2 cursor-pointer"
         :class="currentView === 'ORDERBOOK' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
         @click="currentView = 'ORDERBOOK'"
-      >{{ t('orderBook') }}</button>
+      >{{ isCrypto ? t('orderBook') : t('fundamentals') }}</button>
       <button 
         class="flex-1 py-1 px-1 md:py-2 text-[10px] md:text-xs font-bold text-center transition-colors border-b-2 cursor-pointer"
         :class="currentView === 'ALERTS' ? 'text-blue-400 border-blue-500 bg-blue-900/10' : 'text-slate-500 border-transparent hover:text-slate-300'"
