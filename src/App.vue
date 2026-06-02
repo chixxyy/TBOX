@@ -275,13 +275,18 @@ onUnmounted(() => {
           <!-- Modal Footer -->
           <div class="p-6 pt-0 border-t border-slate-800/30 mt-auto">
             <div class="flex items-center gap-2 mb-4 mt-4">
-              <label class="flex items-center gap-2 cursor-pointer group">
-                <input 
-                  type="checkbox" 
-                  v-model="dontShowAgain"
-                  class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-offset-slate-900"
-                />
-                <span class="text-xs text-slate-500 group-hover:text-slate-300 transition-colors">在此設備上不再顯示此公告</span>
+              <label class="flex items-center gap-3 cursor-pointer group select-none">
+                <div class="relative flex items-center justify-center w-5 h-5">
+                  <input 
+                    type="checkbox" 
+                    v-model="dontShowAgain"
+                    class="peer appearance-none w-5 h-5 rounded border border-slate-700 bg-slate-800/80 checked:bg-blue-600 checked:border-blue-500 hover:border-blue-500/60 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all cursor-pointer shadow-inner"
+                  />
+                  <svg class="absolute w-3.5 h-3.5 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity duration-200 scale-90 peer-checked:scale-100" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+                <span class="text-xs font-medium text-slate-400 group-hover:text-slate-200 transition-colors tracking-wide">在此設備上不再顯示此公告</span>
               </label>
             </div>
             
