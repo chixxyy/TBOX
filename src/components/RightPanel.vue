@@ -560,7 +560,7 @@ onUnmounted(() => {
 
       <!-- 3. Current Positions List -->
       <div class="bg-[#111827] border border-slate-800/80 rounded-xl p-3 flex-1 flex flex-col min-h-[160px] overflow-hidden">
-        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 shrink-0">{{ t('holdings') }}</h4>
+        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 shrink-0">{{ t('holdings') }} ({{ portfolioStore.virtualPortfolio.length }})</h4>
         <div class="flex-1 overflow-y-auto custom-scrollbar pr-0.5">
           <div v-if="portfolioStore.virtualPortfolio.length === 0" class="flex flex-col items-center justify-center h-full text-slate-600 space-y-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
