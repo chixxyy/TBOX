@@ -14,6 +14,7 @@ export * from './market'
 export * from './portfolio'
 export * from './sports'
 export * from './chat'
+export * from './sports_predictions'
 
 // --- Backward Compatibility Layer mapping original refs and functions to Pinia Stores ---
 

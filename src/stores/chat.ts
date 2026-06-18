@@ -4,6 +4,7 @@ import { supabase } from '../services/supabase'
 import { useAuthStore } from './auth'
 import { useToastStore } from './toast'
 import { usePortfolioStore } from './portfolio'
+import { useSportsPredictionsStore } from './sports_predictions'
 
 interface ChatMessage {
   id: string
@@ -33,6 +34,7 @@ export const useChatStore = defineStore('chat', () => {
   const authStore = useAuthStore()
   const toastStore = useToastStore()
   const portfolioStore = usePortfolioStore()
+  const sportsPredictionsStore = useSportsPredictionsStore()
 
   const initSupabaseChat = async () => {
     if (chatChannel) {
@@ -48,11 +50,13 @@ export const useChatStore = defineStore('chat', () => {
         await authStore.fetchUserProfile(session.user.id)
         await portfolioStore.fetchPortfolio(session.user.id)
         await portfolioStore.loadSupabaseVirtualData(session.user.id)
+        await sportsPredictionsStore.fetchPredictions(session.user.id)
         authStore.initSessionSync(session.user.id)
       } else {
         authStore.userProfile = null
         portfolioStore.portfolio = []
         portfolioStore.clearVirtualData()
+        sportsPredictionsStore.clearPredictions()
       }
 
       supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -62,12 +66,14 @@ export const useChatStore = defineStore('chat', () => {
           portfolioStore.fetchPriceAlerts(session.user.id)
           portfolioStore.fetchPortfolio(session.user.id)
           await portfolioStore.loadSupabaseVirtualData(session.user.id)
+          await sportsPredictionsStore.fetchPredictions(session.user.id)
           authStore.initSessionSync(session.user.id)
         } else {
           authStore.userProfile = null
           portfolioStore.priceAlerts = []
           portfolioStore.portfolio = []
           portfolioStore.clearVirtualData()
+          sportsPredictionsStore.clearPredictions()
         }
       })
 

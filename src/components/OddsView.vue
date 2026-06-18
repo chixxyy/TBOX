@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { api } from '../network'
-import { showToast, trackedPlayers, initTrackedPlayers, setScrollProgress, locale } from '../stores'
+import { showToast, trackedPlayers, initTrackedPlayers, setScrollProgress, locale, useSportsPredictionsStore, useAuthStore, goToLogin, type SportsPrediction } from '../stores'
+
+const sportsPredictionsStore = useSportsPredictionsStore()
+const authStore = useAuthStore()
 
 interface Outcome { name: string; price: number }
 interface Market { key: string; outcomes: Outcome[] }
@@ -125,7 +128,7 @@ const nbaLoading = ref(true)
 const mlbError = ref('')
 const nbaError = ref('')
 const isQuotaExceeded = ref(false)
-const activeLeague = ref<'MLB' | 'NBA' | '球員'>('MLB')
+const activeLeague = ref<'MLB' | 'NBA' | '球員' | '預測'>('MLB')
 const lastUpdateStr = ref('')
 
 // ── Score Data ──
@@ -469,6 +472,7 @@ const fetchScoresOnly = async () => {
     ])
     if (mlbS.status === 'fulfilled') mlbScores.value = mlbS.value.events || []
     if (nbaS.status === 'fulfilled') nbaScores.value = nbaS.value.events || []
+    checkAndResolvePredictions()
     
     // Update timestamp on every score sync
     const now = new Date()
@@ -489,6 +493,95 @@ const fetchScoresOnly = async () => {
   } finally {
     // Hidden logic: 15s if live games exist, else 1min
     scheduleNextScoreFetch()
+  }
+}
+
+const handlePredict = async (game: Game, league: 'MLB' | 'NBA', predictedTeam: 'home' | 'away') => {
+  if (!authStore.chatSession?.user?.id) {
+    showToast('請先登入', '預測功能僅限會員使用，請先登入帳號。', false)
+    goToLogin()
+    return
+  }
+
+  if (new Date(game.commence_time).getTime() < Date.now()) {
+    showToast('預測失敗', '此場賽事已開打或已完賽，無法進行預測！', false)
+    return
+  }
+
+  await sportsPredictionsStore.placePrediction(
+    authStore.chatSession.user.id,
+    game.id,
+    league,
+    game.home_team,
+    game.away_team,
+    game.commence_time,
+    predictedTeam
+  )
+}
+
+const getPredictedOutcome = (matchId: string) => {
+  return sportsPredictionsStore.predictions.find(p => p.match_id === matchId)
+}
+
+const checkAndResolvePredictions = () => {
+  if (!authStore.chatSession?.user?.id) return
+
+  sportsPredictionsStore.predictions.forEach(async (pred) => {
+    if (pred.status !== 'pending') return
+
+    const league = pred.sport_type
+    const scores = league === 'MLB' ? mlbScores.value : nbaScores.value
+
+    const scoreData = scores.find(s => {
+      const predTime = new Date(pred.commence_time).getTime()
+      const scoreTime = new Date(s.date).getTime()
+      const timeDiffHours = Math.abs(predTime - scoreTime) / (1000 * 3600)
+      
+      // Safety check: only match games within 12 hours
+      if (timeDiffHours > 12) return false
+
+      const homeWords = pred.home_team.split(' ')
+      const awayWords = pred.away_team.split(' ')
+      const homeKey = (homeWords[homeWords.length - 1] || '').toLowerCase()
+      const awayKey = (awayWords[awayWords.length - 1] || '').toLowerCase()
+      return s.name.toLowerCase().includes(homeKey) && s.name.toLowerCase().includes(awayKey)
+    })
+
+    if (scoreData && scoreData.status.type.state === 'post') {
+      const competitors = scoreData.competitions[0].competitors
+      const homeScoreObj = competitors.find((c: any) => c.homeAway === 'home')
+      const awayScoreObj = competitors.find((c: any) => c.awayAway === 'away' || c.homeAway === 'away')
+
+      const homeScore = parseInt(homeScoreObj?.score || '0')
+      const awayScore = parseInt(awayScoreObj?.score || '0')
+
+      let winner: 'home' | 'away' | 'draw' = 'draw'
+      if (homeScore > awayScore) winner = 'home'
+      else if (awayScore > homeScore) winner = 'away'
+
+      if (winner !== 'draw') {
+        const isCorrect = pred.predicted_outcome === winner
+        const finalStatus = isCorrect ? 'won' : 'lost'
+        await sportsPredictionsStore.updatePredictionStatus(pred.id, finalStatus)
+        showToast(
+          isCorrect ? '預測成功 🎉' : '預測失敗 😢',
+          `${pred.home_team} vs ${pred.away_team} 完賽比數為 ${homeScore}:${awayScore}，您預測 ${pred.predicted_outcome === 'home' ? pred.home_team : pred.away_team}。`
+        )
+      }
+    }
+  })
+}
+
+const predictionToDelete = ref<SportsPrediction | null>(null)
+
+const triggerDeletePrediction = (pred: SportsPrediction) => {
+  predictionToDelete.value = pred
+}
+
+const confirmDeletePrediction = async () => {
+  if (predictionToDelete.value) {
+    await sportsPredictionsStore.deletePrediction(predictionToDelete.value.id)
+    predictionToDelete.value = null
   }
 }
 
@@ -546,8 +639,12 @@ const getSeasonProgress = (league: 'MLB' | 'NBA') => {
     // Dynamic NBA Logic: Previous Year Oct to Current Year April
     const start = new Date(year - 1, 9, 21).getTime()
     const end = new Date(year, 3, 12).getTime()
+    const playoffEnd = new Date(year, 5, 20).getTime() // Playoffs end around mid-June
+    
+    if (now.getTime() > playoffEnd) return { played: 82, total: 82, status: '休賽季' }
     if (now.getTime() > end) return { played: 82, total: 82, status: '季後賽' }
     if (now.getTime() < start) return { played: 0, total: 82, status: '休賽季' }
+    
     const totalDays = (end - start) / (1000 * 3600 * 24)
     const currentDays = (now.getTime() - start) / (1000 * 3600 * 24)
     let played = Math.round((currentDays / totalDays) * 82)
@@ -558,8 +655,12 @@ const getSeasonProgress = (league: 'MLB' | 'NBA') => {
     // Dynamic MLB Logic: Current Year March to Sep
     const start = new Date(year, 2, 26).getTime()
     const end = new Date(year, 8, 27).getTime()
+    const playoffEnd = new Date(year, 10, 5).getTime() // Playoffs end around early November
+    
+    if (now.getTime() > playoffEnd) return { played: 162, total: 162, status: '休賽季' }
     if (now.getTime() > end) return { played: 162, total: 162, status: '季後賽' }
     if (now.getTime() < start) return { played: 0, total: 162, status: '休賽季' }
+    
     const totalDays = (end - start) / (1000 * 3600 * 24)
     const currentDays = (now.getTime() - start) / (1000 * 3600 * 24)
     let played = Math.round((currentDays / totalDays) * 162)
@@ -649,14 +750,16 @@ onUnmounted(() => {
     <div class="min-h-11 md:h-12 border-b border-slate-800 flex items-center px-1.5 md:px-6 shrink-0 bg-[#0a0f1c] w-full">
       <div class="flex w-full items-center overflow-x-auto no-scrollbar flex-nowrap">
         <button 
-          v-for="league in (['MLB', 'NBA', '球員'] as const)"
+          v-for="league in (['MLB', 'NBA', '球員', '預測'] as const)"
           :key="league"
           @click="activeLeague = league"
           class="flex-1 min-w-[max-content] h-11 md:h-12 px-3 md:px-4 border-b-2 transition-colors relative text-[10px] md:text-[13px] font-bold whitespace-nowrap text-center shrink-0"
           :class="activeLeague === league ? 'border-blue-400 text-white bg-blue-400/5' : 'border-transparent text-slate-500 hover:text-slate-300'"
         >
-          <span class="mr-1 md:mr-2 inline-block">{{ league === 'MLB' ? '⚾' : (league === 'NBA' ? '🏀' : '🌟') }}</span>
-          {{ league === '球員' ? (locale === 'zh-TW' ? '球員' : 'Players') : league }}
+          <span class="mr-1 md:mr-2 inline-block">
+            {{ league === 'MLB' ? '⚾' : (league === 'NBA' ? '🏀' : (league === '球員' ? '🌟' : '🔮')) }}
+          </span>
+          {{ league === '球員' ? (locale === 'zh-TW' ? '球員' : 'Players') : (league === '預測' ? (locale === 'zh-TW' ? '預測' : 'Predictions') : league) }}
         </button>
       </div>
     </div>
@@ -1060,6 +1163,52 @@ onUnmounted(() => {
                 :style="{ width: getWinProb(game, game.away_team, game.home_team).home + '%' }"
               ></div>
             </div>
+            
+            <!-- Prediction Action Row -->
+            <div class="mt-3 pt-2.5 border-t border-slate-800/40 flex justify-between items-center text-[10px]">
+              <span class="text-slate-500 font-bold flex items-center gap-1">
+                <span class="neon-blink">{{ locale === 'zh-TW' ? '模擬預測' : 'Mock Predict' }}</span>
+                <span v-if="getPredictedOutcome(game.id) !== undefined" 
+                      class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase ml-1"
+                      :class="getPredictedOutcome(game.id)?.status === 'won' 
+                        ? 'bg-green-950/50 text-green-400 border border-green-500/10' 
+                        : (getPredictedOutcome(game.id)?.status === 'lost' 
+                          ? 'bg-red-950/50 text-red-400 border border-red-500/10' 
+                          : 'bg-blue-950/50 text-blue-400 border border-blue-500/10')">
+                  {{ getPredictedOutcome(game.id)?.status === 'won' 
+                    ? (locale === 'zh-TW' ? '獲勝' : 'Won') 
+                    : (getPredictedOutcome(game.id)?.status === 'lost' 
+                      ? (locale === 'zh-TW' ? '失敗' : 'Lost') 
+                      : (locale === 'zh-TW' ? '預測中' : 'Pending')) }}
+                </span>
+              </span>
+              <div class="flex gap-1.5">
+                <button 
+                  @click="handlePredict(game, 'MLB', 'away')"
+                  :disabled="getPredictedOutcome(game.id) !== undefined || getLiveStatus(game, 'MLB').isFinal || getLiveStatus(game, 'MLB').isLive || new Date(game.commence_time).getTime() < Date.now()"
+                  class="px-2.5 py-1 rounded text-[9px] font-black transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed uppercase"
+                  :class="getPredictedOutcome(game.id)?.predicted_outcome === 'away' 
+                    ? 'bg-blue-600 text-white border border-blue-500 shadow-md shadow-blue-500/20' 
+                    : (getPredictedOutcome(game.id) !== undefined 
+                      ? 'bg-slate-900/40 text-slate-600 border border-slate-900/60' 
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800')"
+                >
+                  {{ game.away_team.split(' ').slice(-1)[0] }}
+                </button>
+                <button 
+                  @click="handlePredict(game, 'MLB', 'home')"
+                  :disabled="getPredictedOutcome(game.id) !== undefined || getLiveStatus(game, 'MLB').isFinal || getLiveStatus(game, 'MLB').isLive || new Date(game.commence_time).getTime() < Date.now()"
+                  class="px-2.5 py-1 rounded text-[9px] font-black transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed uppercase"
+                  :class="getPredictedOutcome(game.id)?.predicted_outcome === 'home' 
+                    ? 'bg-blue-600 text-white border border-blue-500 shadow-md shadow-blue-500/20' 
+                    : (getPredictedOutcome(game.id) !== undefined 
+                      ? 'bg-slate-900/40 text-slate-600 border border-slate-900/60' 
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800')"
+                >
+                  {{ game.home_team.split(' ').slice(-1)[0] }}
+                </button>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -1306,12 +1455,178 @@ onUnmounted(() => {
                 :style="{ width: getWinProb(game, game.away_team, game.home_team).home + '%' }"
               ></div>
             </div>
+
+            <!-- Prediction Action Row -->
+            <div class="mt-3 pt-2.5 border-t border-slate-800/40 flex justify-between items-center text-[10px]">
+              <span class="text-slate-500 font-bold flex items-center gap-1">
+                <span class="neon-blink">{{ locale === 'zh-TW' ? '模擬預測' : 'Mock Predict' }}</span>
+                <span v-if="getPredictedOutcome(game.id) !== undefined" 
+                      class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase ml-1"
+                      :class="getPredictedOutcome(game.id)?.status === 'won' 
+                        ? 'bg-green-950/50 text-green-400 border border-green-500/10' 
+                        : (getPredictedOutcome(game.id)?.status === 'lost' 
+                          ? 'bg-red-950/50 text-red-400 border border-red-500/10' 
+                          : 'bg-blue-950/50 text-blue-400 border border-blue-500/10')">
+                  {{ getPredictedOutcome(game.id)?.status === 'won' 
+                    ? (locale === 'zh-TW' ? '獲勝' : 'Won') 
+                    : (getPredictedOutcome(game.id)?.status === 'lost' 
+                      ? (locale === 'zh-TW' ? '失敗' : 'Lost') 
+                      : (locale === 'zh-TW' ? '預測中' : 'Pending')) }}
+                </span>
+              </span>
+              <div class="flex gap-1.5">
+                <button 
+                  @click="handlePredict(game, 'NBA', 'away')"
+                  :disabled="getPredictedOutcome(game.id) !== undefined || getLiveStatus(game, 'NBA').isFinal || getLiveStatus(game, 'NBA').isLive || new Date(game.commence_time).getTime() < Date.now()"
+                  class="px-2.5 py-1 rounded text-[9px] font-black transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed uppercase"
+                  :class="getPredictedOutcome(game.id)?.predicted_outcome === 'away' 
+                    ? 'bg-blue-600 text-white border border-blue-500 shadow-md shadow-blue-500/20' 
+                    : (getPredictedOutcome(game.id) !== undefined 
+                      ? 'bg-slate-900/40 text-slate-600 border border-slate-900/60' 
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800')"
+                >
+                  {{ game.away_team.split(' ').slice(-1)[0] }}
+                </button>
+                <button 
+                  @click="handlePredict(game, 'NBA', 'home')"
+                  :disabled="getPredictedOutcome(game.id) !== undefined || getLiveStatus(game, 'NBA').isFinal || getLiveStatus(game, 'NBA').isLive || new Date(game.commence_time).getTime() < Date.now()"
+                  class="px-2.5 py-1 rounded text-[9px] font-black transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed uppercase"
+                  :class="getPredictedOutcome(game.id)?.predicted_outcome === 'home' 
+                    ? 'bg-blue-600 text-white border border-blue-500 shadow-md shadow-blue-500/20' 
+                    : (getPredictedOutcome(game.id) !== undefined 
+                      ? 'bg-slate-900/40 text-slate-600 border border-slate-900/60' 
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800')"
+                >
+                  {{ game.home_team.split(' ').slice(-1)[0] }}
+                </button>
+              </div>
+            </div>
           </div>
 
         </div>
         </div>
       </template>
 
+      <!-- ===== Predictions Tab ===== -->
+      <template v-if="activeLeague === '預測'">
+        <!-- Stats Header Card -->
+        <div class="mt-4 bg-gradient-to-br from-[#111827] to-[#070b14] border border-blue-500/10 rounded-2xl p-4 shadow-xl mb-4">
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-sm font-black text-slate-400 tracking-widest uppercase">🔮 {{ locale === 'zh-TW' ? '我的預測數據' : 'My Prediction Stats' }}</h2>
+            <span class="text-[9px] font-mono text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded border border-slate-800 uppercase">Daily Limit: 3</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-blue-950/20 border border-blue-900/10 rounded-xl py-3">
+              <div class="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{{ locale === 'zh-TW' ? '今日剩餘額度' : 'Today Remaining' }}</div>
+              <div class="text-sm md:text-lg font-black text-blue-400 font-mono">{{ sportsPredictionsStore.predictionsRemainingToday }}</div>
+            </div>
+            <div class="bg-blue-950/20 border border-blue-900/10 rounded-xl py-3">
+              <div class="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{{ locale === 'zh-TW' ? '累積勝率' : 'Win Rate' }}</div>
+              <div class="text-sm md:text-lg font-black text-green-400 font-mono">{{ sportsPredictionsStore.winRate }}</div>
+            </div>
+            <div class="bg-blue-950/20 border border-blue-900/10 rounded-xl py-3">
+              <div class="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{{ locale === 'zh-TW' ? '預測總場次' : 'Total Predicted' }}</div>
+              <div class="text-sm md:text-lg font-black text-slate-200 font-mono">{{ sportsPredictionsStore.predictions.length }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Predictions History List -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-black text-slate-400 tracking-widest uppercase mb-1">📋 {{ locale === 'zh-TW' ? '歷史預測記錄' : 'Prediction History' }}</h3>
+          
+          <div v-if="!authStore.chatSession" class="flex flex-col items-center justify-center p-8 bg-[#0a0f1c]/50 border border-slate-800/60 rounded-2xl text-center">
+            <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4 animate-pulse">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <p class="text-slate-300 font-bold text-xs mb-2">{{ locale === 'zh-TW' ? '請先登入帳號' : 'Please Sign In' }}</p>
+            <p class="text-slate-500 text-[10px] mb-4 max-w-[240px] leading-relaxed">{{ locale === 'zh-TW' ? '登入會員後即可參與每日模擬預測遊戲，記錄您的勝率！' : 'Sign in to access daily predictions and track your success rate!' }}</p>
+            <button @click="goToLogin" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg text-xs transition-colors cursor-pointer">{{ locale === 'zh-TW' ? '前往登入' : 'Go to Login' }}</button>
+          </div>
+
+          <div v-else-if="sportsPredictionsStore.predictions.length === 0" class="py-8 flex flex-col items-center gap-2 bg-[#0a0f1c]/50 rounded-2xl border border-slate-800 text-center">
+            <span class="text-3xl">🔮</span>
+            <p class="text-slate-500 font-bold text-sm">{{ locale === 'zh-TW' ? '目前無預測記錄' : 'No predictions yet' }}</p>
+            <p class="text-slate-600 text-xs">{{ locale === 'zh-TW' ? '快去球賽列表預測今天的比賽吧！' : 'Go predict today\'s games!' }}</p>
+          </div>
+
+          <div v-else class="space-y-2.5">
+            <div v-for="pred in sportsPredictionsStore.predictions" :key="pred.id"
+              class="bg-[#0a0f1c] border border-slate-800/80 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-[10px] text-slate-500 font-mono bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 font-bold">{{ pred.sport_type }}</span>
+                  <span class="text-[9px] text-slate-600 font-mono">{{ new Date(pred.created_at).toLocaleString() }}</span>
+                </div>
+                <div class="text-xs font-bold text-slate-300">
+                  {{ pred.away_team }} <span class="text-slate-600 font-normal">@</span> {{ pred.home_team }}
+                </div>
+                <div class="text-[10px] text-blue-400 font-bold mt-1.5 flex items-center gap-1">
+                  <span>🎯 {{ locale === 'zh-TW' ? '預測勝出：' : 'Predicted Winner: ' }}</span>
+                  <span class="text-white font-black">{{ pred.predicted_outcome === 'home' ? pred.home_team : pred.away_team }}</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 self-end md:self-auto shrink-0">
+                <span 
+                  class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase"
+                  :class="pred.status === 'won' 
+                    ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                    : (pred.status === 'lost' 
+                      ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                      : 'bg-blue-500/10 text-blue-400 border border-blue-500/20')"
+                >
+                  {{ pred.status === 'won' 
+                    ? (locale === 'zh-TW' ? '預測獲勝' : 'Won') 
+                    : (pred.status === 'lost' 
+                      ? (locale === 'zh-TW' ? '預測失敗' : 'Lost') 
+                      : (locale === 'zh-TW' ? '預測中' : 'Pending')) }}
+                </span>
+
+                <button 
+                  @click.stop="triggerDeletePrediction(pred)"
+                  class="p-1 rounded bg-red-950/20 hover:bg-red-900/40 border border-red-500/10 hover:border-red-500/30 text-red-400 transition-colors cursor-pointer"
+                  :title="locale === 'zh-TW' ? '刪除預測紀錄' : 'Delete Prediction'"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+    <!-- Prediction Delete Confirmation Modal -->
+    <transition name="fade">
+      <div v-if="predictionToDelete !== null" class="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-[#111827] border border-red-900/50 rounded-xl p-6 w-full max-w-sm shadow-2xl text-center">
+          <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">{{ locale === 'zh-TW' ? '確認刪除預測？' : 'Confirm Delete Prediction?' }}</h3>
+          <p class="text-xs text-slate-400 mb-6">
+            {{ locale === 'zh-TW' ? '您確定要刪除此筆預測紀錄嗎？刪除後將會還原您今日的預測額度。' : 'Are you sure you want to delete this prediction? Deleting will restore your daily prediction quota.' }}
+            <br />
+            <span class="text-white font-bold block mt-2">{{ predictionToDelete.away_team }} @ {{ predictionToDelete.home_team }}</span>
+          </p>
+          <div class="flex gap-3">
+            <button @click="predictionToDelete = null" class="flex-1 py-2.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-bold cursor-pointer">
+              {{ locale === 'zh-TW' ? '取消' : 'Cancel' }}
+            </button>
+            <button @click="confirmDeletePrediction" class="flex-1 py-2.5 rounded bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-bold cursor-pointer">
+              {{ locale === 'zh-TW' ? '確認刪除' : 'Confirm' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
     </div>
   </div>
 </template>
@@ -1319,4 +1634,20 @@ onUnmounted(() => {
 <style scoped>
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes neon-glow {
+  0%, 100% {
+    color: #fbbf24;
+    opacity: 1;
+  }
+  50% {
+    color: #f59e0b;
+    opacity: 0.85;
+  }
+}
+.neon-blink {
+  animation: neon-glow 3s infinite alternate;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
 </style>

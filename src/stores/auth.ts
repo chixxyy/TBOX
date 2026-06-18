@@ -5,6 +5,7 @@ import { supabase } from '../services/supabase'
 import { useAppStore } from './app'
 import { useToastStore } from './toast'
 import { usePortfolioStore } from './portfolio'
+import { useSportsPredictionsStore } from './sports_predictions'
 
 // Fallback for crypto.randomUUID()
 const generateUUID = () => {
@@ -44,6 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
   const appStore = useAppStore()
   const toastStore = useToastStore()
   const portfolioStore = usePortfolioStore()
+  const sportsPredictionsStore = useSportsPredictionsStore()
 
   const chatUser = computed(() => 
     chatSession.value?.user?.user_metadata?.nickname || 
@@ -190,6 +192,7 @@ export const useAuthStore = defineStore('auth', () => {
     portfolioStore.portfolio = []
     portfolioStore.priceAlerts = []
     portfolioStore.clearVirtualData()
+    sportsPredictionsStore.clearPredictions()
 
     try {
       if (!isInternal) {
