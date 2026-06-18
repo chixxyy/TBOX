@@ -83,7 +83,7 @@ export const initialAssets = [
   { symbol: 'TSLA', name: 'Tesla', type: 'stock', isIndex: false },
   { symbol: 'ORCL', name: 'Oracle', type: 'stock', isIndex: false },
   { symbol: 'PLTR', name: 'Palantir', type: 'stock', isIndex: false },
-  { symbol: 'RKLB', name: 'Rocket Lab', type: 'stock', isIndex: false },
+  { symbol: 'SPCX', name: 'Space Exploration', type: 'stock', isIndex: false },
   { symbol: 'MSFT', name: 'Microsoft', type: 'stock', isIndex: false },
   { symbol: 'IBM', name: 'IBM Corp', type: 'stock', isIndex: false },
   { symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', isIndex: false },
