@@ -746,6 +746,13 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     toastStore.showToast('帳戶重置', '模擬帳戶虛擬資金已重置為 100,000 USD，保留您當前的持倉與未結訂單。')
   }
 
+  const clearVirtualData = () => {
+    currentUserId.value = 'GUEST'
+    virtualCash.value = 100000
+    virtualPortfolio.value = []
+    virtualPendingOrders.value = []
+  }
+
   return {
     portfolio,
     priceAlerts,
@@ -764,6 +771,8 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     sellVirtualAsset,
     placeLimitOrder,
     cancelLimitOrder,
-    resetVirtualAccount
+    resetVirtualAccount,
+    loadSupabaseVirtualData,
+    clearVirtualData
   }
 })

@@ -47,23 +47,27 @@ export const useChatStore = defineStore('chat', () => {
       if (session?.user.id) {
         await authStore.fetchUserProfile(session.user.id)
         await portfolioStore.fetchPortfolio(session.user.id)
+        await portfolioStore.loadSupabaseVirtualData(session.user.id)
         authStore.initSessionSync(session.user.id)
       } else {
         authStore.userProfile = null
         portfolioStore.portfolio = []
+        portfolioStore.clearVirtualData()
       }
 
-      supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.auth.onAuthStateChange(async (_event, session) => {
         authStore.chatSession = session
         if (session?.user.id) {
           authStore.fetchUserProfile(session.user.id)
           portfolioStore.fetchPriceAlerts(session.user.id)
           portfolioStore.fetchPortfolio(session.user.id)
+          await portfolioStore.loadSupabaseVirtualData(session.user.id)
           authStore.initSessionSync(session.user.id)
         } else {
           authStore.userProfile = null
           portfolioStore.priceAlerts = []
           portfolioStore.portfolio = []
+          portfolioStore.clearVirtualData()
         }
       })
 

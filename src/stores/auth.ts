@@ -189,6 +189,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Clear portfolio and price alerts from portfolioStore
     portfolioStore.portfolio = []
     portfolioStore.priceAlerts = []
+    portfolioStore.clearVirtualData()
 
     try {
       if (!isInternal) {
