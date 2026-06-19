@@ -523,6 +523,36 @@ const getPredictedOutcome = (matchId: string) => {
   return sportsPredictionsStore.predictions.find(p => p.match_id === matchId)
 }
 
+const getPredictionScore = (pred: SportsPrediction) => {
+  if (pred.home_score !== undefined && pred.home_score !== null && pred.away_score !== undefined && pred.away_score !== null) {
+    return { home: pred.home_score, away: pred.away_score }
+  }
+
+  const league = pred.sport_type
+  const scores = league === 'MLB' ? mlbScores.value : nbaScores.value
+  const scoreData = scores.find(s => {
+    const predTime = new Date(pred.commence_time).getTime()
+    const scoreTime = new Date(s.date).getTime()
+    const timeDiffHours = Math.abs(predTime - scoreTime) / (1000 * 3600)
+    if (timeDiffHours > 12) return false
+
+    const homeWords = pred.home_team.split(' ')
+    const awayWords = pred.away_team.split(' ')
+    const homeKey = (homeWords[homeWords.length - 1] || '').toLowerCase()
+    const awayKey = (awayWords[awayWords.length - 1] || '').toLowerCase()
+    return s.name.toLowerCase().includes(homeKey) && s.name.toLowerCase().includes(awayKey)
+  })
+
+  if (scoreData && (scoreData.status.type.state === 'in' || scoreData.status.type.state === 'post')) {
+    const competitors = scoreData.competitions[0].competitors
+    return {
+      home: competitors.find((c: any) => c.homeAway === 'home')?.score || '0',
+      away: competitors.find((c: any) => c.awayAway === 'away' || c.homeAway === 'away')?.score || '0'
+    }
+  }
+  return null
+}
+
 const checkAndResolvePredictions = () => {
   if (!authStore.chatSession?.user?.id) return
 
@@ -562,7 +592,7 @@ const checkAndResolvePredictions = () => {
       if (winner !== 'draw') {
         const isCorrect = pred.predicted_outcome === winner
         const finalStatus = isCorrect ? 'won' : 'lost'
-        await sportsPredictionsStore.updatePredictionStatus(pred.id, finalStatus)
+        await sportsPredictionsStore.updatePredictionStatus(pred.id, finalStatus, homeScore, awayScore)
         showToast(
           isCorrect ? '預測成功 🎉' : '預測失敗 😢',
           `${pred.home_team} vs ${pred.away_team} 完賽比數為 ${homeScore}:${awayScore}，您預測 ${pred.predicted_outcome === 'home' ? pred.home_team : pred.away_team}。`
@@ -1557,16 +1587,27 @@ onUnmounted(() => {
             <div v-for="pred in sportsPredictionsStore.predictions" :key="pred.id"
               class="bg-[#0a0f1c] border border-slate-800/80 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
               <div>
-                <div class="flex items-center gap-2 mb-1">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
                   <span class="text-[10px] text-slate-500 font-mono bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 font-bold">{{ pred.sport_type }}</span>
-                  <span class="text-[9px] text-slate-600 font-mono">{{ new Date(pred.created_at).toLocaleString() }}</span>
+                  <span class="text-[9px] text-slate-500 font-mono">
+                    {{ locale === 'zh-TW' ? '預測時間' : 'Predicted' }}: {{ new Date(pred.created_at).toLocaleString() }}
+                  </span>
+                  <span class="text-[9px] text-amber-500/90 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-bold">
+                    {{ locale === 'zh-TW' ? '開賽時間' : 'Start Time' }}: {{ new Date(pred.commence_time).toLocaleString() }}
+                  </span>
                 </div>
                 <div class="text-xs font-bold text-slate-300">
                   {{ pred.away_team }} <span class="text-slate-600 font-normal">@</span> {{ pred.home_team }}
                 </div>
-                <div class="text-[10px] text-blue-400 font-bold mt-1.5 flex items-center gap-1">
-                  <span>🎯 {{ locale === 'zh-TW' ? '預測勝出：' : 'Predicted Winner: ' }}</span>
-                  <span class="text-white font-black">{{ pred.predicted_outcome === 'home' ? pred.home_team : pred.away_team }}</span>
+                <div class="text-[10px] text-blue-400 font-bold mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span class="flex items-center gap-1">
+                    <span>🎯 {{ locale === 'zh-TW' ? '預測勝出：' : 'Predicted Winner: ' }}</span>
+                    <span class="text-white font-black">{{ pred.predicted_outcome === 'home' ? pred.home_team : pred.away_team }}</span>
+                  </span>
+                  <span v-if="getPredictionScore(pred)" class="text-slate-400 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1">
+                    {{ locale === 'zh-TW' ? '比數：' : 'Score: ' }}
+                    <span class="text-slate-300 font-black">{{ getPredictionScore(pred)?.away }} : {{ getPredictionScore(pred)?.home }}</span>
+                  </span>
                 </div>
               </div>
 

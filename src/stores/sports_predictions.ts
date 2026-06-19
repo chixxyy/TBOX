@@ -14,6 +14,8 @@ export interface SportsPrediction {
   predicted_outcome: 'home' | 'away'
   status: 'pending' | 'won' | 'lost'
   created_at: string
+  home_score?: number | null
+  away_score?: number | null
 }
 
 export const useSportsPredictionsStore = defineStore('sportsPredictions', () => {
@@ -92,16 +94,31 @@ export const useSportsPredictionsStore = defineStore('sportsPredictions', () => 
     return false
   }
 
-  const updatePredictionStatus = async (id: string, status: 'won' | 'lost') => {
-    const { error } = await supabase
+  const updatePredictionStatus = async (id: string, status: 'won' | 'lost', homeScore?: number, awayScore?: number) => {
+    const updates: any = { status }
+    if (homeScore !== undefined) updates.home_score = homeScore
+    if (awayScore !== undefined) updates.away_score = awayScore
+
+    let { error } = await supabase
       .from('sports_predictions')
-      .update({ status })
+      .update(updates)
       .eq('id', id)
+
+    // Fallback if database columns home_score/away_score don't exist yet
+    if (error && (error.message.includes('column') || error.code === '42703')) {
+      const fallbackRes = await supabase
+        .from('sports_predictions')
+        .update({ status })
+        .eq('id', id)
+      error = fallbackRes.error
+    }
 
     if (!error) {
       const pred = predictions.value.find(p => p.id === id)
       if (pred) {
         pred.status = status
+        if (homeScore !== undefined) pred.home_score = homeScore
+        if (awayScore !== undefined) pred.away_score = awayScore
       }
     }
   }
