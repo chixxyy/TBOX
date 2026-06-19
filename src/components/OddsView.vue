@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { api } from '../network'
-import { showToast, trackedPlayers, initTrackedPlayers, setScrollProgress, locale, useSportsPredictionsStore, useAuthStore, goToLogin, type SportsPrediction } from '../stores'
+import { showToast, trackedPlayers, initTrackedPlayers, setScrollProgress, locale, useSportsPredictionsStore, useAuthStore, useSportsStore, goToLogin, type SportsPrediction } from '../stores'
 
 const sportsPredictionsStore = useSportsPredictionsStore()
 const authStore = useAuthStore()
+const sportsStore = useSportsStore()
 
 interface Outcome { name: string; price: number }
 interface Market { key: string; outcomes: Outcome[] }
@@ -121,21 +122,42 @@ const getWinProb = (game: Game, awayTeam: string, homeTeam: string): { away: num
 }
 
 // ── Data / Loading ──
-const mlbGames = ref<Game[]>([])
-const nbaGames = ref<Game[]>([])
-const mlbLoading = ref(true)
-const nbaLoading = ref(true)
+const mlbGames = computed({
+  get: () => sportsStore.mlbGames,
+  set: (val) => { sportsStore.mlbGames = val }
+})
+const nbaGames = computed({
+  get: () => sportsStore.nbaGames,
+  set: (val) => { sportsStore.nbaGames = val }
+})
+const mlbLoading = ref(false)
+const nbaLoading = ref(false)
 const mlbError = ref('')
 const nbaError = ref('')
-const isQuotaExceeded = ref(false)
+const isQuotaExceeded = computed({
+  get: () => sportsStore.isQuotaExceeded,
+  set: (val) => { sportsStore.isQuotaExceeded = val }
+})
 const activeLeague = ref<'MLB' | 'NBA' | '球員' | '預測'>('MLB')
 const lastUpdateStr = ref('')
 
 // ── Score Data ──
-const mlbScores = ref<any[]>([])
-const nbaScores = ref<any[]>([])
-const mlbStandings = ref<any[]>([])
-const nbaStandings = ref<any[]>([])
+const mlbScores = computed({
+  get: () => sportsStore.mlbScores,
+  set: (val) => { sportsStore.mlbScores = val }
+})
+const nbaScores = computed({
+  get: () => sportsStore.nbaScores,
+  set: (val) => { sportsStore.nbaScores = val }
+})
+const mlbStandings = computed({
+  get: () => sportsStore.mlbStandings,
+  set: (val) => { sportsStore.mlbStandings = val }
+})
+const nbaStandings = computed({
+  get: () => sportsStore.nbaStandings,
+  set: (val) => { sportsStore.nbaStandings = val }
+})
 
 // ── Player Sub-filter ──
 const currentYear = new Date().getFullYear()
@@ -404,6 +426,14 @@ const getLiveStatus = (game: Game, league: 'MLB' | 'NBA') => {
 const fetchOddsOnly = async () => {
   if (isQuotaExceeded.value) return;
 
+  // Cache odds for 15 minutes to save key usage
+  const oddsAge = Date.now() - sportsStore.lastOddsFetchTime
+  const hasCachedOdds = mlbGames.value.length > 0 && nbaGames.value.length > 0
+  if (hasCachedOdds && oddsAge < 15 * 60 * 1000) {
+    console.log('%c[Sports Sync] 💤 Odds Cache Valid, Skipping Fetch', "color: #10b981; font-style: italic;");
+    return;
+  }
+
   const hasWorkToDo = (scores: any[]) => scores.length === 0 || scores.some(s => s.status.type.state === 'pre' || s.status.type.state === 'in');
   
   const needsMlb = hasWorkToDo(mlbScores.value);
@@ -450,6 +480,9 @@ const fetchOddsOnly = async () => {
         nbaError.value = err.message || '無法取得賠率'
       }
     }
+    if (mlb.status === 'fulfilled' || nba.status === 'fulfilled') {
+      sportsStore.lastOddsFetchTime = Date.now()
+    }
   } catch (err) {
     console.error('[Odds Engine] Sync Error:', err)
   } finally {
@@ -465,6 +498,13 @@ const isRapidMode = computed(() => {
 })
 
 const fetchScoresOnly = async () => {
+  const scoresAge = Date.now() - sportsStore.lastScoresFetchTime
+  const interval = isRapidMode.value ? 15000 : 60000
+  if (mlbScores.value.length > 0 && nbaScores.value.length > 0 && scoresAge < interval) {
+    scheduleNextScoreFetch()
+    return
+  }
+
   try {
     const [mlbS, nbaS] = await Promise.allSettled([
       api.getEspnScores('mlb'),
@@ -472,6 +512,9 @@ const fetchScoresOnly = async () => {
     ])
     if (mlbS.status === 'fulfilled') mlbScores.value = mlbS.value.events || []
     if (nbaS.status === 'fulfilled') nbaScores.value = nbaS.value.events || []
+    if (mlbS.status === 'fulfilled' || nbaS.status === 'fulfilled') {
+      sportsStore.lastScoresFetchTime = Date.now()
+    }
     checkAndResolvePredictions()
     
     // Update timestamp on every score sync
@@ -633,6 +676,11 @@ const fetchAll = async () => {
 }
 
 const fetchStandings = async () => {
+  const standingsAge = Date.now() - sportsStore.lastStandingsFetchTime
+  if (mlbStandings.value.length > 0 && nbaStandings.value.length > 0 && standingsAge < 60 * 60 * 1000) {
+    return
+  }
+
   try {
     const [mlbRes, nbaRes] = await Promise.all([
       api.getEspnStandings('mlb'),
@@ -655,6 +703,7 @@ const fetchStandings = async () => {
 
     mlbStandings.value = processStandings(mlbRes?.children)
     nbaStandings.value = processStandings(nbaRes?.children)
+    sportsStore.lastStandingsFetchTime = Date.now()
   } catch (err) {
     console.error('Failed to fetch standings', err)
   }
@@ -705,6 +754,9 @@ let scoreTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(async () => {
   fetchAll()
+  if (authStore.chatSession?.user?.id) {
+    sportsPredictionsStore.fetchPredictions(authStore.chatSession.user.id)
+  }
   const loadedFromCache = await initTrackedPlayers()
   if (!loadedFromCache) {
     fetchPlayerStats()

@@ -17,6 +17,19 @@ interface PlayerStats {
 export const useSportsStore = defineStore('sports', () => {
   const trackedPlayers = ref<PlayerStats[]>([])
 
+  // Global sports cache to prevent API waste on tab switching
+  const mlbGames = ref<any[]>([])
+  const nbaGames = ref<any[]>([])
+  const mlbScores = ref<any[]>([])
+  const nbaScores = ref<any[]>([])
+  const mlbStandings = ref<any[]>([])
+  const nbaStandings = ref<any[]>([])
+  const isQuotaExceeded = ref(false)
+
+  const lastOddsFetchTime = ref<number>(0)
+  const lastScoresFetchTime = ref<number>(0)
+  const lastStandingsFetchTime = ref<number>(0)
+
   const initTrackedPlayers = async (): Promise<boolean> => {
     if (trackedPlayers.value.length > 0) return true;
     
@@ -106,6 +119,16 @@ export const useSportsStore = defineStore('sports', () => {
 
   return {
     trackedPlayers,
-    initTrackedPlayers
+    initTrackedPlayers,
+    mlbGames,
+    nbaGames,
+    mlbScores,
+    nbaScores,
+    mlbStandings,
+    nbaStandings,
+    isQuotaExceeded,
+    lastOddsFetchTime,
+    lastScoresFetchTime,
+    lastStandingsFetchTime
   }
 })
