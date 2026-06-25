@@ -215,9 +215,10 @@ const api = {
   },
 
   // ESPN Hidden API for Live Scores
-  async getEspnScores(league: 'mlb' | 'nba') {
+  async getEspnScores(league: 'mlb' | 'nba', dateStr?: string) {
     const sport = league === 'nba' ? 'basketball' : 'baseball';
-    return apiFetch(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard`);
+    const query = dateStr ? `?dates=${dateStr}` : '';
+    return apiFetch(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard${query}`);
   },
 
   // ESPN Standings API (Daily Cached)

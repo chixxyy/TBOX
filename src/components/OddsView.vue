@@ -596,16 +596,18 @@ const getPredictionScore = (pred: SportsPrediction) => {
   return null
 }
 
-const checkAndResolvePredictions = () => {
+const checkAndResolvePredictions = async () => {
   if (!authStore.chatSession?.user?.id) return
 
-  sportsPredictionsStore.predictions.forEach(async (pred) => {
-    if (pred.status !== 'pending') return
+  const fetchedPastScores = new Map<string, any>()
+
+  for (const pred of sportsPredictionsStore.predictions) {
+    if (pred.status !== 'pending') continue
 
     const league = pred.sport_type
     const scores = league === 'MLB' ? mlbScores.value : nbaScores.value
 
-    const scoreData = scores.find(s => {
+    let scoreData = scores.find(s => {
       const predTime = new Date(pred.commence_time).getTime()
       const scoreTime = new Date(s.date).getTime()
       const timeDiffHours = Math.abs(predTime - scoreTime) / (1000 * 3600)
@@ -619,6 +621,36 @@ const checkAndResolvePredictions = () => {
       const awayKey = (awayWords[awayWords.length - 1] || '').toLowerCase()
       return s.name.toLowerCase().includes(homeKey) && s.name.toLowerCase().includes(awayKey)
     })
+
+    // If not found in today's scores but game start time has passed by > 4 hours, fetch historical scoreboard
+    if (!scoreData && new Date(pred.commence_time).getTime() < Date.now() - 4 * 3600 * 1000) {
+      try {
+        const d = new Date(pred.commence_time)
+        const estDateStr = d.toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' })
+        const [month, day, year] = estDateStr.split('/')
+        const yyyymmdd = `${year}${month}${day}`
+        const cacheKey = `${league}_${yyyymmdd}`
+        
+        let pastEvents = []
+        if (fetchedPastScores.has(cacheKey)) {
+          pastEvents = fetchedPastScores.get(cacheKey)
+        } else {
+          const res = await api.getEspnScores(league.toLowerCase() as 'mlb' | 'nba', yyyymmdd)
+          pastEvents = res?.events || []
+          fetchedPastScores.set(cacheKey, pastEvents)
+        }
+        
+        scoreData = pastEvents.find((s: any) => {
+          const homeWords = pred.home_team.split(' ')
+          const awayWords = pred.away_team.split(' ')
+          const homeKey = (homeWords[homeWords.length - 1] || '').toLowerCase()
+          const awayKey = (awayWords[awayWords.length - 1] || '').toLowerCase()
+          return s.name.toLowerCase().includes(homeKey) && s.name.toLowerCase().includes(awayKey)
+        })
+      } catch (err) {
+        console.error('Failed to fetch past scores for prediction resolution:', err)
+      }
+    }
 
     if (scoreData && scoreData.status.type.state === 'post') {
       const competitors = scoreData.competitions[0].competitors
@@ -642,7 +674,7 @@ const checkAndResolvePredictions = () => {
         )
       }
     }
-  })
+  }
 }
 
 const predictionToDelete = ref<SportsPrediction | null>(null)
