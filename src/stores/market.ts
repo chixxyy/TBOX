@@ -56,7 +56,7 @@ export const initialAssets = [
   { symbol: 'ETHUSDT', name: 'Ethereum', type: 'crypto', isIndex: false },
   { symbol: 'SOLUSDT', name: 'Solana', type: 'crypto', isIndex: false },
   { symbol: 'BNBUSDT', name: 'Binance Coin', type: 'crypto', isIndex: false },
-  { symbol: 'XRPUSDT', name: 'Ripple', type: 'crypto', isIndex: false },
+  { symbol: 'XAUTUSDT', name: 'Tether Gold', type: 'crypto', isIndex: false },
   { symbol: 'DOGEUSDT', name: 'Dogecoin', type: 'crypto', isIndex: false },
   { symbol: 'ADAUSDT', name: 'Cardano', type: 'crypto', isIndex: false },
   { symbol: 'TRXUSDT', name: 'Tron', type: 'crypto', isIndex: false },
