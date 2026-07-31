@@ -103,7 +103,7 @@ const handleLogout = () => {
       <!-- Language Switcher -->
       <button 
         @click="locale = locale === 'zh-TW' ? 'en' : 'zh-TW'" 
-        class="px-2 py-1 mr-1.5 md:mr-2 rounded-lg bg-slate-800/40 border border-slate-700/60 hover:bg-slate-700/50 text-slate-300 hover:text-slate-100 transition-all font-mono font-bold text-[10px] md:text-xs select-none backdrop-blur-md cursor-pointer"
+        class="hidden md:block px-2 py-1 mr-1.5 md:mr-2 rounded-lg bg-slate-800/40 border border-slate-700/60 hover:bg-slate-700/50 text-slate-300 hover:text-slate-100 transition-all font-mono font-bold text-[10px] md:text-xs select-none backdrop-blur-md cursor-pointer"
       >
         {{ locale === 'zh-TW' ? 'EN' : 'ZH' }}
       </button>
