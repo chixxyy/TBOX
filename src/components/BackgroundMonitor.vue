@@ -110,32 +110,35 @@ async function fetchFinnhub(): Promise<any[]> {
 }
 
 async function fetchCC(): Promise<any[]> {
-  const res = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&limit=50&sortOrder=latest')
-  const data = await res.json()
-  return (data.Data || []).map((item: any) => {
-    const categories = (item.categories || '').toUpperCase()
-    const tags: string[] = []
-    if (categories.includes('REGULAT')) tags.push('regulation')
-    if (categories.includes('DEFI')) tags.push('defi')
-    if (categories.includes('MARKET')) tags.push('markets')
-    if (categories.includes('ETF')) tags.push('etf')
-    if (tags.length === 0) tags.push('crypto')
-
-    if (tags.length === 0) tags.push('crypto')
-
-    return {
-      uid: `cc-${item.id}`,
-      source: item.source_info?.name || item.source,
-      cat: tags[0],
-      ts: item.published_on * 1000,
-      headline: item.title,
-      summary: item.body?.slice(0, 200) || '',
-      image: item.imageurl || '',
-      url: item.url || '#',
-      avatarBg: '7c3aed',
-      provider: 'cryptocompare'
-    }
-  })
+  try {
+    const res = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&limit=50&sortOrder=latest')
+    if (!res.ok) return []
+    const data = await res.json()
+    if (!data || !Array.isArray(data.Data)) return []
+    
+    return data.Data.map((item: any) => {
+      const categories = (item.categories || '').toUpperCase()
+      const tags: string[] = []
+      if (categories.includes('REGULAT')) tags.push('regulation')
+      if (categories.includes('DEFI')) tags.push('defi')
+      if (categories.includes('MARKET')) tags.push('markets')
+      if (categories.includes('ETF')) tags.push('etf')
+      if (tags.length === 0) tags.push('crypto')
+  
+      return {
+        uid: `cc-${item.id}`,
+        source: item.source_info?.name || item.source,
+        cat: tags[0],
+        ts: item.published_on * 1000,
+        headline: item.title,
+        summary: item.body?.slice(0, 200) || '',
+        image: item.imageurl || '',
+        url: item.url || '#',
+        avatarBg: '7c3aed',
+        provider: 'cryptocompare'
+      }
+    })
+  } catch { return [] }
 }
 
 async function fetchRss(
@@ -147,9 +150,12 @@ async function fetchRss(
 ): Promise<any[]> {
   try {
     const url = encodeURIComponent(feedUrl);
-    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
+    const apiPath = import.meta.env.DEV ? `https://api.rss2json.com/v1/api.json?rss_url=${url}` : `/api/rss?u=${url}&_vite=1`;
+    const res = await fetch(apiPath);
     const data = await res.json();
-    if (data.status !== 'ok') return [];
+    if (import.meta.env.DEV && data.status !== 'ok') return [];
+    if (!import.meta.env.DEV && data.status !== 'ok') return [];
+    
     return (data.items || []).map((item: any) => ({
       uid: `${providerId}-${item.guid || item.link}`,
       source: sourceName,
