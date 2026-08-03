@@ -107,39 +107,7 @@ async function fetchFinnhub(): Promise<any[]> {
                 item.source.toLowerCase().includes('cnbc') ? 'cnbc' : 'finnhub'
     }
   })
-}
-
-async function fetchCC(): Promise<any[]> {
-  try {
-    const res = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&limit=50&sortOrder=latest')
-    if (!res.ok) return []
-    const data = await res.json()
-    if (!data || !Array.isArray(data.Data)) return []
-    
-    return data.Data.map((item: any) => {
-      const categories = (item.categories || '').toUpperCase()
-      const tags: string[] = []
-      if (categories.includes('REGULAT')) tags.push('regulation')
-      if (categories.includes('DEFI')) tags.push('defi')
-      if (categories.includes('MARKET')) tags.push('markets')
-      if (categories.includes('ETF')) tags.push('etf')
-      if (tags.length === 0) tags.push('crypto')
-  
-      return {
-        uid: `cc-${item.id}`,
-        source: item.source_info?.name || item.source,
-        cat: tags[0],
-        ts: item.published_on * 1000,
-        headline: item.title,
-        summary: item.body?.slice(0, 200) || '',
-        image: item.imageurl || '',
-        url: item.url || '#',
-        avatarBg: '7c3aed',
-        provider: 'cryptocompare'
-      }
-    })
-  } catch { return [] }
-}
+const fetchCoinTelegraph = () => fetchRss('https://cointelegraph.com/rss', 'CoinTelegraph', 'cointelegraph', 'crypto', 'fabd00');
 
 async function fetchRss(
   feedUrl: string, 
@@ -214,9 +182,9 @@ const fetchCNBC = () => fetchRss('https://search.cnbc.com/rs/search/combinedcms/
 
 async function syncNews(skipNotifications = false) {
   try {
-    const [fh, cc, sp, mt, yf, bbc, cd, cnbc] = await Promise.allSettled([
+    const [fh, ct, sp, mt, yf, bbc, cd, cnbc] = await Promise.allSettled([
       fetchFinnhub(), 
-      fetchCC(), 
+      fetchCoinTelegraph(), 
       fetchSports(), 
       fetchMlbTransactions(),
       fetchYahooFinance(),
@@ -226,7 +194,7 @@ async function syncNews(skipNotifications = false) {
     ])
     const rawAll = [
       ...(fh.status === 'fulfilled' ? fh.value : []),
-      ...(cc.status === 'fulfilled' ? cc.value : []),
+      ...(ct.status === 'fulfilled' ? ct.value : []),
       ...(sp.status === 'fulfilled' ? sp.value : []),
       ...(mt.status === 'fulfilled' ? mt.value : []),
       ...(yf.status === 'fulfilled' ? yf.value : []),

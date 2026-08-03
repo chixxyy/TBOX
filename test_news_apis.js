@@ -25,7 +25,7 @@ async function runTests() {
 
   await testApi('Finnhub (General)', `https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_TOKEN}`);
   await testApi('Finnhub (Crypto)', `https://finnhub.io/api/v1/news?category=crypto&token=${FINNHUB_TOKEN}`);
-  await testApi('CryptoCompare', 'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&limit=50&sortOrder=latest');
+  await testApi('CoinTelegraph (via rss2json)', `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://cointelegraph.com/rss')}`);
   await testApi('ESPN (via rss2json)', `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://www.espn.com/espn/rss/news')}`);
   await testApi('MLB Transactions', `https://statsapi.mlb.com/api/v1/transactions?sportId=1&startDate=${threeDaysAgo}&endDate=${today}`);
 }
