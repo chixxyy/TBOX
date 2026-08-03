@@ -1,5 +1,22 @@
+import fs from 'fs';
+import path from 'path';
+
+function getEnvVar(key) {
+  if (process.env[key]) return process.env[key];
+  try {
+    const envPath = path.resolve('.env.local');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      const match = content.match(new RegExp(`^${key}=(.*)$`, 'm'));
+      if (match) return match[1].split(',')[0].trim();
+    }
+  } catch (e) {}
+  return '';
+}
+
 async function testOdds() {
-  const url = 'https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=3eb79b6bc84fa6476843ae28b7a62bc6&regions=us&markets=h2h&oddsFormat=decimal&bookmakers=draftkings,pinnacle,fanduel';
+  const apiKey = getEnvVar('VITE_ODDS_API_KEY');
+  const url = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${apiKey}&regions=us&markets=h2h&oddsFormat=decimal&bookmakers=draftkings,pinnacle,fanduel`;
   console.log('Fetching:', url);
   try {
     const res = await fetch(url);

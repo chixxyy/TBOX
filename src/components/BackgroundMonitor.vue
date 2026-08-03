@@ -101,13 +101,42 @@ async function fetchFinnhub(): Promise<any[]> {
       summary: item.summary || '',
       url: item.url || '#',
       avatarBg: item.category === 'crypto' ? '3b82f6' : item.category === 'forex' ? 'f59e0b' : '10b981',
-      provider: item.source.toLowerCase().includes('forexlive') ? 'forexlive' : 
-                item.source.toLowerCase().includes('reuters') ? 'reuters' : 
-                item.source.toLowerCase().includes('yahoo') ? 'yahoo' : 
-                item.source.toLowerCase().includes('cnbc') ? 'cnbc' : 'finnhub'
+      provider: (item.source || '').toLowerCase().includes('forexlive') ? 'forexlive' : 
+                (item.source || '').toLowerCase().includes('reuters') ? 'reuters' : 
+                (item.source || '').toLowerCase().includes('yahoo') ? 'yahoo' : 
+                (item.source || '').toLowerCase().includes('cnbc') ? 'cnbc' : 'finnhub'
     }
   })
-const fetchCoinTelegraph = () => fetchRss('https://cointelegraph.com/rss', 'CoinTelegraph', 'cointelegraph', 'crypto', 'fabd00');
+}
+
+async function fetchCC(): Promise<any[]> {
+  const res = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&limit=50&sortOrder=latest')
+  const data = await res.json()
+  return (data.Data || []).map((item: any) => {
+    const categories = (item.categories || '').toUpperCase()
+    const tags: string[] = []
+    if (categories.includes('REGULAT')) tags.push('regulation')
+    if (categories.includes('DEFI')) tags.push('defi')
+    if (categories.includes('MARKET')) tags.push('markets')
+    if (categories.includes('ETF')) tags.push('etf')
+    if (tags.length === 0) tags.push('crypto')
+
+    if (tags.length === 0) tags.push('crypto')
+
+    return {
+      uid: `cc-${item.id}`,
+      source: item.source_info?.name || item.source,
+      cat: tags[0],
+      ts: item.published_on * 1000,
+      headline: item.title,
+      summary: item.body?.slice(0, 200) || '',
+      image: item.imageurl || '',
+      url: item.url || '#',
+      avatarBg: '7c3aed',
+      provider: 'cryptocompare'
+    }
+  })
+}
 
 async function fetchRss(
   feedUrl: string, 
@@ -118,12 +147,9 @@ async function fetchRss(
 ): Promise<any[]> {
   try {
     const url = encodeURIComponent(feedUrl);
-    const apiPath = import.meta.env.DEV ? `https://api.rss2json.com/v1/api.json?rss_url=${url}` : `/api/rss?u=${url}&_vite=1`;
-    const res = await fetch(apiPath);
+    const res = await fetch(`/api/rss?u=${url}&_vite=1`);
     const data = await res.json();
-    if (import.meta.env.DEV && data.status !== 'ok') return [];
-    if (!import.meta.env.DEV && data.status !== 'ok') return [];
-    
+    if (data.status !== 'ok') return [];
     return (data.items || []).map((item: any) => ({
       uid: `${providerId}-${item.guid || item.link}`,
       source: sourceName,
@@ -182,9 +208,9 @@ const fetchCNBC = () => fetchRss('https://search.cnbc.com/rs/search/combinedcms/
 
 async function syncNews(skipNotifications = false) {
   try {
-    const [fh, ct, sp, mt, yf, bbc, cd, cnbc] = await Promise.allSettled([
+    const [fh, cc, sp, mt, yf, bbc, cd, cnbc] = await Promise.allSettled([
       fetchFinnhub(), 
-      fetchCoinTelegraph(), 
+      fetchCC(), 
       fetchSports(), 
       fetchMlbTransactions(),
       fetchYahooFinance(),
@@ -194,7 +220,7 @@ async function syncNews(skipNotifications = false) {
     ])
     const rawAll = [
       ...(fh.status === 'fulfilled' ? fh.value : []),
-      ...(ct.status === 'fulfilled' ? ct.value : []),
+      ...(cc.status === 'fulfilled' ? cc.value : []),
       ...(sp.status === 'fulfilled' ? sp.value : []),
       ...(mt.status === 'fulfilled' ? mt.value : []),
       ...(yf.status === 'fulfilled' ? yf.value : []),

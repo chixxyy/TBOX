@@ -1,5 +1,21 @@
 
-const FINNHUB_TOKEN = 'd5l4c49r01qgqufk6ua0d5l4c49r01qgqufk6uag';
+import fs from 'fs';
+import path from 'path';
+
+function getEnvVar(key) {
+  if (process.env[key]) return process.env[key];
+  try {
+    const envPath = path.resolve('.env.local');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      const match = content.match(new RegExp(`^${key}=(.*)$`, 'm'));
+      if (match) return match[1].split(',')[0].trim();
+    }
+  } catch (e) {}
+  return '';
+}
+
+const FINNHUB_TOKEN = getEnvVar('VITE_FINNHUB_TOKEN');
 
 async function testApi(name, url) {
   console.log(`Testing ${name}...`);
