@@ -9,7 +9,7 @@
       "destination": "https://query1.finance.yahoo.com/:path*"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|assets/|.*\\.(?:js|css|webmanifest|svg|png|jpg|jpeg|ico|json|woff2)$).*)",
       "destination": "/index.html"
     }
   ]
