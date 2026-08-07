@@ -250,6 +250,13 @@ watch(activeSymbol, () => {
   }
 })
 
+const mockPortfolioFilter = ref<'all' | 'crypto' | 'stock'>('all')
+const filteredVirtualPortfolio = computed(() => {
+  if (mockPortfolioFilter.value === 'all') return portfolioStore.virtualPortfolio
+  if (mockPortfolioFilter.value === 'crypto') return portfolioStore.virtualPortfolio.filter(i => i.symbol.includes('USDT') || i.symbol.endsWith('USD'))
+  return portfolioStore.virtualPortfolio.filter(i => !i.symbol.includes('USDT') && !i.symbol.endsWith('USD') && !i.symbol.startsWith('^') && i.symbol !== 'BDI')
+})
+
 const fetchStockInfo = async () => {
   const symbol = activeSymbol.value
   if (!symbol || symbol.startsWith('^') || symbol === 'FGI' || symbol === 'BDI') return
@@ -570,9 +577,16 @@ onUnmounted(() => {
 
       <!-- 3. Current Positions List -->
       <div class="bg-[#111827] border border-slate-800/80 rounded-xl p-3 flex-1 flex flex-col min-h-[160px] overflow-hidden">
-        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 shrink-0">{{ t('holdings') }} ({{ portfolioStore.virtualPortfolio.length }})</h4>
+        <div class="flex items-center justify-between mb-2 shrink-0">
+          <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ t('holdings') }} ({{ filteredVirtualPortfolio.length }})</h4>
+          <div class="flex space-x-1">
+            <button @click="mockPortfolioFilter = 'all'" :class="mockPortfolioFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-800/80 text-slate-400'" class="px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-colors">{{ t('all') }}</button>
+            <button @click="mockPortfolioFilter = 'crypto'" :class="mockPortfolioFilter === 'crypto' ? 'bg-blue-600 text-white' : 'bg-slate-800/80 text-slate-400'" class="px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-colors">{{ t('crypto') }}</button>
+            <button @click="mockPortfolioFilter = 'stock'" :class="mockPortfolioFilter === 'stock' ? 'bg-blue-600 text-white' : 'bg-slate-800/80 text-slate-400'" class="px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-colors">{{ t('stock') }}</button>
+          </div>
+        </div>
         <div class="flex-1 overflow-y-auto custom-scrollbar pr-0.5">
-          <div v-if="portfolioStore.virtualPortfolio.length === 0" class="flex flex-col items-center justify-center h-full text-slate-600 space-y-1">
+          <div v-if="filteredVirtualPortfolio.length === 0" class="flex flex-col items-center justify-center h-full text-slate-600 space-y-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -580,7 +594,7 @@ onUnmounted(() => {
           </div>
           <div v-else class="space-y-2">
             <div 
-              v-for="item in portfolioStore.virtualPortfolio"
+              v-for="item in filteredVirtualPortfolio"
               :key="item.id"
               @click="setActiveSymbol(item.symbol)"
               class="p-2 rounded-lg bg-[#0a0f1c] hover:bg-slate-800 border border-slate-800/50 hover:border-slate-700 transition-all cursor-pointer flex justify-between items-center group"
