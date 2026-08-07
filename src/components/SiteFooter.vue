@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { scrollProgress, isChangingTab, t } from '../stores'
+import { isChangingTab, t } from '../stores'
 
 const uptime = ref('00:00:00')
 const startTime = Date.now()
@@ -25,7 +25,7 @@ onMounted(() => {
       <div 
         class="h-full bg-blue-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-[0_0_8px_rgba(59,130,246,0.7)]"
         :class="isChangingTab ? 'transition-none' : 'transition-all duration-500'"
-        :style="{ width: `${scrollProgress}%` }"
+        style="width: var(--scroll-progress, 0%)"
       ></div>
     </div>
     <div class="flex items-center space-x-4 w-full">

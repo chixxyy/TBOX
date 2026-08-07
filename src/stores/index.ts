@@ -64,11 +64,6 @@ export const activeAIAsset = computed({
   set: (val) => { useAppStore().activeAIAsset = val }
 })
 
-export const scrollProgress = computed({
-  get: () => useAppStore().scrollProgress,
-  set: (val) => { useAppStore().scrollProgress = val }
-})
-
 export const isChangingTab = computed({
   get: () => useAppStore().isChangingTab,
   set: (val) => { useAppStore().isChangingTab = val }

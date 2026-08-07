@@ -26,7 +26,7 @@ export const translations = {
     disabled: '已關閉',
     muteNotifications: '點擊靜音通知與音效',
     unmuteNotifications: '點擊開啟通知與音效',
-    systemOperational: '系統運作正常',
+    systemOperational: '連線正常',
 
     // Asset List
     searchPlaceholder: '搜尋資產代碼...',

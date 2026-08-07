@@ -7,7 +7,6 @@ import {
   isMoversLoading as isLoading, 
   lastMoversUpdate as lastUpdateTime,
   type Mover,
-  setScrollProgress,
   isChangingTab,
   portfolio,
   marketPrices,
@@ -31,10 +30,10 @@ const handleScroll = (e: Event) => {
     const el = e.target as HTMLElement
     const scrollMax = el.scrollHeight - el.clientHeight
     if (scrollMax <= 0) {
-      setScrollProgress(0)
+      document.documentElement.style.setProperty('--scroll-progress', '0%')
     } else {
       const progress = (el.scrollTop / scrollMax) * 100
-      setScrollProgress(progress)
+      document.documentElement.style.setProperty('--scroll-progress', `${progress}%`)
     }
   })
 }
@@ -90,10 +89,7 @@ const selectSuggestion = (s: any) => {
 }
 
 const handleBlur = () => {
-  // Delay hiding to allow click events on suggestions to fire first
-  setTimeout(() => {
-    showSuggestions.value = false
-  }, 200)
+  showSuggestions.value = false
 }
 
 const formatSymbolDisplay = (symbol: string) => symbol.replace('.B', '').replace('^', '')
@@ -338,7 +334,7 @@ const portfolioAllocation = computed(() => {
 const setTab = async (tag: string) => {
   isChangingTab.value = true
   activeFilter.value = tag
-  setScrollProgress(0)
+  document.documentElement.style.setProperty('--scroll-progress', '0%')
   await nextTick()
   setTimeout(() => {
     isChangingTab.value = false
@@ -472,8 +468,8 @@ const triggerDelete = (id: string, symbol: string) => {
 const showAdjustModal = ref(false)
 const adjustItem = ref<any>(null)
 const adjustType = ref<'add' | 'reduce'>('add')
-const adjustAmount = ref<number | null>(null)
-const adjustPrice = ref<number | null>(null)
+const adjustAmount = ref<number | string | null>(null)
+const adjustPrice = ref<number | string | null>(null)
 const isAdjusting = ref(false)
 
 const openAdjust = (item: any) => {
@@ -752,7 +748,7 @@ const earningsSeasonInfo = computed(() => {
                       <span class="text-[9px] font-black text-blue-400 uppercase tracking-[0.2em]">Portfolio Suggestions</span>
                     </div>
                     <div v-for="s in localSuggestions" :key="s.symbol" 
-                         @click="selectSuggestion(s)"
+                         @mousedown.prevent="selectSuggestion(s)"
                          class="px-5 py-3 hover:bg-blue-600/20 cursor-pointer flex items-center justify-between group/s border-b border-white/5 last:border-0 transition-colors">
                       <div class="flex items-center gap-3">
                         <div class="w-8 h-8 bg-slate-800 rounded flex items-center justify-center text-[10px] font-black text-slate-300 group-hover/s:bg-blue-600 group-hover/s:text-white transition-all">
@@ -776,8 +772,35 @@ const earningsSeasonInfo = computed(() => {
             </div>
           </div>
 
+          <!-- Skeleton Loading -->
+          <div v-if="isEarningsSearching" class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 animate-pulse mt-4 md:mt-6">
+            <div class="bg-slate-900/40 border border-white/5 rounded-2xl md:rounded-3xl p-6 md:p-8 flex flex-col gap-6">
+              <div class="flex items-center gap-6">
+                <div class="w-16 h-16 md:w-20 md:h-20 rounded-xl md:rounded-2xl bg-slate-800/80"></div>
+                <div class="space-y-3">
+                  <div class="h-8 md:h-10 w-24 md:w-32 bg-slate-800/80 rounded-lg"></div>
+                  <div class="flex gap-2">
+                    <div class="h-5 w-20 bg-slate-800/80 rounded"></div>
+                    <div class="h-5 w-24 bg-slate-800/80 rounded"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div class="h-16 md:h-20 bg-slate-800/80 rounded-xl w-full"></div>
+                <div class="h-16 md:h-20 bg-slate-800/80 rounded-xl w-full"></div>
+              </div>
+            </div>
+            <div class="bg-slate-900/40 border border-white/5 rounded-2xl md:rounded-3xl p-6 md:p-8 flex flex-col gap-6">
+              <div class="h-6 md:h-8 w-32 md:w-48 bg-slate-800/80 rounded-lg mb-2"></div>
+              <div class="grid grid-cols-2 gap-4">
+                <div v-for="i in 4" :key="i" class="h-20 md:h-24 bg-slate-800/80 rounded-xl w-full"></div>
+              </div>
+              <div class="h-16 md:h-24 bg-slate-800/80 rounded-xl w-full mt-auto"></div>
+            </div>
+          </div>
+
           <!-- Error State: Not Found -->
-          <div v-if="isEarningsNotFound" class="flex-1 flex flex-col items-center justify-center py-20 bg-red-500/5 border border-dashed border-red-500/20 rounded-3xl animate-in fade-in zoom-in duration-300">
+          <div v-else-if="isEarningsNotFound" class="flex-1 flex flex-col items-center justify-center py-20 bg-red-500/5 border border-dashed border-red-500/20 rounded-3xl animate-in fade-in zoom-in duration-300">
             <div class="w-20 h-20 bg-red-950/30 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -1220,7 +1243,7 @@ const earningsSeasonInfo = computed(() => {
 
       <!-- 2. Movers View - Public -->
       <template v-else>
-        <div v-if="isLoading" class="max-w-5xl mx-auto space-y-4">
+        <div v-if="isLoading || isChangingTab" class="max-w-5xl mx-auto space-y-4">
           <div v-for="n in 3" :key="n" class="skeleton-shimmer-container bg-[#111827]/50 border border-slate-800/60 rounded-xl p-3 md:p-5 flex flex-col h-40 space-y-4">
             <div class="flex items-start justify-between">
               <div class="flex items-center space-x-3">
