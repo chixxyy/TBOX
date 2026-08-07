@@ -260,10 +260,10 @@ async function syncNews(skipNotifications = false) {
       }
     })
     
-    // Clean up old news (> 24 hours) to prevent infinite memory growth
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
+    // Clean up old news (> 72 hours) to prevent infinite memory growth
+    const threeDaysAgo = Date.now() - 72 * 60 * 60 * 1000
     for (const [uid, item] of masterNewsPool.entries()) {
-      if (item.ts < oneDayAgo) {
+      if (item.ts < threeDaysAgo) {
         masterNewsPool.delete(uid)
       }
     }
