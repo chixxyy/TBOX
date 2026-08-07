@@ -465,6 +465,16 @@ onUnmounted(() => {
                 :style="{ left: `${tick}%` }"
               ></div>
               
+              <!-- Dynamic Percentage Floating Label -->
+              <div 
+                class="absolute -top-4 w-8 -ml-4 text-center text-[10px] font-mono font-bold z-10 pointer-events-none"
+                :class="tradeType === 'buy' ? 'text-green-400' : 'text-red-400'"
+                :style="{ left: `${sliderPercent}%` }"
+                v-if="sliderPercent > 0"
+              >
+                {{ Math.round(sliderPercent) }}%
+              </div>
+
               <!-- Thumb decoration (glowing circle) -->
               <div 
                 class="absolute w-4 h-4 -ml-2 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)] border-2 bg-white z-10 pointer-events-none transition-transform duration-75 scale-110"

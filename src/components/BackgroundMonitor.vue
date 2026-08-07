@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
+import { useStorage } from '@vueuse/core'
 import { 
   globalMovers, globalNews,
   isMoversLoading, isNewsLoading,
@@ -601,6 +602,45 @@ async function syncPortfolioStockPrices() {
   }
 }
 
+const earningsAlertsTriggered = useStorage<Record<string, boolean>>('tbox-earnings-alerts-triggered', {})
+
+async function checkEarningsAlerts() {
+  // Extract unique stock symbols from portfolio
+  const stocks = [...new Set(portfolio.value.filter(p => !p.symbol.includes('USDT') && !p.symbol.startsWith('^') && p.symbol !== 'BDI').map(p => p.symbol))]
+  
+  if (stocks.length === 0) return
+
+  const now = new Date()
+  const today = now.toISOString().split('T')[0] as string
+  const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] as string
+
+  for (const symbol of stocks) {
+    try {
+      const res = await api.getFinnhubEarningsCalendar(today, threeDaysLater, symbol)
+      if (res && res.earningsCalendar && res.earningsCalendar.length > 0) {
+        // Find the earliest upcoming earning
+        const nextEarning = res.earningsCalendar[0]
+        const earningDate = nextEarning.date // Format: 'YYYY-MM-DD'
+        
+        const alertKey = `${symbol}_${earningDate}`
+        if (!earningsAlertsTriggered.value[alertKey]) {
+          // Trigger notification
+          const msg = `⚠️ 提醒：您持倉的 ${symbol} 即將於 ${earningDate} 公布財報！`
+          if (isNotificationsEnabled.value) {
+            sendDesktopNotification('📅 財報預警', msg)
+          }
+          showToast('📅 財報預警', msg)
+
+          // Mark as triggered
+          earningsAlertsTriggered.value[alertKey] = true
+        }
+      }
+    } catch (e) {
+      console.warn(`[EARNINGS_ALERT] Failed to check for ${symbol}:`, e)
+    }
+  }
+}
+
 onMounted(() => {
   // 1. Initial hydration from cache: Populate known IDs to prevent duplicate alerts
   if (globalNews.value.length > 0) {
@@ -625,10 +665,18 @@ onMounted(() => {
   connectAlertMonitor()
   syncPortfolioStockPrices() // Initial sync — now parallel!
   fetchBdiData() // Initial BDI sync
+  
   newsTimer = setInterval(syncNews, 30000)
   moversTimer = setInterval(syncMovers, 10000)
   setInterval(syncPortfolioStockPrices, 60000) // Every minute
   setInterval(fetchBdiData, 300000) // Every 5 minutes
+
+  // Earnings Check: wait 15 seconds after app mount to avoid initial slowdown
+  setTimeout(() => {
+    checkEarningsAlerts()
+  }, 15000)
+  // Check every 6 hours
+  setInterval(checkEarningsAlerts, 6 * 60 * 60 * 1000)
 })
 
 onUnmounted(() => {
