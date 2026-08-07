@@ -126,7 +126,12 @@ const searchEarnings = async () => {
     const toStr = futureDate.toISOString().split('T')[0] as string;
     const todayStr = today.toISOString().split('T')[0] as string;
     
-    const calData = await api.getFinnhubEarningsCalendar(fromStr, toStr, symbol)
+    const [calData, surpData, metricData] = await Promise.all([
+      api.getFinnhubEarningsCalendar(fromStr, toStr, symbol).catch(() => null),
+      api.getFinnhubEarningsSurprises(symbol).catch(() => []),
+      api.getFinnhubMetric(symbol, 'all').catch(() => null)
+    ])
+
     let latest: any = null
     let next: any = null
     
@@ -140,14 +145,12 @@ const searchEarnings = async () => {
       });
     }
 
-    const surpData = await api.getFinnhubEarningsSurprises(symbol)
     let surprises = []
     if (surpData && Array.isArray(surpData)) {
       surprises = surpData.sort((a: any, b: any) => new Date(b.period).getTime() - new Date(a.period).getTime())
     }
 
     // New: Fetch Key Metrics for "Intelligence"
-    const metricData = await api.getFinnhubMetric(symbol, 'all')
     const m = metricData?.metric || {}
 
     // 判定無效代碼：日曆無資料 且 基本面指標全空
@@ -278,14 +281,21 @@ const filterTabs = [
 ]
 const activeFilter = ref('all')
 
+const initialAssetsMap = computed(() => {
+  const map = new Map()
+  initialAssets.forEach(a => map.set(a.symbol, a))
+  return map
+})
+
 const categorizedPortfolio = computed(() => {
+  const map = initialAssetsMap.value
   return {
     crypto: portfolio.value.filter((item: any) => {
-      const info = initialAssets.find(a => a.symbol === item.symbol)
+      const info = map.get(item.symbol)
       return info?.type === 'crypto'
     }),
     stock: portfolio.value.filter((item: any) => {
-      const info = initialAssets.find(a => a.symbol === item.symbol)
+      const info = map.get(item.symbol)
       return info?.type === 'stock'
     })
   }
@@ -298,9 +308,10 @@ const portfolioAllocation = computed(() => {
 
   let cryptoValue = 0
   let stockValue = 0
+  const map = initialAssetsMap.value
 
   portfolio.value.forEach((item: any) => {
-    const info = initialAssets.find(a => a.symbol === item.symbol)
+    const info = map.get(item.symbol)
     const market = marketPrices.value[item.symbol]
     const currentPrice = market?.rawPrice || item.entryPrice
     const itemValue = item.amount * currentPrice
@@ -474,7 +485,7 @@ const openAdjust = (item: any) => {
 }
 
 const projectedStats = computed(() => {
-  if (!adjustItem.value || !adjustAmount.value || !adjustPrice.value) return null
+  if (!adjustItem.value || adjustAmount.value === null || adjustAmount.value === '' || adjustPrice.value === null || adjustPrice.value === '') return null
   
   const currentQty = Number(adjustItem.value.amount)
   const currentAvg = Number(adjustItem.value.entryPrice)
@@ -501,11 +512,23 @@ const projectedStats = computed(() => {
 })
 
 const handleAdjust = async () => {
-  if (!adjustItem.value || !adjustAmount.value || !adjustPrice.value) return
+  if (!adjustItem.value || adjustAmount.value === null || adjustAmount.value === '' || adjustPrice.value === null || adjustPrice.value === '') {
+    showToast('操作錯誤', '請填寫完整的數量與單價')
+    return
+  }
+  
+  if (Number(adjustAmount.value) <= 0 || Number(adjustPrice.value) < 0) {
+    showToast('操作錯誤', '請填寫合理的數量與價格 (數量需大於0，價格不得為負)')
+    return
+  }
   
   isAdjusting.value = true
   const stats = projectedStats.value
-  if (!stats) return
+  if (!stats) {
+    showToast('操作錯誤', '無法計算預估結果，請檢查輸入內容是否正確')
+    isAdjusting.value = false
+    return
+  }
 
   try {
     if (stats.totalQty <= 0) {
@@ -1379,7 +1402,7 @@ const earningsSeasonInfo = computed(() => {
 
             <button 
               @click="handleAdjust"
-              :disabled="!adjustAmount || isAdjusting"
+              :disabled="adjustAmount === null || adjustAmount === '' || isAdjusting"
               class="w-full py-3.5 rounded-xl text-sm font-black tracking-widest transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-xl"
               :class="adjustType === 'add' ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20' : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/20'"
             >
