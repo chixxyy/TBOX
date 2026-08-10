@@ -27,6 +27,26 @@
   </head>
   <body style="margin: 0; background-color: #131722; color: white;">
     <div id="app"></div>
+    <script>
+      // 自動處理 PWA 或快取造成的舊版 script 載入失敗 (404 或 MIME error)
+      function forceReload() {
+        if (!sessionStorage.getItem('__tbox_reloaded')) {
+          sessionStorage.setItem('__tbox_reloaded', '1');
+          window.location.reload(true); // 強制重新載入
+        }
+      }
+      window.addEventListener('error', function(e) {
+        if (e.target && e.target.tagName === 'SCRIPT') {
+          forceReload();
+        }
+      }, true);
+      window.addEventListener('vite:preloadError', function() {
+        forceReload();
+      });
+      window.addEventListener('load', function() {
+        sessionStorage.removeItem('__tbox_reloaded');
+      });
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
