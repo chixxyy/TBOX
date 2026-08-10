@@ -10,7 +10,7 @@ export default defineConfig({
     vue(),
     tailwindcss(),
     VitePWA({
-      registerType: 'prompt', // We will use ReloadPrompt.vue
+      registerType: 'autoUpdate',
       includeAssets: ['pwa-icon.svg'],
       manifest: {
         name: 'TradingBox',
