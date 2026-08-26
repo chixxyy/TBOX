@@ -34,7 +34,7 @@ export const useSportsStore = defineStore('sports', () => {
     if (trackedPlayers.value.length > 0) return true;
     
     try {
-      const CACHE_KEY = 'mlb_players_with_stats';
+      const CACHE_KEY = 'mlb_players_with_stats_v2';
       const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
       const cachedStr = localStorage.getItem(CACHE_KEY);
       
@@ -47,7 +47,7 @@ export const useSportsStore = defineStore('sports', () => {
       }
 
       const currentYear = new Date().getFullYear();
-      const res = await fetch(`https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=homeRuns,battingAverage,runsBattedIn,onBasePlusSlugging,earnedRunAverage,strikeOuts,wins,saves&statGroup=hitting,pitching&season=${currentYear}&limit=100`);
+      const res = await fetch(`https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=homeRuns,battingAverage,runsBattedIn,onBasePlusSlugging,earnedRunAverage,strikeOuts,wins,saves&statGroup=hitting,pitching&season=${currentYear}&limit=200`);
       const data = await res.json();
       
       const playersMap = new Map<string, PlayerStats>();
@@ -106,7 +106,7 @@ export const useSportsStore = defineStore('sports', () => {
       
       const finalPlayers: PlayerStats[] = [];
       for (const tId in teamGroups) {
-        finalPlayers.push(...(teamGroups[tId] || []).slice(0, 5));
+        finalPlayers.push(...(teamGroups[tId] || []).slice(0, 10));
       }
       
       trackedPlayers.value = finalPlayers;

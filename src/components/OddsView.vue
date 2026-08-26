@@ -304,10 +304,15 @@ const fetchPlayerStats = async (isManual = false) => {
         p.loading = false
       }
     }))
+    
+    // Add a small delay between chunks to prevent API rate limiting
+    if (i + chunkSize < players.length) {
+      await new Promise(r => setTimeout(r, 100))
+    }
   }
 
   // Save fully hydrated players to cache
-  localStorage.setItem('mlb_players_with_stats', JSON.stringify({
+  localStorage.setItem('mlb_players_with_stats_v2', JSON.stringify({
     timestamp: Date.now(),
     data: trackedPlayers.value
   }))
