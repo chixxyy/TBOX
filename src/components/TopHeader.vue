@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, hasClickedNotifications, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, resetPlatformNotice, locale, t } from '../stores'
+import { activeTab, notificationHistory, unreadNotificationsCount, markAllNotificationsRead, clearNotifications, removeNotificationLog, isNotificationsEnabled, hasClickedNotifications, chatSession, showLogoutConfirm, goToLogin, isAdmin, chatUser, userProfile, resetPlatformNotice, locale, t, isEntryLoading } from '../stores'
 import { initDesktopNotifications } from '../utils/notify'
 import { onClickOutside } from '@vueuse/core'
 
@@ -61,7 +61,7 @@ const handleLogout = () => {
   <header class="h-12 md:h-14 bg-[#0a0f1c] border-b border-slate-800 flex items-center justify-between px-2 md:px-4 text-xs md:text-sm whitespace-nowrap sticky top-0 z-[100]">
     <div class="flex items-center h-full min-w-0 flex-1">
       <div 
-        @click="activeTab = '交易'; resetPlatformNotice()"
+        @click="activeTab = '交易'; resetPlatformNotice(); isEntryLoading = true"
         class="flex items-center space-x-2 md:space-x-3 cursor-pointer group shrink-0 pr-2 md:pr-4 hover:brightness-125 transition-all"
         title="返回首頁"
       >

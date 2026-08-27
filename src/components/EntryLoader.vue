@@ -203,10 +203,10 @@ onUnmounted(() => {
     <!-- UI Overlay: Glassmorphism Header -->
     <div class="absolute top-0 inset-x-0 z-10 p-4 md:p-6 flex justify-between items-start pointer-events-none">
       <div class="pointer-events-auto">
-        <h1 class="text-3xl md:text-5xl font-black tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-focus-in">
+        <h1 class="text-2xl md:text-5xl font-black tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-focus-in">
           TBOX
         </h1>
-        <p class="text-[10px] text-emerald-400/80 tracking-widest uppercase mt-1 animate-pulse font-bold">
+        <p class="text-[8px] md:text-[10px] text-emerald-400/80 tracking-widest uppercase mt-0.5 md:mt-1 animate-pulse font-bold">
           Global Intelligence
         </p>
       </div>
@@ -271,15 +271,15 @@ onUnmounted(() => {
     </transition>
 
     <!-- Bottom Right Entry UI -->
-    <div class="absolute bottom-0 right-0 z-10 p-6 pointer-events-none">
+    <div class="absolute bottom-0 right-0 z-10 p-4 md:p-6 pointer-events-none">
       <transition name="fade-quick">
         <div v-if="isReady" class="pointer-events-auto">
           <button 
             @click="enterTerminal"
-            class="group relative px-8 py-3 bg-emerald-500/10 border border-emerald-500/40 rounded-xl overflow-hidden hover:bg-emerald-500/20 transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur-md"
+            class="group relative px-5 py-2 md:px-8 md:py-3 bg-emerald-500/10 border border-emerald-500/40 rounded-lg md:rounded-xl overflow-hidden hover:bg-emerald-500/20 transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur-md"
           >
             <div class="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-emerald-400/20 via-transparent to-cyan-400/20 animate-pulse-slow"></div>
-            <span class="relative text-sm font-black text-emerald-400 tracking-[0.4em] uppercase group-hover:text-emerald-300 transition-colors">
+            <span class="relative text-[10px] md:text-sm font-black text-emerald-400 tracking-[0.4em] uppercase group-hover:text-emerald-300 transition-colors">
               {{ entryType === 'ACCESS' ? '進入系統' : '前往登入' }}
             </span>
           </button>
