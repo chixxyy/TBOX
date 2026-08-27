@@ -7,6 +7,7 @@ const globeEl = ref<HTMLElement | null>(null)
 let globe: any = null
 
 const isReady = ref(false)
+const isMobile = ref(window.innerWidth < 768)
 const entryType = computed(() => chatSession.value ? 'ACCESS' : 'LOGIN')
 
 const selectedNews = ref<any>(null)
@@ -36,9 +37,10 @@ const globeData = computed(() => {
   const globeEligibleNews = globalNews.value.filter((n: any) => n.cat !== 'sports')
 
   // Guarantee that ALL critical news are displayed (up to 50), filling the rest with normal news
+  const maxItems = isMobile.value ? 20 : 50
   const criticalNews = globeEligibleNews.filter((n: any) => n.severity === 'critical')
   const normalNews = globeEligibleNews.filter((n: any) => n.severity !== 'critical')
-  const selectedNews = [...criticalNews, ...normalNews].slice(0, 50)
+  const selectedNews = [...criticalNews, ...normalNews].slice(0, maxItems)
   
   // Track how many items are assigned to each city to create a neat spiral offset
   const cityCounts: Record<string, number> = {}
@@ -54,7 +56,7 @@ const globeData = computed(() => {
     let lng = city.lng
     
     if (count > 0) {
-      const radius = count * 1.5 // Expand outward by 1.5 degrees per item
+      const radius = count * 6.0 // Increase radius (6.0 degrees per item) to make them spread out more distinctly
       const angle = count * 137.5 * (Math.PI / 180) // Golden angle in radians
       lat += radius * Math.sin(angle)
       lng += radius * Math.cos(angle)
@@ -68,6 +70,32 @@ const globeData = computed(() => {
       isBreaking: news.severity === 'critical'
     }
   })
+})
+
+const arcsData = computed(() => {
+  const data = globeData.value
+  if (!data || data.length < 2) return []
+  const arcs = []
+  for (let i = 0; i < data.length - 1; i++) {
+    arcs.push({
+      startLat: data[i].lat,
+      startLng: data[i].lng,
+      endLat: data[i+1].lat,
+      endLng: data[i+1].lng,
+      color: ['rgba(249, 115, 22, 0.1)', 'rgba(249, 115, 22, 0.8)'] // Orange gradient
+    })
+  }
+  // Link the last one back to the first
+  if (data.length > 2) {
+    arcs.push({
+      startLat: data[data.length - 1].lat,
+      startLng: data[data.length - 1].lng,
+      endLat: data[0].lat,
+      endLng: data[0].lng,
+      color: ['rgba(249, 115, 22, 0.1)', 'rgba(249, 115, 22, 0.8)']
+    })
+  }
+  return arcs
 })
 
 const translateText = async (text: string) => {
@@ -105,14 +133,19 @@ const selectNews = (news: any) => {
   translatedSummary.value = ''
   
   if (globe) {
-    globe.pointOfView({ lat: news.lat, lng: news.lng, altitude: 1.5 }, 1000)
+    // Zoom in closer (altitude 0.8) and pause rotation so user can easily click nearby dots
+    globe.pointOfView({ lat: news.lat, lng: news.lng, altitude: 0.8 }, 1000)
+    globe.controls().autoRotate = false
   }
 }
 
 const closeNews = () => {
   selectedNews.value = null
   if (globe) {
-    globe.pointOfView({ altitude: 2.5 }, 1000)
+    // Keep current lat/lng to stay in the region, just zoom out
+    const currentPov = globe.pointOfView()
+    globe.pointOfView({ lat: currentPov.lat, lng: currentPov.lng, altitude: 2.5 }, 1000)
+    globe.controls().autoRotate = true
   }
 }
 
@@ -124,6 +157,7 @@ const enterTerminal = () => {
 }
 
 const handleResize = () => {
+  isMobile.value = window.innerWidth < 768
   if (globe && globeEl.value) {
     globe.width(window.innerWidth).height(window.innerHeight)
   }
@@ -147,17 +181,28 @@ onMounted(() => {
 
     window.addEventListener('resize', handleResize)
     
+    // Add glowing animated orange arcs between points
+    globe.arcsData(arcsData.value)
+      .arcColor('color')
+      .arcDashLength(0.4)
+      .arcDashGap(isMobile.value ? 8 : 4) // Larger gap on mobile
+      .arcDashInitialGap(() => Math.random() * 5)
+      .arcDashAnimateTime(isMobile.value ? 4500 : 2500) // Slower animation on mobile
+      .arcAltitudeAutoScale(0.3)
+      .arcStroke(0.5)
+
     // Draw HTML elements over the globe for news markers
     globe.htmlElementsData(globeData.value)
       .htmlElement((d: any) => {
         const el = document.createElement('div');
+        const isM = isMobile.value;
         
         if (d.isBreaking) {
           el.innerHTML = `
             <div class="relative group cursor-pointer">
-              <div class="absolute -inset-2 rounded-full blur-sm opacity-75 animate-ping" style="background-color: #ef4444"></div>
+              <div class="absolute -inset-2 rounded-full ${isM ? 'opacity-40' : 'blur-sm opacity-75'} animate-ping" style="background-color: #ef4444"></div>
               <div class="relative w-4 h-4 rounded-full border-2 border-white/50 flex items-center justify-center shadow-[0_0_15px_rgba(239,68,68,1)] transition-transform group-hover:scale-125" style="background-color: #ef4444">
-                 <span class="absolute text-[8px] -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 px-1 py-0.5 rounded backdrop-blur-sm pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]">
+                 <span class="absolute text-[8px] -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 px-1 py-0.5 rounded ${isM ? '' : 'backdrop-blur-sm'} pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]">
                    BREAKING
                  </span>
               </div>
@@ -166,9 +211,9 @@ onMounted(() => {
         } else {
           el.innerHTML = `
             <div class="relative group cursor-pointer animate-pulse-slow">
-              <div class="absolute -inset-2 rounded-full blur-sm opacity-50 transition-opacity group-hover:opacity-100" style="background-color: #${d.avatarBg || '10b981'}"></div>
+              <div class="absolute -inset-2 rounded-full ${isM ? '' : 'blur-sm opacity-50 transition-opacity group-hover:opacity-100'}" style="background-color: #${d.avatarBg || '10b981'}"></div>
               <div class="relative w-4 h-4 rounded-full border-2 border-white/50 flex items-center justify-center shadow-lg transition-transform group-hover:scale-125" style="background-color: #${d.avatarBg || '10b981'}">
-                 <span class="absolute text-[8px] -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-1 py-0.5 rounded backdrop-blur-sm pointer-events-none">
+                 <span class="absolute text-[8px] -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-1 py-0.5 rounded ${isM ? '' : 'backdrop-blur-sm'} pointer-events-none">
                    ${d.cat.toUpperCase()}
                  </span>
               </div>
@@ -186,6 +231,12 @@ onMounted(() => {
 watch(globeData, (newData) => {
   if (globe) {
     globe.htmlElementsData(newData)
+  }
+})
+
+watch(arcsData, (newData) => {
+  if (globe) {
+    globe.arcsData(newData)
   }
 })
 

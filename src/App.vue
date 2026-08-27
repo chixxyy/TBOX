@@ -248,7 +248,7 @@ onUnmounted(() => {
               </div>
 
               <div class="p-3 bg-slate-900/40 rounded-xl border border-slate-800">
-                <p class="text-[11px] text-slate-500 italic text-center">
+                <p class="text-[11px] text-slate-500 text-center">
                   本平台採用邊緣計算優化，推薦使用 Chrome 核心瀏覽器以獲得最佳體驗。
                 </p>
               </div>
