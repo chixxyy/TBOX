@@ -32,9 +32,12 @@ const CITIES = [
 const globeData = computed(() => {
   if (!globalNews.value || globalNews.value.length === 0) return []
   
+  // Exclude sports news for the globe, focusing on finance/politics (general, crypto)
+  const globeEligibleNews = globalNews.value.filter((n: any) => n.cat !== 'sports')
+
   // Guarantee that ALL critical news are displayed (up to 50), filling the rest with normal news
-  const criticalNews = globalNews.value.filter((n: any) => n.severity === 'critical')
-  const normalNews = globalNews.value.filter((n: any) => n.severity !== 'critical')
+  const criticalNews = globeEligibleNews.filter((n: any) => n.severity === 'critical')
+  const normalNews = globeEligibleNews.filter((n: any) => n.severity !== 'critical')
   const selectedNews = [...criticalNews, ...normalNews].slice(0, 50)
   
   // Track how many items are assigned to each city to create a neat spiral offset
