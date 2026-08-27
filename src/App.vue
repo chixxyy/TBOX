@@ -257,9 +257,9 @@ onUnmounted(() => {
             <div v-show="currentNoticeTab === '更新'" class="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div class="space-y-4">
                 <div v-for="item in [
-                  { title: '運動賽事看板', desc: '新增 MLB/NBA 實時賠率監測功能。' },
-                  { title: '持股財報追蹤', desc: '自動鎖定投資組合中即將到來的財報日，一鍵深度解析獲利。' },
-                  { title: '系統動效優化', desc: '大幅縮短載入動畫時長，並優化手機端內容捲動反饋。' }
+                  { title: '3D 地球儀情報網', desc: '全新升級 3D 互動地球，以黃金螺旋無死角顯示全球重大快訊，並整合一鍵外語翻譯。' },
+                  { title: '平台導覽體驗優化', desc: '點擊左上角 TBOX Logo 可隨時重返地球儀介面，且支援個人化的平台公告防擾設定。' },
+                  { title: '系統效能全面升級', desc: '重構狀態管理機制與 PWA 資源快取上限，解決模組相依警告，大幅提升網頁載入速度。' }
                 ]" :key="item.title" class="flex gap-3">
                   <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
