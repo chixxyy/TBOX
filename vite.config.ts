@@ -12,6 +12,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['pwa-icon.svg'],
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5000000 // 5 MB
+      },
       manifest: {
         name: 'TradingBox',
         short_name: 'TradingBox',

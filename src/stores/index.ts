@@ -129,10 +129,6 @@ export const triggerShare = (news: any) => useMarketStore().triggerShare(news)
 
 
 // --- Sports Store Mapping ---
-export const playersById = computed({
-  get: () => useSportsStore().playersById,
-  set: (val) => { useSportsStore().playersById = val }
-})
 
 export const playerIds = computed({
   get: () => useSportsStore().playerIds,
