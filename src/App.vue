@@ -4,20 +4,23 @@ import EntryLoader from './components/EntryLoader.vue'
 import GlobalToast from './components/GlobalToast.vue'
 import TickerBanner from './components/TickerBanner.vue'
 import AssetList from './components/AssetList.vue'
-import ChartArea from './components/ChartArea.vue'
-import RightPanel from './components/RightPanel.vue'
-import MarketsView from './components/MarketsView.vue'
-import NewsView from './components/NewsView.vue'
-import MoversView from './components/MoversView.vue'
-import OddsView from './components/OddsView.vue'
-import ChatView from './components/ChatView.vue'
-import LoginView from './components/LoginView.vue'
-import ProfileView from './components/ProfileView.vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, defineAsyncComponent } from 'vue'
+
+const ChartArea = defineAsyncComponent(() => import('./components/ChartArea.vue'))
+const RightPanel = defineAsyncComponent(() => import('./components/RightPanel.vue'))
+const MarketsView = defineAsyncComponent(() => import('./components/MarketsView.vue'))
+const NewsView = defineAsyncComponent(() => import('./components/NewsView.vue'))
+const MoversView = defineAsyncComponent(() => import('./components/MoversView.vue'))
+const OddsView = defineAsyncComponent(() => import('./components/OddsView.vue'))
+const ChatView = defineAsyncComponent(() => import('./components/ChatView.vue'))
+const LoginView = defineAsyncComponent(() => import('./components/LoginView.vue'))
+const ProfileView = defineAsyncComponent(() => import('./components/ProfileView.vue'))
+
 import AIDrawer from './components/AIDrawer.vue'
 import BackgroundMonitor from './components/BackgroundMonitor.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import ReloadPrompt from './components/ReloadPrompt.vue'
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+
 import { 
   activeTab, 
   setScrollProgress, 
