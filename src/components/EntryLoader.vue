@@ -211,7 +211,7 @@ onMounted(() => {
         } else {
           el.innerHTML = `
             <div class="relative group cursor-pointer animate-pulse-slow">
-              <div class="absolute -inset-2 rounded-full ${isM ? '' : 'blur-sm opacity-50 transition-opacity group-hover:opacity-100'}" style="background-color: #${d.avatarBg || '10b981'}"></div>
+              <div class="absolute -inset-2 rounded-full ${isM ? 'opacity-20' : 'blur-sm opacity-50 transition-opacity group-hover:opacity-100'}" style="background-color: #${d.avatarBg || '10b981'}"></div>
               <div class="relative w-4 h-4 rounded-full border-2 border-white/50 flex items-center justify-center shadow-lg transition-transform group-hover:scale-125" style="background-color: #${d.avatarBg || '10b981'}">
                  <span class="absolute text-[8px] -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-1 py-0.5 rounded ${isM ? '' : 'backdrop-blur-sm'} pointer-events-none">
                    ${d.cat.toUpperCase()}
