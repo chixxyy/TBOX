@@ -1,4 +1,4 @@
-import { ref, shallowRef } from 'vue'
+import { ref, shallowRef, computed } from 'vue'
 import { defineStore } from 'pinia'
 
 interface PlayerStats {
@@ -15,7 +15,9 @@ interface PlayerStats {
 }
 
 export const useSportsStore = defineStore('sports', () => {
-  const trackedPlayers = ref<PlayerStats[]>([])
+  const playersById = shallowRef<Record<string, PlayerStats>>({})
+  const playerIds = shallowRef<string[]>([])
+  const trackedPlayers = computed(() => playerIds.value.map(id => playersById.value[id]).filter(Boolean) as PlayerStats[])
 
   // Global sports cache to prevent API waste on tab switching
   const mlbGames = shallowRef<any[]>([])
@@ -31,17 +33,18 @@ export const useSportsStore = defineStore('sports', () => {
   const lastStandingsFetchTime = ref<number>(0)
 
   const initTrackedPlayers = async (): Promise<boolean> => {
-    if (trackedPlayers.value.length > 0) return true;
+    if (playerIds.value.length > 0) return true;
     
     try {
-      const CACHE_KEY = 'mlb_players_with_stats_v2';
+      const CACHE_KEY = 'mlb_players_with_stats_v3';
       const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
       const cachedStr = localStorage.getItem(CACHE_KEY);
       
       if (cachedStr) {
-        const { data, timestamp } = JSON.parse(cachedStr);
-        if (Date.now() - timestamp < CACHE_TTL && data && data.length > 0) {
-          trackedPlayers.value = data;
+        const { byId, ids, timestamp } = JSON.parse(cachedStr);
+        if (Date.now() - timestamp < CACHE_TTL && ids && ids.length > 0) {
+          playersById.value = byId || {};
+          playerIds.value = ids || [];
           return true; // Loaded from cache
         }
       }
@@ -104,12 +107,19 @@ export const useSportsStore = defineStore('sports', () => {
         teamGroups[player.teamId]!.push(player);
       }
       
-      const finalPlayers: PlayerStats[] = [];
+      const newPlayersById: Record<string, PlayerStats> = {};
+      const newPlayerIds: string[] = [];
+      
       for (const tId in teamGroups) {
-        finalPlayers.push(...(teamGroups[tId] || []).slice(0, 10));
+        const top10 = (teamGroups[tId] || []).slice(0, 10);
+        top10.forEach(p => {
+          newPlayersById[p.id] = p;
+          newPlayerIds.push(p.id);
+        });
       }
       
-      trackedPlayers.value = finalPlayers;
+      playersById.value = newPlayersById;
+      playerIds.value = newPlayerIds;
       return false; // Indicates stats need to be fetched
     } catch (error) {
       console.error('Failed to init tracked players:', error);
@@ -118,6 +128,8 @@ export const useSportsStore = defineStore('sports', () => {
   }
 
   return {
+    playersById,
+    playerIds,
     trackedPlayers,
     initTrackedPlayers,
     mlbGames,

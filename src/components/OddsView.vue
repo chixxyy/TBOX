@@ -305,6 +305,9 @@ const fetchPlayerStats = async (isManual = false) => {
       }
     }))
     
+    // Trigger reactivity for normalized state
+    sportsStore.playersById = { ...sportsStore.playersById }
+    
     // Add a small delay between chunks to prevent API rate limiting
     if (i + chunkSize < players.length) {
       await new Promise(r => setTimeout(r, 100))
@@ -312,9 +315,10 @@ const fetchPlayerStats = async (isManual = false) => {
   }
 
   // Save fully hydrated players to cache
-  localStorage.setItem('mlb_players_with_stats_v2', JSON.stringify({
+  localStorage.setItem('mlb_players_with_stats_v3', JSON.stringify({
     timestamp: Date.now(),
-    data: trackedPlayers.value
+    byId: sportsStore.playersById,
+    ids: sportsStore.playerIds
   }))
 }
 

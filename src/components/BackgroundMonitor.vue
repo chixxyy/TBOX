@@ -11,7 +11,7 @@ import {
   updatePriceAlertTriggered,
   marketPrices,
   portfolio,
-  trackedPlayers,
+  playerIds,
   type Mover
 } from '../stores'
 import { sendDesktopNotification } from '../utils/notify'
@@ -177,7 +177,7 @@ async function fetchMlbTransactions(): Promise<any[]> {
     
     return transactions.map((t: any) => {
       const pId = t.person?.id || t.personId
-      const isTracked = trackedPlayers.value.some(p => p.id === String(pId))
+      const isTracked = playerIds.value.includes(String(pId))
       
       // Boost timestamp: If it's a transaction from today/yesterday, give it a high hour weight
       // so it clusters with recent news rather than sinking to 00:00:00
