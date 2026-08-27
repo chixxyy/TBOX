@@ -82,7 +82,7 @@ const arcsData = computed(() => {
       startLng: data[i].lng,
       endLat: data[i+1].lat,
       endLng: data[i+1].lng,
-      color: ['rgba(249, 115, 22, 0.1)', 'rgba(249, 115, 22, 0.8)'] // Orange gradient
+      color: ['rgba(45, 212, 191, 0.1)', 'rgba(34, 211, 238, 0.8)'] // Teal to Cyan gradient (matches TBOX logo)
     })
   }
   // Link the last one back to the first
@@ -92,7 +92,7 @@ const arcsData = computed(() => {
       startLng: data[data.length - 1].lng,
       endLat: data[0].lat,
       endLng: data[0].lng,
-      color: ['rgba(249, 115, 22, 0.1)', 'rgba(249, 115, 22, 0.8)']
+      color: ['rgba(45, 212, 191, 0.1)', 'rgba(34, 211, 238, 0.8)']
     })
   }
   return arcs
