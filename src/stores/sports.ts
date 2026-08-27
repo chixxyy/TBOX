@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 
 interface PlayerStats {
@@ -18,12 +18,12 @@ export const useSportsStore = defineStore('sports', () => {
   const trackedPlayers = ref<PlayerStats[]>([])
 
   // Global sports cache to prevent API waste on tab switching
-  const mlbGames = ref<any[]>([])
-  const nbaGames = ref<any[]>([])
-  const mlbScores = ref<any[]>([])
-  const nbaScores = ref<any[]>([])
-  const mlbStandings = ref<any[]>([])
-  const nbaStandings = ref<any[]>([])
+  const mlbGames = shallowRef<any[]>([])
+  const nbaGames = shallowRef<any[]>([])
+  const mlbScores = shallowRef<any[]>([])
+  const nbaScores = shallowRef<any[]>([])
+  const mlbStandings = shallowRef<any[]>([])
+  const nbaStandings = shallowRef<any[]>([])
   const isQuotaExceeded = ref(false)
 
   const lastOddsFetchTime = ref<number>(0)
